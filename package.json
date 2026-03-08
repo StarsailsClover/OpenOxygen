@@ -1,0 +1,77 @@
+{
+  "name": "openoxygen",
+  "version": "0.1.0",
+  "description": "Windows-native Agent deployment framework with OpenClaw ecosystem compatibility, kernel-level system control, and fused inference planning",
+  "keywords": ["agent", "ai", "windows", "openclaw-compatible", "vision", "inference"],
+  "homepage": "https://github.com/openoxygen/openoxygen#readme",
+  "license": "MIT",
+  "author": "",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "openoxygen": "openoxygen.mjs"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./plugin-sdk": {
+      "types": "./dist/plugins/sdk/index.d.ts",
+      "default": "./dist/plugins/sdk/index.js"
+    },
+    "./compat/openclaw": {
+      "types": "./dist/compat/openclaw/index.d.ts",
+      "default": "./dist/compat/openclaw/index.js"
+    }
+  },
+  "files": [
+    "CHANGELOG.md",
+    "LICENSE",
+    "openoxygen.mjs",
+    "README.md",
+    "assets/",
+    "dist/",
+    "docs/",
+    "skills/"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/entry.ts",
+    "start": "node dist/entry.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "oxlint ./src",
+    "lint:fix": "oxlint ./src --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.0",
+    "chokidar": "^4.0.3",
+    "commander": "^13.1.0",
+    "dotenv": "^16.4.7",
+    "express": "^5.0.1",
+    "ffi-napi": "^4.0.9",
+    "node-gyp": "^10.3.1",
+    "onnxruntime-node": "^1.21.0",
+    "ref-napi": "^3.0.3",
+    "sharp": "^0.33.5",
+    "uuid": "^11.1.0",
+    "ws": "^8.18.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.13.0",
+    "@types/uuid": "^10.0.0",
+    "@types/ws": "^8.5.14",
+    "prettier": "^3.5.3",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

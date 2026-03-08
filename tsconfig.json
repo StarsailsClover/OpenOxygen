@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": false,
+    "paths": {
+      "@openoxygen/core/*": ["./src/core/*"],
+      "@openoxygen/inference/*": ["./src/inference/*"],
+      "@openoxygen/execution/*": ["./src/execution/*"],
+      "@openoxygen/memory/*": ["./src/memory/*"],
+      "@openoxygen/security/*": ["./src/security/*"],
+      "@openoxygen/compat/*": ["./src/compat/*"],
+      "@openoxygen/plugins/*": ["./src/plugins/*"],
+      "@openoxygen/types/*": ["./src/types/*"],
+      "@openoxygen/utils/*": ["./src/utils/*"]
+    }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "test", "_reference"]
+}

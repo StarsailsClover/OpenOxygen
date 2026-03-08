@@ -1,0 +1,362 @@
+/**
+ * OpenOxygen — Inference Engine
+ *
+ * 自适应推理引擎：根据任务复杂度自动选择推理模式。
+ * 支持 fast/balanced/deep 三档推理深度。
+ */
+
+import { createSubsystemLogger } from "../../logging/index.js";
+import type {
+  InferenceMode,
+  ModelConfig,
+  OxygenConfig,
+  ToolInvocation,
+  ToolResult,
+} from "../../types/index.js";
+import { generateId, nowMs, withTimeout } from "../../utils/index.js";
+
+const log = createSubsystemLogger("inference/engine");
+
+// ─── Message Types ──────────────────────────────────────────────────────────
+
+export type ChatRole = "system" | "user" | "assistant" | "tool";
+
+export type ChatMessage = {
+  role: ChatRole;
+  content: string;
+  name?: string;
+  toolCallId?: string;
+  toolCalls?: ToolCallRequest[];
+};
+
+export type ToolCallRequest = {
+  id: string;
+  name: string;
+  arguments: string; // JSON string
+};
+
+export type InferenceRequest = {
+  messages: ChatMessage[];
+  model?: ModelConfig;
+  mode?: InferenceMode;
+  tools?: ToolDefinition[];
+  maxTokens?: number;
+  temperature?: number;
+  systemPrompt?: string;
+};
+
+export type ToolDefinition = {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+};
+
+export type InferenceResponse = {
+  id: string;
+  content: string;
+  toolCalls?: ToolCallRequest[];
+  usage?: { promptTokens: number; completionTokens: number; totalTokens: number };
+  model: string;
+  provider: string;
+  durationMs: number;
+  mode: InferenceMode;
+};
+
+// ─── Complexity Analyzer ────────────────────────────────────────────────────
+
+function analyzeComplexity(messages: ChatMessage[]): InferenceMode {
+  const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
+  if (!lastUserMsg) return "fast";
+
+  const content = lastUserMsg.content;
+  const length = content.length;
+
+  // Heuristics for complexity detection
+  const deepIndicators = [
+    /分析|analyze|evaluate|research|compare|investigate/i,
+    /报告|report|comprehensive|detailed|thorough/i,
+    /规划|plan|strategy|architecture|design/i,
+    /多步|multi.?step|chain|workflow|pipeline/i,
+  ];
+
+  const balancedIndicators = [
+    /解释|explain|describe|summarize|列出|list/i,
+    /如何|how to|what is|why|when/i,
+    /帮我|help me|create|make|build/i,
+  ];
+
+  if (length > 500 || deepIndicators.some((r) => r.test(content))) {
+    return "deep";
+  }
+  if (length > 100 || balancedIndicators.some((r) => r.test(content))) {
+    return "balanced";
+  }
+  return "fast";
+}
+
+// ─── Provider Adapters ──────────────────────────────────────────────────────
+
+type ProviderAdapter = {
+  name: string;
+  chat: (
+    messages: ChatMessage[],
+    config: ModelConfig,
+    tools?: ToolDefinition[],
+  ) => Promise<InferenceResponse>;
+};
+
+async function callOpenAICompatible(
+  messages: ChatMessage[],
+  config: ModelConfig,
+  tools: ToolDefinition[] | undefined,
+  providerName: string,
+): Promise<InferenceResponse> {
+  const startTime = nowMs();
+  const baseUrl = config.baseUrl ?? "https://api.openai.com/v1";
+
+  const requestBody: Record<string, unknown> = {
+    model: config.model,
+    messages: messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+      ...(m.name ? { name: m.name } : {}),
+      ...(m.toolCallId ? { tool_call_id: m.toolCallId } : {}),
+      ...(m.toolCalls ? { tool_calls: m.toolCalls } : {}),
+    })),
+    temperature: config.temperature ?? 0.7,
+    max_tokens: config.maxTokens ?? 4096,
+  };
+
+  if (tools && tools.length > 0) {
+    requestBody["tools"] = tools.map((t) => ({
+      type: "function",
+      function: { name: t.name, description: t.description, parameters: t.parameters },
+    }));
+  }
+
+  const response = await fetch(`${baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${config.apiKey}`,
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`${providerName} API error (${response.status}): ${errorText}`);
+  }
+
+  const data = (await response.json()) as {
+    id: string;
+    choices: Array<{
+      message: { content?: string; tool_calls?: ToolCallRequest[] };
+    }>;
+    usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
+  };
+
+  const choice = data.choices[0];
+  return {
+    id: data.id ?? generateId("inf"),
+    content: choice?.message.content ?? "",
+    toolCalls: choice?.message.tool_calls,
+    usage: data.usage
+      ? {
+          promptTokens: data.usage.prompt_tokens,
+          completionTokens: data.usage.completion_tokens,
+          totalTokens: data.usage.total_tokens,
+        }
+      : undefined,
+    model: config.model,
+    provider: providerName,
+    durationMs: nowMs() - startTime,
+    mode: "balanced",
+  };
+}
+
+const providers: Record<string, ProviderAdapter> = {
+  openai: {
+    name: "openai",
+    chat: (msgs, cfg, tools) => callOpenAICompatible(msgs, cfg, tools, "openai"),
+  },
+  anthropic: {
+    name: "anthropic",
+    chat: async (messages, config, tools) => {
+      const startTime = nowMs();
+      const baseUrl = config.baseUrl ?? "https://api.anthropic.com/v1";
+
+      // Convert to Anthropic format
+      const systemMsg = messages.find((m) => m.role === "system");
+      const nonSystemMsgs = messages.filter((m) => m.role !== "system");
+
+      const requestBody: Record<string, unknown> = {
+        model: config.model,
+        max_tokens: config.maxTokens ?? 4096,
+        messages: nonSystemMsgs.map((m) => ({
+          role: m.role === "tool" ? "user" : m.role,
+          content: m.content,
+        })),
+      };
+
+      if (systemMsg) {
+        requestBody["system"] = systemMsg.content;
+      }
+
+      if (tools && tools.length > 0) {
+        requestBody["tools"] = tools.map((t) => ({
+          name: t.name,
+          description: t.description,
+          input_schema: t.parameters,
+        }));
+      }
+
+      const response = await fetch(`${baseUrl}/messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": config.apiKey ?? "",
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Anthropic API error (${response.status}): ${errorText}`);
+      }
+
+      const data = (await response.json()) as {
+        id: string;
+        content: Array<{ type: string; text?: string }>;
+        usage?: { input_tokens: number; output_tokens: number };
+      };
+
+      const textContent = data.content
+        .filter((c) => c.type === "text")
+        .map((c) => c.text ?? "")
+        .join("");
+
+      return {
+        id: data.id,
+        content: textContent,
+        usage: data.usage
+          ? {
+              promptTokens: data.usage.input_tokens,
+              completionTokens: data.usage.output_tokens,
+              totalTokens: data.usage.input_tokens + data.usage.output_tokens,
+            }
+          : undefined,
+        model: config.model,
+        provider: "anthropic",
+        durationMs: nowMs() - startTime,
+        mode: "balanced",
+      };
+    },
+  },
+  gemini: {
+    name: "gemini",
+    chat: (msgs, cfg, tools) =>
+      callOpenAICompatible(
+        msgs,
+        { ...cfg, baseUrl: cfg.baseUrl ?? "https://generativelanguage.googleapis.com/v1beta/openai" },
+        tools,
+        "gemini",
+      ),
+  },
+  openrouter: {
+    name: "openrouter",
+    chat: (msgs, cfg, tools) =>
+      callOpenAICompatible(
+        msgs,
+        { ...cfg, baseUrl: cfg.baseUrl ?? "https://openrouter.ai/api/v1" },
+        tools,
+        "openrouter",
+      ),
+  },
+  stepfun: {
+    name: "stepfun",
+    chat: (msgs, cfg, tools) =>
+      callOpenAICompatible(
+        msgs,
+        { ...cfg, baseUrl: cfg.baseUrl ?? "https://api.stepfun.com/v1" },
+        tools,
+        "stepfun",
+      ),
+  },
+  ollama: {
+    name: "ollama",
+    chat: (msgs, cfg, tools) =>
+      callOpenAICompatible(
+        msgs,
+        { ...cfg, baseUrl: cfg.baseUrl ?? "http://localhost:11434/v1" },
+        tools,
+        "ollama",
+      ),
+  },
+  custom: {
+    name: "custom",
+    chat: (msgs, cfg, tools) => callOpenAICompatible(msgs, cfg, tools, "custom"),
+  },
+};
+
+// ─── Inference Engine ───────────────────────────────────────────────────────
+
+export class InferenceEngine {
+  private config: OxygenConfig;
+
+  constructor(config: OxygenConfig) {
+    this.config = config;
+  }
+
+  updateConfig(config: OxygenConfig): void {
+    this.config = config;
+  }
+
+  async infer(request: InferenceRequest): Promise<InferenceResponse> {
+    const mode = request.mode ?? analyzeComplexity(request.messages);
+    const model = request.model ?? this.selectModel(mode);
+
+    if (!model) {
+      throw new Error("No model configured for inference");
+    }
+
+    const adapter = providers[model.provider];
+    if (!adapter) {
+      throw new Error(`Unknown model provider: ${model.provider}`);
+    }
+
+    // Prepend system prompt if provided
+    let messages = [...request.messages];
+    if (request.systemPrompt) {
+      messages = [{ role: "system", content: request.systemPrompt }, ...messages];
+    }
+
+    log.info(`Inference [${mode}] via ${model.provider}/${model.model}`);
+
+    const timeoutMs = mode === "deep" ? 120_000 : mode === "balanced" ? 60_000 : 30_000;
+
+    const response = await withTimeout(
+      adapter.chat(messages, { ...model, ...request }, request.tools),
+      timeoutMs,
+      `inference:${model.provider}`,
+    );
+
+    response.mode = mode;
+    log.info(`Inference completed in ${response.durationMs}ms (${response.usage?.totalTokens ?? "?"} tokens)`);
+    return response;
+  }
+
+  private selectModel(mode: InferenceMode): ModelConfig | null {
+    const models = this.config.models;
+    if (models.length === 0) return null;
+
+    // Simple strategy: use first available model
+    // Future: implement model routing based on mode
+    return models[0] ?? null;
+  }
+
+  getAvailableProviders(): string[] {
+    return this.config.models.map((m) => `${m.provider}/${m.model}`);
+  }
+}
