@@ -12,6 +12,7 @@ import process from "node:process";
 import { createSubsystemLogger } from "../../logging/index.js";
 import type { OxygenConfig, OxygenEvent, OxygenEventHandler } from "../../types/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
+import type { InferenceEngine, ChatMessage } from "../../inference/engine/index.js";
 
 const log = createSubsystemLogger("gateway");
 
@@ -19,6 +20,7 @@ const log = createSubsystemLogger("gateway");
 
 export type GatewayServerOptions = {
   config: OxygenConfig;
+  inferenceEngine?: InferenceEngine;
   onEvent?: OxygenEventHandler;
 };
 
@@ -45,7 +47,6 @@ function validateAuth(
 ): boolean {
   const { auth } = config.gateway;
   if (auth.mode === "none") return true;
-
   if (!authHeader) return false;
 
   if (auth.mode === "token") {
@@ -56,7 +57,6 @@ function validateAuth(
   }
 
   if (auth.mode === "password") {
-    // Basic auth
     if (!authHeader.startsWith("Basic ")) return false;
     try {
       const decoded = Buffer.from(authHeader.slice(6), "base64").toString("utf-8");
@@ -70,77 +70,10 @@ function validateAuth(
   return false;
 }
 
-// ─── Route Handlers ─────────────────────────────────────────────────────────
-
-type RouteHandler = (
-  ctx: RequestContext,
-  body: unknown,
-  config: OxygenConfig,
-) => Promise<{ status: number; body: unknown }>;
-
-const routes: Record<string, Record<string, RouteHandler>> = {
-  GET: {
-    "/health": async () => ({
-      status: 200,
-      body: { status: "ok", timestamp: nowMs(), version: "0.1.0" },
-    }),
-    "/api/v1/status": async (_ctx, _body, config) => ({
-      status: 200,
-      body: {
-        gateway: { host: config.gateway.host, port: config.gateway.port },
-        agents: config.agents.list.map((a) => ({ id: a.id, name: a.name })),
-        channels: config.channels.map((c) => ({ id: c.id, type: c.type, enabled: c.enabled })),
-        plugins: config.plugins.map((p) => ({ name: p.name, enabled: p.enabled })),
-        uptime: process.uptime(),
-      },
-    }),
-    "/api/v1/agents": async (_ctx, _body, config) => ({
-      status: 200,
-      body: { agents: config.agents.list },
-    }),
-    "/api/v1/models": async (_ctx, _body, config) => ({
-      status: 200,
-      body: {
-        models: config.models.map((m) => ({
-          provider: m.provider,
-          model: m.model,
-          hasKey: !!m.apiKey,
-        })),
-      },
-    }),
-  },
-  POST: {
-    "/api/v1/chat": async (ctx, body) => {
-      // Placeholder — will be wired to inference engine
-      log.info(`Chat request ${ctx.requestId}`);
-      return {
-        status: 200,
-        body: {
-          id: ctx.requestId,
-          message: "Inference engine not yet connected",
-          input: body,
-        },
-      };
-    },
-    "/api/v1/execute": async (ctx, body) => {
-      // Placeholder — will be wired to execution engine
-      log.info(`Execute request ${ctx.requestId}`);
-      return {
-        status: 200,
-        body: {
-          id: ctx.requestId,
-          message: "Execution engine not yet connected",
-          input: body,
-        },
-      };
-    },
-  },
-};
-
 // ─── Server Factory ─────────────────────────────────────────────────────────
 
 export function createGatewayServer(options: GatewayServerOptions): GatewayServer {
-  const { config, onEvent } = options;
+  const { config, inferenceEngine, onEvent } = options;
   let server: HttpServer | null = null;
   let running = false;
 
@@ -196,24 +129,133 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
       }
     }
 
-    // Route dispatch
-    const methodRoutes = routes[ctx.method];
-    const handler = methodRoutes?.[ctx.path];
-
-    if (!handler) {
-      res.writeHead(404, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Not found", path: ctx.path }));
-      return;
-    }
-
     try {
-      const result = await handler(ctx, body, config);
-      res.writeHead(result.status, { "Content-Type": "application/json" });
-      res.end(JSON.stringify(result.body));
+      // ─── Route Dispatch ───────────────────────────────────────────
+      const { method, path } = ctx;
+
+      // GET /health
+      if (method === "GET" && path === "/health") {
+        respond(res, 200, { status: "ok", timestamp: nowMs(), version: "0.1.0" });
+        return;
+      }
+
+      // GET /api/v1/status
+      if (method === "GET" && path === "/api/v1/status") {
+        respond(res, 200, {
+          gateway: { host: config.gateway.host, port: config.gateway.port },
+          agents: config.agents.list.map((a) => ({ id: a.id, name: a.name })),
+          channels: config.channels.map((c) => ({ id: c.id, type: c.type, enabled: c.enabled })),
+          plugins: config.plugins.map((p) => ({ name: p.name, enabled: p.enabled })),
+          models: config.models.map((m) => ({ provider: m.provider, model: m.model, hasKey: !!m.apiKey })),
+          inferenceReady: !!inferenceEngine,
+          uptime: process.uptime(),
+        });
+        return;
+      }
+
+      // GET /api/v1/agents
+      if (method === "GET" && path === "/api/v1/agents") {
+        respond(res, 200, { agents: config.agents.list });
+        return;
+      }
+
+      // GET /api/v1/models
+      if (method === "GET" && path === "/api/v1/models") {
+        respond(res, 200, {
+          models: config.models.map((m) => ({
+            provider: m.provider,
+            model: m.model,
+            hasKey: !!m.apiKey,
+          })),
+        });
+        return;
+      }
+
+      // POST /api/v1/chat — Main inference endpoint
+      if (method === "POST" && path === "/api/v1/chat") {
+        if (!inferenceEngine) {
+          respond(res, 503, { error: "Inference engine not available" });
+          return;
+        }
+
+        const chatBody = body as {
+          message?: string;
+          messages?: ChatMessage[];
+          systemPrompt?: string;
+          mode?: "fast" | "balanced" | "deep";
+        } | null;
+
+        if (!chatBody) {
+          respond(res, 400, { error: "Request body required" });
+          return;
+        }
+
+        // Support both single message and full messages array
+        let messages: ChatMessage[];
+        if (chatBody.messages) {
+          messages = chatBody.messages;
+        } else if (chatBody.message) {
+          messages = [{ role: "user", content: chatBody.message }];
+        } else {
+          respond(res, 400, { error: "Either 'message' or 'messages' field required" });
+          return;
+        }
+
+        log.info(`Chat request ${ctx.requestId}: ${messages.length} messages, mode=${chatBody.mode ?? "auto"}`);
+
+        emitEvent({ type: "agent.message", agentId: "default", sessionKey: "main", content: messages[messages.length - 1]?.content ?? "" });
+
+        const inferenceResult = await inferenceEngine.infer({
+          messages,
+          mode: chatBody.mode,
+          systemPrompt: chatBody.systemPrompt,
+        });
+
+        const elapsed = nowMs() - ctx.startTime;
+        log.info(`Chat response ${ctx.requestId}: ${inferenceResult.usage?.totalTokens ?? "?"} tokens in ${elapsed}ms`);
+
+        respond(res, 200, {
+          id: ctx.requestId,
+          content: inferenceResult.content,
+          toolCalls: inferenceResult.toolCalls,
+          model: inferenceResult.model,
+          provider: inferenceResult.provider,
+          mode: inferenceResult.mode,
+          usage: inferenceResult.usage,
+          durationMs: inferenceResult.durationMs,
+        });
+        return;
+      }
+
+      // POST /api/v1/plan — Task planning endpoint
+      if (method === "POST" && path === "/api/v1/plan") {
+        if (!inferenceEngine) {
+          respond(res, 503, { error: "Inference engine not available" });
+          return;
+        }
+
+        const planBody = body as { goal?: string; context?: string } | null;
+        if (!planBody?.goal) {
+          respond(res, 400, { error: "'goal' field required" });
+          return;
+        }
+
+        // Import planner dynamically to avoid circular deps
+        const { TaskPlanner } = await import("../../inference/planner/index.js");
+        const planner = new TaskPlanner(inferenceEngine);
+        const plan = await planner.generatePlan(planBody.goal, planBody.context);
+
+        emitEvent({ type: "plan.created", planId: plan.id });
+
+        respond(res, 200, plan);
+        return;
+      }
+
+      // 404
+      respond(res, 404, { error: "Not found", path: ctx.path });
     } catch (err) {
       log.error(`Request ${ctx.requestId} failed:`, err);
-      res.writeHead(500, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Internal server error" }));
+      respond(res, 500, { error: "Internal server error" });
     }
   });
 
@@ -253,4 +295,9 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
         });
       }),
   };
+}
+
+function respond(res: import("node:http").ServerResponse, status: number, body: unknown): void {
+  res.writeHead(status, { "Content-Type": "application/json" });
+  res.end(JSON.stringify(body));
 }

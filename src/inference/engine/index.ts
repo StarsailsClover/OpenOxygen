@@ -337,7 +337,7 @@ export class InferenceEngine {
     const timeoutMs = mode === "deep" ? 120_000 : mode === "balanced" ? 60_000 : 30_000;
 
     const response = await withTimeout(
-      adapter.chat(messages, { ...model, ...request }, request.tools),
+      adapter.chat(messages, model, request.tools),
       timeoutMs,
       `inference:${model.provider}`,
     );

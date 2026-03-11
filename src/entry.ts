@@ -89,7 +89,7 @@ async function bootstrap(): Promise<void> {
   };
 
   // 6. Start Gateway
-  const gateway = createGatewayServer({ config, onEvent: handleEvent });
+  const gateway = createGatewayServer({ config, inferenceEngine, onEvent: handleEvent });
   await gateway.start();
 
   // 7. Start vision monitoring if enabled

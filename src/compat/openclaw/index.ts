@@ -156,7 +156,7 @@ function convertAgent(claw: OpenClawAgentEntry): AgentEntry {
     model,
     skills,
     identity: claw.identity,
-    sandbox: claw.sandbox,
+    sandbox: claw.sandbox ? { enabled: claw.sandbox.enabled ?? false, timeoutMs: claw.sandbox.timeoutMs } : undefined,
     tools: claw.tools,
   };
 }

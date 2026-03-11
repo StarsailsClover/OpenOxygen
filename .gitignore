@@ -1,6 +1,37 @@
-node_modules/
+# ─── Build Outputs ───────────────────────────────────────────
 dist/
+*.node
+packages/core-native/target/
+
+# ─── Dependencies ────────────────────────────────────────────
+node_modules/
+
+# ─── Environment & Secrets ───────────────────────────────────
 .env
-*.log
+.env.local
+.env.*.local
+
+# ─── Runtime State ───────────────────────────────────────────
+.state/
+
+# ─── Reference / Vendor (not shipped) ────────────────────────
 _reference/
+
+# ─── Archives & Installers ───────────────────────────────────
 *.zip
+*.exe
+
+# ─── Test Artifacts ──────────────────────────────────────────
+test_capture.png
+test/e2e_capture.png
+
+# ─── Logs ────────────────────────────────────────────────────
+*.log
+
+# ─── OS / Editor ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
