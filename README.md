@@ -11,6 +11,8 @@
 
 *Kernel-level system control · Fused inference planning · OpenClaw compatible*
 
+[**中文文档 →**](docs/README_CN.md)
+
 </div>
 
 ---
