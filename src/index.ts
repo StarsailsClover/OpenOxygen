@@ -74,6 +74,24 @@ export { MemoryManager } from "./memory/lifecycle/index.js";
 // ─── Security ───────────────────────────────────────────────────────────────
 export { AuditTrail } from "./security/audit/index.js";
 export { checkPermission, assertPermission } from "./security/permissions/index.js";
+export {
+  RateLimiter,
+  validateGatewayBinding,
+  sanitizeGatewayUrl,
+  validateWebSocketOrigin,
+  sanitizeShellArg,
+  validateCommand,
+  sanitizeEnvironment,
+  detectPromptInjection,
+  sanitizeLogContent,
+  verifyPluginIntegrity,
+  computeFileHash,
+  auditPluginPermissions,
+  encryptSecret,
+  decryptSecret,
+  maskApiKey,
+  timingSafeEqual,
+} from "./security/hardening.js";
 
 // ─── Plugins ────────────────────────────────────────────────────────────────
 export { PluginRegistry, loadPlugins, runHooks } from "./plugins/loader/index.js";

@@ -1,20 +1,35 @@
 /**
- * OpenOxygen — Gateway Server
+ * OpenOxygen — Gateway Server (Hardened)
  *
- * HTTP/WebSocket 网关服务器，统一接入层。
- * 提供 REST API + WebSocket 实时通信。
- * 独立实现，接口协议兼容 OpenClaw Gateway。
+ * 安全加固版网关：
+ * - 速率限制 (防 ClawJacked 暴力破解)
+ * - Origin 校验 (防跨站 WebSocket 劫持)
+ * - 时间安全认证 (防计时攻击)
+ * - 绑定地址校验 (防公网暴露)
+ * - 请求体大小限制 (防 DoS)
+ * - 提示注入检测 (防日志投毒)
  */
 
-import type { Server as HttpServer } from "node:http";
+import type { Server as HttpServer, IncomingMessage } from "node:http";
 import { createServer } from "node:http";
 import process from "node:process";
 import { createSubsystemLogger } from "../../logging/index.js";
 import type { OxygenConfig, OxygenEvent, OxygenEventHandler } from "../../types/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
 import type { InferenceEngine, ChatMessage } from "../../inference/engine/index.js";
+import {
+  RateLimiter,
+  validateGatewayBinding,
+  timingSafeEqual,
+  detectPromptInjection,
+  sanitizeLogContent,
+} from "../../security/hardening.js";
 
 const log = createSubsystemLogger("gateway");
+
+// ─── Constants ──────────────────────────────────────────────────────────────
+
+const MAX_BODY_BYTES = 1024 * 1024; // 1 MB max request body
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -37,9 +52,10 @@ type RequestContext = {
   path: string;
   startTime: number;
   authenticated: boolean;
+  clientIp: string;
 };
 
-// ─── Auth ───────────────────────────────────────────────────────────────────
+// ─── Auth (timing-safe) ─────────────────────────────────────────────────────
 
 function validateAuth(
   config: OxygenConfig,
@@ -49,25 +65,42 @@ function validateAuth(
   if (auth.mode === "none") return true;
   if (!authHeader) return false;
 
-  if (auth.mode === "token") {
+  if (auth.mode === "token" && auth.token) {
     const token = authHeader.startsWith("Bearer ")
       ? authHeader.slice(7)
       : authHeader;
-    return token === auth.token;
+    return timingSafeEqual(token, auth.token);
   }
 
-  if (auth.mode === "password") {
+  if (auth.mode === "password" && auth.password) {
     if (!authHeader.startsWith("Basic ")) return false;
     try {
       const decoded = Buffer.from(authHeader.slice(6), "base64").toString("utf-8");
       const [, password] = decoded.split(":");
-      return password === auth.password;
+      return password ? timingSafeEqual(password, auth.password) : false;
     } catch {
       return false;
     }
   }
 
   return false;
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function getClientIp(req: IncomingMessage): string {
+  // 不信任 X-Forwarded-For（防止 IP 伪造）
+  return req.socket.remoteAddress ?? "unknown";
+}
+
+function respond(
+  res: import("node:http").ServerResponse,
+  status: number,
+  body: unknown,
+  headers?: Record<string, string>,
+): void {
+  res.writeHead(status, { "Content-Type": "application/json", ...headers });
+  res.end(JSON.stringify(body));
 }
 
 // ─── Server Factory ─────────────────────────────────────────────────────────
@@ -77,24 +110,52 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
   let server: HttpServer | null = null;
   let running = false;
 
+  // 初始化速率限制器
+  const rateLimiter = new RateLimiter(config.gateway.rateLimit);
+
+  // 定期清理速率限制记录
+  const cleanupInterval = setInterval(() => rateLimiter.cleanup(), 60_000);
+
   const emitEvent = (event: OxygenEvent) => {
     onEvent?.(event);
   };
 
   const httpServer = createServer(async (req, res) => {
+    const clientIp = getClientIp(req);
     const ctx: RequestContext = {
       requestId: generateId("req"),
       method: req.method ?? "GET",
-      path: req.url ?? "/",
+      path: req.url?.split("?")[0] ?? "/", // 剥离 query string（防 CVE-2026-25253）
       startTime: nowMs(),
       authenticated: false,
+      clientIp,
     };
 
-    // CORS
-    const origins = config.gateway.cors?.origins ?? ["*"];
-    res.setHeader("Access-Control-Allow-Origin", origins.join(","));
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    // ── 速率限制 ──────────────────────────────────────────────
+    const rateCheck = rateLimiter.check(clientIp);
+    if (!rateCheck.allowed) {
+      log.warn(`Rate limited: ${clientIp} — ${rateCheck.reason}`);
+      respond(res, 429, { error: rateCheck.reason }, {
+        "Retry-After": String(Math.ceil((rateCheck.retryAfterMs ?? 60000) / 1000)),
+      });
+      return;
+    }
+
+    // ── CORS（严格模式）──────────────────────────────────────
+    const allowedOrigins = config.gateway.cors?.origins ?? ["http://127.0.0.1", "http://localhost"];
+    const requestOrigin = req.headers.origin;
+    if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+      res.setHeader("Access-Control-Allow-Origin", requestOrigin);
+    }
+    // 不设置通配符 "*"，防止跨域攻击
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.setHeader("Access-Control-Max-Age", "3600");
+
+    // 安全响应头
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("Content-Security-Policy", "default-src 'none'");
 
     if (req.method === "OPTIONS") {
       res.writeHead(204);
@@ -102,35 +163,42 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
       return;
     }
 
-    // Auth (skip for health endpoint)
+    // ── 认证（跳过 /health）──────────────────────────────────
     if (ctx.path !== "/health") {
       ctx.authenticated = validateAuth(config, req.headers.authorization);
       if (!ctx.authenticated) {
-        res.writeHead(401, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "Unauthorized" }));
+        rateLimiter.recordAuthFailure(clientIp);
+        respond(res, 401, { error: "Unauthorized" });
         return;
       }
+      rateLimiter.resetAuthFailures(clientIp);
     }
 
-    // Parse body for POST/PUT
+    // ── 解析请求体（带大小限制）──────────────────────────────
     let body: unknown = null;
     if (req.method === "POST" || req.method === "PUT") {
       try {
         const chunks: Buffer[] = [];
+        let totalBytes = 0;
+
         for await (const chunk of req) {
+          totalBytes += (chunk as Buffer).length;
+          if (totalBytes > MAX_BODY_BYTES) {
+            respond(res, 413, { error: "Request body too large (max 1MB)" });
+            return;
+          }
           chunks.push(chunk as Buffer);
         }
+
         const raw = Buffer.concat(chunks).toString("utf-8");
         body = raw ? JSON.parse(raw) : null;
       } catch {
-        res.writeHead(400, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "Invalid JSON body" }));
+        respond(res, 400, { error: "Invalid JSON body" });
         return;
       }
     }
 
     try {
-      // ─── Route Dispatch ───────────────────────────────────────────
       const { method, path } = ctx;
 
       // GET /health
@@ -171,7 +239,7 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
         return;
       }
 
-      // POST /api/v1/chat — Main inference endpoint
+      // POST /api/v1/chat
       if (method === "POST" && path === "/api/v1/chat") {
         if (!inferenceEngine) {
           respond(res, 503, { error: "Inference engine not available" });
@@ -190,7 +258,6 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
           return;
         }
 
-        // Support both single message and full messages array
         let messages: ChatMessage[];
         if (chatBody.messages) {
           messages = chatBody.messages;
@@ -201,18 +268,41 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
           return;
         }
 
-        log.info(`Chat request ${ctx.requestId}: ${messages.length} messages, mode=${chatBody.mode ?? "auto"}`);
+        // ── 提示注入检测 ──────────────────────────────────────
+        for (const msg of messages) {
+          if (msg.role === "user" && msg.content) {
+            const injection = detectPromptInjection(msg.content);
+            if (injection.risk === "high") {
+              log.error(`Blocked high-risk prompt injection from ${clientIp}: ${injection.patterns.join(", ")}`);
+              emitEvent({
+                type: "security.violation",
+                entry: {
+                  id: generateId("audit"),
+                  timestamp: nowMs(),
+                  operation: "prompt.injection",
+                  actor: clientIp,
+                  target: "chat",
+                  severity: "critical",
+                  details: { patterns: injection.patterns },
+                  rollbackable: false,
+                },
+              });
+              respond(res, 400, {
+                error: "Request blocked: potentially harmful content detected",
+                risk: injection.risk,
+              });
+              return;
+            }
+          }
+        }
 
-        emitEvent({ type: "agent.message", agentId: "default", sessionKey: "main", content: messages[messages.length - 1]?.content ?? "" });
+        log.info(`Chat ${ctx.requestId} from ${clientIp}: ${messages.length} msgs, mode=${chatBody.mode ?? "auto"}`);
 
         const inferenceResult = await inferenceEngine.infer({
           messages,
           mode: chatBody.mode,
           systemPrompt: chatBody.systemPrompt,
         });
-
-        const elapsed = nowMs() - ctx.startTime;
-        log.info(`Chat response ${ctx.requestId}: ${inferenceResult.usage?.totalTokens ?? "?"} tokens in ${elapsed}ms`);
 
         respond(res, 200, {
           id: ctx.requestId,
@@ -227,7 +317,7 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
         return;
       }
 
-      // POST /api/v1/plan — Task planning endpoint
+      // POST /api/v1/plan
       if (method === "POST" && path === "/api/v1/plan") {
         if (!inferenceEngine) {
           respond(res, 503, { error: "Inference engine not available" });
@@ -240,18 +330,15 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
           return;
         }
 
-        // Import planner dynamically to avoid circular deps
         const { TaskPlanner } = await import("../../inference/planner/index.js");
         const planner = new TaskPlanner(inferenceEngine);
         const plan = await planner.generatePlan(planBody.goal, planBody.context);
 
         emitEvent({ type: "plan.created", planId: plan.id });
-
         respond(res, 200, plan);
         return;
       }
 
-      // 404
       respond(res, 404, { error: "Not found", path: ctx.path });
     } catch (err) {
       log.error(`Request ${ctx.requestId} failed:`, err);
@@ -268,10 +355,19 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
     },
     start: () =>
       new Promise<void>((resolve, reject) => {
+        // 绑定地址安全检查
+        const bindCheck = validateGatewayBinding(config.gateway.host, config.gateway.port);
+        if (!bindCheck.safe) {
+          const err = new Error(`Unsafe gateway binding: ${bindCheck.reason}`);
+          log.error(err.message);
+          reject(err);
+          return;
+        }
+
         httpServer.listen(config.gateway.port, config.gateway.host, () => {
           running = true;
           server = httpServer;
-          log.info(`Gateway started on ${config.gateway.host}:${config.gateway.port}`);
+          log.info(`Gateway started on ${config.gateway.host}:${config.gateway.port} (hardened)`);
           emitEvent({ type: "gateway.started", port: config.gateway.port });
           resolve();
         });
@@ -282,6 +378,7 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
       }),
     stop: () =>
       new Promise<void>((resolve) => {
+        clearInterval(cleanupInterval);
         if (!server) {
           resolve();
           return;
@@ -295,9 +392,4 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
         });
       }),
   };
-}
-
-function respond(res: import("node:http").ServerResponse, status: number, body: unknown): void {
-  res.writeHead(status, { "Content-Type": "application/json" });
-  res.end(JSON.stringify(body));
 }
