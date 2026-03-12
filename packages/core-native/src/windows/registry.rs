@@ -7,7 +7,7 @@ use windows::Win32::System::Registry::*;
 #[cfg(windows)]
 use windows::core::PCWSTR;
 
-use super::input::InputResult;
+use crate::input::InputResult;
 
 /// 读取注册表字符串值
 #[napi]

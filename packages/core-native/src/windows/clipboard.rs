@@ -11,7 +11,7 @@ use windows::Win32::Foundation::*;
 #[cfg(windows)]
 use windows::Win32::System::Memory::*;
 
-use super::input::InputResult;
+use crate::input::InputResult;
 
 /// 读取剪贴板文本
 #[napi]

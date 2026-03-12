@@ -1,14 +1,16 @@
 //! OpenOxygen Core Native — Rust 核心模块
 //!
 //! 通过 NAPI-RS 暴露给 Node.js/TypeScript 层：
-//! - windows: Win32 API 系统控制
-//! - vision: 图像处理与 UI 元素检测管道
+//! - input: 高级输入系统（SendInput + 虚拟驱动 + 平滑移动 + 提权）
+//! - windows: Win32 API 系统控制（截图、窗口、进程、注册表、剪贴板）
+//! - vision: 三层视觉管道（UI Automation + 图像处理 + 视觉模型接口）
 //! - memory: SIMD 加速向量检索
 //! - sandbox: 进程级隔离执行
 
 #[macro_use]
 extern crate napi_derive;
 
+pub mod input;
 pub mod memory;
 pub mod sandbox;
 pub mod vision;

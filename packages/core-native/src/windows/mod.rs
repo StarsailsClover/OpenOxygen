@@ -5,7 +5,7 @@
 
 pub mod capture;
 pub mod clipboard;
-pub mod input;
 pub mod process;
 pub mod registry;
 pub mod window;
+// 注意：input 模块已迁移到顶层 src/input/，提供更强大的输入系统
