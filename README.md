@@ -27,11 +27,12 @@ It is **interface-compatible** with [OpenClaw](https://github.com/openclaw/openc
 
 | Metric | Value |
 |--------|-------|
-| Screen capture (2048 × 1152) | **103 ms** (Win32 BitBlt) |
-| Vector search (1 000 docs) | **< 1 ms** (SIMD) |
+| Screen capture (2048 × 1152) | **85 ms** (Win32 BitBlt) |
+| Vector search (1 000 × 128-dim) | **45 ms** (SIMD) |
 | Inference round-trip | **~120 ms** (Gateway → LLM → Response) |
-| Integration tests | **42 / 42 passing** |
-| Native binary size | **6.16 MB** (release + LTO) |
+| UI element detection | **86 elements < 50 ms** (UI Automation) |
+| Integration tests | **130 / 130 passing** (e2e + security + llm) |
+| Native binary size | **6.27 MB** (release + LTO) |
 
 ---
 

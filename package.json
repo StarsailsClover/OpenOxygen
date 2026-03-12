@@ -1,6 +1,6 @@
 {
   "name": "openoxygen",
-  "version": "0.1.0",
+  "version": "26w11aB",
   "description": "Windows-native Agent deployment framework with OpenClaw ecosystem compatibility, kernel-level system control, and fused inference planning",
   "keywords": ["agent", "ai", "windows", "openclaw-compatible", "vision", "inference"],
   "homepage": "https://github.com/openoxygen/openoxygen#readme",
