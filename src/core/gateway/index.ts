@@ -24,6 +24,7 @@ import {
   detectPromptInjection,
   sanitizeLogContent,
 } from "../../security/hardening.js";
+import { DASHBOARD_HTML } from "../../dashboard/index.js";
 
 const log = createSubsystemLogger("gateway");
 
@@ -204,6 +205,13 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
       // GET /health
       if (method === "GET" && path === "/health") {
         respond(res, 200, { status: "ok", timestamp: nowMs(), version: "0.1.0" });
+        return;
+      }
+
+      // GET / — Dashboard
+      if (method === "GET" && (path === "/" || path === "/dashboard")) {
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+        res.end(DASHBOARD_HTML);
         return;
       }
 
