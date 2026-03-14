@@ -1,4 +1,4 @@
-/**
+﻿/**
  * OpenOxygen — Dependency Security Manager (26w11aE)
  *
  * 针对 risks.md 供应链风险的加固实现：
@@ -113,7 +113,7 @@ export async function auditDependencies(projectPath?: string): Promise<{
         package: pkg,
         installed: ver,
         cve,
-        severity,
+        severity: severity as DependencyViolation["severity"],
         message: `${pkg}@${ver} 受 ${cve} 影响`,
       });
     }
@@ -151,7 +151,7 @@ export function validatePluginDependencies(skillPath: string): {
   const content = readFileSync(requirementsPath, "utf-8");
   const deps = content
     .split("\n")
-    .map(l => l.split("==")[0].split(">=")[0].split("<=")[0].trim())
+    .map(l => (l.split("==")[0] ?? "").split(">=")[0]?.split("<=")[0]?.trim() ?? "")
     .filter(l => l && !l.startsWith("#"));
 
   const violations: string[] = [];
@@ -266,3 +266,4 @@ export type DependencyViolation = {
   required?: string;
   cve?: string;
 };
+

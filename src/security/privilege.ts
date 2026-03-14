@@ -35,8 +35,8 @@ export function detectPrivilegeLevel(): PrivilegeStatus {
   if (platform() !== "win32") {
     // 非 Windows 平台简化处理
     return {
-      level: process.getuid?.() === 0 ? "admin" : "user",
-      isElevated: process.getuid?.() === 0 ?? false,
+      level: (process.getuid?.() === 0 ? "admin" : "user") as PrivilegeLevel,
+      isElevated: process.getuid?.() === 0,
       canEscalate: false,
       username: process.env.USER || "unknown",
       domain: "",
@@ -46,7 +46,7 @@ export function detectPrivilegeLevel(): PrivilegeStatus {
   try {
     // Windows: 使用 whoami 和 net session 检测
     const username = execSync("whoami", { encoding: "utf-8" }).trim();
-    const [domain, user] = username.includes("\\") ? username.split("\\") : ["", username];
+    const [domain = "", user = "unknown"] = username.includes("\\") ? username.split("\\") : ["", username];
     
     let isElevated = false;
     let level: PrivilegeLevel = "user";
@@ -252,8 +252,8 @@ export function dropPrivileges(targetUser?: string): boolean {
         // 获取用户 UID（简化处理）
         const { uid, gid } = getUserIds(user);
         
-        process.setgid(gid);
-        process.setuid(uid);
+      process.setgid?.(gid);
+      process.setuid?.(uid);
         
         log.info(`Dropped privileges to ${user} (uid=${uid}, gid=${gid})`);
         return true;
