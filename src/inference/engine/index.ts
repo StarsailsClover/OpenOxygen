@@ -151,15 +151,26 @@ async function callOpenAICompatible(
   const data = (await response.json()) as {
     id: string;
     choices: Array<{
-      message: { content?: string; tool_calls?: ToolCallRequest[] };
+      message: { content?: string; reasoning?: string; tool_calls?: ToolCallRequest[] };
     }>;
     usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
   };
 
   const choice = data.choices[0];
+  // Qwen3 thinking 模式：content 可能为空，实际内容在 reasoning 字段
+  const rawContent = choice?.message.content || "";
+  const reasoning = choice?.message.reasoning || "";
+  // 优先使用 content，如果为空则从 reasoning 提取最终答案
+  let finalContent = rawContent;
+  if (!finalContent && reasoning) {
+    // 尝试提取 reasoning 中最后一段作为答案
+    const lines = reasoning.split("\n").filter((l: string) => l.trim().length > 0);
+    finalContent = lines[lines.length - 1] || reasoning.slice(0, 500);
+  }
+
   return {
     id: data.id ?? generateId("inf"),
-    content: choice?.message.content ?? "",
+    content: finalContent,
     toolCalls: choice?.message.tool_calls,
     usage: data.usage
       ? {

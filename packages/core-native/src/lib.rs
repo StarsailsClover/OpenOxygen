@@ -10,7 +10,7 @@
 #[macro_use]
 extern crate napi_derive;
 
-pub mod db;
+// pub mod db;  // Disabled: requires rocksdb C++ build tools
 pub mod inference;
 pub mod input;
 pub mod memory;

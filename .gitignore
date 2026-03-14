@@ -24,6 +24,11 @@ _reference/
 # ─── Test Artifacts ──────────────────────────────────────────
 test_capture.png
 test/e2e_capture.png
+test/p3_test.png
+test/p3_compress.png
+test/results/
+.state/screenshots/
+.state/bilibili_test.png
 
 # ─── Logs ────────────────────────────────────────────────────
 *.log
@@ -36,3 +41,4 @@ Thumbs.db
 *.swp
 *.swo
 /.ollama
+2603141948.md
