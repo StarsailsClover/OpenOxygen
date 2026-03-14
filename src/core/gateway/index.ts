@@ -1,4 +1,4 @@
-/**
+﻿/**
  * OpenOxygen — Gateway Server (Hardened)
  *
  * 安全加固版网关：
@@ -45,6 +45,7 @@ export type GatewayServer = {
   stop: () => Promise<void>;
   readonly port: number;
   readonly isRunning: boolean;
+  readonly httpServer: import("node:http").Server | null;
 };
 
 type RequestContext = {
@@ -361,6 +362,9 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
     get isRunning() {
       return running;
     },
+    get httpServer() {
+      return server;
+    },
     start: () =>
       new Promise<void>((resolve, reject) => {
         // 绑定地址安全检查
@@ -401,3 +405,5 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
       }),
   };
 }
+
+

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * OpenOxygen — Main Entry Point
  *
  * CLI 入口：解析命令行参数，启动 Gateway 服务器。
@@ -20,6 +20,7 @@ import { enableConsoleCapture, initLogLevelFromEnv } from "./logging/index.js";
 import { assertSupportedRuntime, defaultRuntime, installGlobalErrorHandlers } from "./core/runtime/index.js";
 import { loadConfig, loadDotEnv } from "./core/config/index.js";
 import { createGatewayServer } from "./core/gateway/index.js";
+import { RealtimeChannel } from "./core/ws/index.js";
 import { InferenceEngine } from "./inference/engine/index.js";
 import { ModelRouter } from "./inference/router/index.js";
 import { TaskPlanner } from "./inference/planner/index.js";
@@ -107,6 +108,13 @@ async function bootstrap(): Promise<void> {
   const gateway = createGatewayServer({ config, inferenceEngine, onEvent: handleEvent });
   await gateway.start();
 
+
+  // 6b. WebSocket realtime channel
+  const wsChannel = new RealtimeChannel(inferenceEngine);
+  if (gateway.httpServer) {
+    wsChannel.attach(gateway.httpServer);
+    log.info("WebSocket attached at /ws");
+  }
   // 7. Start vision monitoring if enabled
   if (config.vision.enabled) {
     vision.startMonitoring();
@@ -200,3 +208,4 @@ function deepMergeConfig(base: OxygenConfig, overrides: Partial<OxygenConfig>): 
     plugins: [...base.plugins, ...(overrides.plugins ?? [])],
   };
 }
+
