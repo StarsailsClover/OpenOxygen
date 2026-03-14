@@ -10,6 +10,8 @@
 #[macro_use]
 extern crate napi_derive;
 
+pub mod db;
+pub mod inference;
 pub mod input;
 pub mod memory;
 pub mod sandbox;
