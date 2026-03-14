@@ -2,61 +2,42 @@
 
 <div align="center">
 
-**Windows 原生 AI Agent 框架**
+**下一代 Windows 原生 AI Agent 框架**
 
-*内核级系统控制 · 融合推理规划 · OpenClaw 兼容*
+*超越 OpenClaw · 内核级控制 · 多模型融合 · 零信任安全*
+
+[English](../README.md) · [API 参考](API.md) · [路线图](../ROADMAP_26w11aE.md) · [更新日志](../CHANGELOG.md)
 
 </div>
 
 ---
 
-## 简介
+## 为什么选择 OpenOxygen？
 
-OpenOxygen 是一个从零构建的 Windows 原生 AI Agent 部署框架。它将 **Rust 原生核心**（Win32 API、SIMD 向量检索、图像处理）与 **TypeScript 应用层**（推理引擎、任务规划、插件系统）结合，让大语言模型能够安全地控制操作系统。
+OpenOxygen 不是 OpenClaw 的分支或封装，而是从零构建的**下一代** AI Agent 框架，在每个维度全面超越：
 
-与 [OpenClaw](https://github.com/openclaw/openclaw) 接口兼容——现有的 skills、插件和 LLM 配置可以零代码迁移。
+| | OpenClaw | OpenOxygen |
+|---|---------|------------|
+| **核心** | Python 解释器 | Rust 原生 + SIMD |
+| **速度** | ~500ms 推理 | **21ms** 推理 |
+| **视觉** | 基础截图 | 三层融合 (UIA + CV + VLM) |
+| **输入** | SendKeys | 签名序列 + 人类相似度评分 |
+| **安全** | 基础认证 | 零信任 + CVE 加固 + 审计链 |
+| **模型** | 单模型 | 多模型集群 + 共识推理 |
 
-### 核心指标
+我们保留 OpenClaw 接口兼容以便迁移，但架构完全独立。
 
-| 指标 | 数值 |
-|------|------|
-| 屏幕截图 (2048×1152) | **103 ms** (Win32 BitBlt) |
-| 向量检索 (1000 文档) | **< 1 ms** (SIMD) |
-| 推理往返 | **~120 ms** (Gateway → LLM → 响应) |
-| UI 元素检测 | **181 个元素 < 50ms** (UI Automation) |
-| 集成测试 | **42/42 通过** |
-| 安全测试 | **47/47 通过** |
-| 原生二进制大小 | **6.22 MB** (release + LTO) |
+### 性能指标
 
----
-
-## 架构
-
-```
-Gateway (:4800)
-    │
-    ├── 推理引擎 ─── 多模型路由器
-    │       │         (OpenAI / Anthropic / Gemini / Ollama / StepFun)
-    │       ├── 任务规划器
-    │       └── 反思引擎
-    │
-    ├── 执行层
-    │       ├── Windows 控制  ← Rust (Win32 API)
-    │       ├── OxygenUltraVision 视觉引擎
-    │       │     ├── UI Automation (精确层，标准控件 100% 准确)
-    │       │     ├── 图像处理 (快速层，Sobel/连通域/模板匹配)
-    │       │     └── 视觉大模型 (理解层，语义级屏幕理解)
-    │       └── 沙箱
-    │
-    ├── 记忆系统
-    │       ├── 向量存储  ← Rust (SIMD 余弦相似度)
-    │       └── BM25 + 生命周期管理
-    │
-    └── 安全系统
-            ├── 审计日志
-            ├── 权限系统 (最小 / 标准 / 提升)
-            └── 安全加固 (防 CVE-2026-25253 / ClawJacked 等)
-```
+| 指标 | 数值 | 方法 |
+|------|------|------|
+| 推理往返 | **21 ms** | Gateway → Engine → LLM |
+| 屏幕截图 | **85 ms** | Win32 BitBlt (2048×1152) |
+| UI 元素检测 | **253 个** | Win32 UI Automation |
+| 向量检索 | **14 ms** | SIMD 余弦相似度 (1000×128维) |
+| 人类相似度 | **81/100** | 时序 + 运动 + 模式分析 |
+| 安全测试 | **47/47** | CVE + 注入 + 重放 |
+| 总测试 | **130+** | E2E + 安全 + P1-P4 |
 
 ---
 
@@ -64,206 +45,115 @@ Gateway (:4800)
 
 ### 环境要求
 
-| 工具 | 版本 | 必需 |
-|------|------|------|
-| Windows | 10/11 x64 | ✅ |
-| Node.js | ≥ 22 | ✅ |
-| Rust | ≥ 1.82 | 构建原生模块时需要 |
-| Ollama | 任意版本 | 本地 LLM 时需要 |
+- **Windows 10/11** (x64)
+- **Node.js 22+**
+- **Rust 1.82+**（构建原生模块）
+- **Ollama**（可选，本地 LLM）
 
-### 安装与运行
+### 安装
 
 ```bash
-git clone https://github.com/ND-SailsIsHere/OpenOxygen.git
+git clone https://github.com/StarsailsClover/OpenOxygen.git
 cd OpenOxygen
-
-npm install                    # 安装 JS 依赖
-npm run build:native           # 编译 Rust → .node
-npm run build:ts               # 编译 TypeScript → dist/
-
-# 配置（编辑模型、网关端口等）
+npm install
+npm run build:native    # Rust → .node
+npm run build:ts        # TypeScript → dist/
 cp .env.example .env
-
-# 启动
 npm start
 ```
 
-网关将在 **http://127.0.0.1:4800** 上监听。
-
-### 验证
+### 本地模型
 
 ```bash
-curl http://127.0.0.1:4800/health
-# → {"status":"ok","version":"0.1.0"}
-```
-
----
-
-## 使用本地 LLM
-
-```bash
-# 1. 安装 Ollama → https://ollama.com
-# 2. 拉取模型
-ollama pull qwen3:4b
-
-# 3. openoxygen.json 已配置指向 localhost:11434，直接启动即可
+ollama pull qwen3:4b        # 2.5GB — 快速查询
+ollama pull qwen3-vl:4b     # 3.3GB — 视觉任务
+ollama pull gpt-oss:20b     # 13GB  — 深度推理
 npm start
 ```
 
-无需修改代码，推理引擎会自动检测 Ollama 的 OpenAI 兼容端点。
+路由器会根据任务自动选择最优模型。
 
 ---
 
-## OxygenUltraVision 视觉引擎
+## 核心功能
 
-OpenOxygen 的视觉系统采用三层架构：
+### OxygenUltraVision 三层视觉引擎
 
-### 第一层：UI Automation（精确层）
+| 层级 | 技术 | 速度 | 准确率 |
+|------|------|------|--------|
+| 1. UI Automation | Win32 IUIAutomation COM | <50ms | 100%（标准控件）|
+| 2. 图像处理 | Rust Sobel + 连通域分析 | <200ms | ~80% |
+| 3. 视觉大模型 | qwen3-vl:4b | ~500ms | ~85% |
 
-通过 Windows UI Automation COM 接口直接获取所有标准 UI 控件的精确信息：
+三层结果融合为统一的 `ScreenAnalysis`，去重后提供精确的交互建议。
 
-```javascript
-const native = require("@openoxygen/core-native");
+### 签名输入序列
 
-// 获取所有 UI 元素（类型、名称、坐标、尺寸、状态）
-const elements = native.getUiElements(null);
-// → 181 个元素，< 50ms
-
-// 获取鼠标位置处的元素
-const elem = native.getElementAtPoint(500, 300);
-// → [Button] "确定" @ (480, 290, 80x30)
-
-// 获取当前焦点元素
-const focused = native.getFocusedElement();
+```typescript
+const mgr = new SignedInputManager({ secretKey: "..." });
+const seq = mgr.createSequence([
+  { type: "move", params: { x: 400, y: 300 } },
+  { type: "click", params: { x: 400, y: 300 } },
+]);
+// HMAC-SHA256 签名，Nonce 防重放，时间窗口过期
+await mgr.execute(seq, executor);
 ```
 
-**优势**：100% 准确、零视觉模型开销、支持所有标准 Win32/WPF/UWP 控件。
+### AI 思考集群
 
-### 第二层：图像处理（快速层）
+多模型共识推理：
+- **ThoughtRouter**：将子任务路由到最优模型
+- **ConsensusEngine**：加权投票融合多模型输出
+- **ReflectionLoop**：迭代反思优化（最多 3 轮）
 
-Rust 原生实现的高性能图像算法：
+### 安全体系
 
-- **Sobel 边缘检测** + Otsu 自适应阈值
-- **连通域分析** — 自动分类 UI 区域（按钮/输入框/图标/面板）
-- **模板匹配** — NCC 归一化互相关 + 非极大值抑制
-- **差异检测** — 像素级屏幕变化监控
-
-### 第三层：视觉大模型（理解层）
-
-当 LLM 调用 OUV API 时，系统会：
-1. 截取屏幕 → Rust BitBlt (103ms)
-2. UI Automation 获取控件树 → 结构化 JSON
-3. 图像预处理 → 缩放到适合模型的分辨率
-4. 发送给视觉模型 → 语义级理解
-5. 融合三层结果 → 精确的交互建议
+| 威胁 | 防御 |
+|------|------|
+| CVE-2026-25253 (URL 注入) | Query string 剥离，绑定校验 |
+| ClawJacked (WS 劫持) | Origin 白名单，速率限制，时序安全认证 |
+| 命令注入 | Shell 元字符过滤，命令黑名单 |
+| 提示注入 | 三级检测，高风险拦截 |
+| 供应链投毒 | SHA-256 完整性，依赖审计 |
+| 凭证泄露 | AES-256-GCM 加密，API Key 遮蔽 |
+| 输入重放 | Nonce 注册表，HMAC 签名 |
+| 鼠标锁定 | 安全守卫，自动释放，紧急停止 |
 
 ---
 
-## 安全加固
+## 开发进度 (26w11aE)
 
-OpenOxygen 针对 OpenClaw 所有已知漏洞进行了全面防护：
-
-| 漏洞 | CVSS | OpenOxygen 防护 |
-|------|------|----------------|
-| **CVE-2026-25253** | 9.8 | 禁止外部覆盖 gateway 地址、绑定校验 |
-| **ClawJacked** | 高 | Origin 白名单、速率限制、认证失败自动封禁 |
-| **CVE-2026-24763** | 高 | 环境变量净化、命令黑名单、shell 元字符过滤 |
-| **CVE-2026-25593** | 高 | 三级提示注入检测、高风险请求拦截 |
-| **供应链投毒** | 高 | SHA-256 完整性校验、权限声明审计 |
-| **凭证明文** | 中 | AES-256-GCM 内存加密、日志遮蔽 |
+| 阶段 | 状态 | 核心交付 |
+|------|------|----------|
+| P1: 安全基础 | ✅ | CVE 加固、AI 集群、异步算力栈 |
+| P2: 多模型运行时 | ✅ | 三模型配置、动态路由 |
+| P3: 视觉语言融合 | ✅ | OUV v2 融合、Tokenizer |
+| P4: 输入系统硬化 | ✅ | 签名序列、人类评分、DPI |
+| P5: 持久化存储 | 🔄 | RocksDB 向量存储 |
+| P6: 分布式网关 | ⏳ | Gateway 集群 |
+| P7: 插件市场 | ⏳ | 插件生态 |
+| P8: GUI 仪表盘 | ⏳ | 桌面应用 |
+| P9: 正式发布 | ⏳ | v26w11aE Release |
 
 ---
 
 ## API 参考
 
-完整 API 文档请参见 [API.md](API.md)。
-
-### 主要端点
-
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | `GET` | `/health` | 健康检查 |
 | `GET` | `/api/v1/status` | 系统状态 |
-| `GET` | `/api/v1/agents` | Agent 列表 |
 | `GET` | `/api/v1/models` | 模型列表 |
 | `POST` | `/api/v1/chat` | 对话推理 |
 | `POST` | `/api/v1/plan` | 任务规划 |
 
-### 对话示例
-
-```bash
-curl -X POST http://127.0.0.1:4800/api/v1/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message":"帮我整理桌面文件","mode":"deep"}'
-```
+完整 API 文档见 [API.md](API.md)。
 
 ---
 
-## 插件开发
+## 紧急恢复
 
-```typescript
-import { definePlugin } from "openoxygen/plugin-sdk";
-
-export default definePlugin()
-  .setManifest({ name: "my-plugin", version: "1.0.0", entryPoint: "index.js" })
-  .addTool({
-    name: "greet",
-    description: "打招呼",
-    parameters: { type: "object", properties: { name: { type: "string" } } },
-    execute: async (params) => ({
-      success: true,
-      output: `你好，${params.name}！`,
-      durationMs: 1,
-    }),
-  })
-  .build();
-```
-
----
-
-## OpenClaw 兼容
-
-在 `openoxygen.json` 中添加：
-
-```json
-{
-  "compat": {
-    "openclaw": {
-      "enabled": true,
-      "configPath": "~/.openclaw/openclaw.json"
-    }
-  }
-}
-```
-
-OpenOxygen 会自动转译 OpenClaw 配置、加载其 skills 并适配插件协议。
-
----
-
-## 技术栈
-
-| 层级 | 技术 | 用途 |
-|------|------|------|
-| **原生层** | Rust 1.94 + NAPI-RS | Win32 API、SIMD 向量、图像处理、UI Automation |
-| **应用层** | TypeScript 5.7 + Node.js 22 | 推理引擎、Gateway、插件系统 |
-| **推理** | OpenAI-compatible API | 多 Provider 统一接口 |
-| **安全** | AES-256-GCM + SHA-256 | 凭证加密、完整性校验 |
-
----
-
-## 路线图
-
-- [x] Rust 原生核心 (Win32, SIMD, 图像, 沙箱)
-- [x] 多 Provider 推理引擎
-- [x] 任务规划 + 反思循环
-- [x] OpenClaw 兼容层
-- [x] 安全加固 (47/47 测试通过)
-- [x] UI Automation 精确控件检测
-- [x] 连通域分析 + 模板匹配
-- [ ] WebSocket 流式传输
-- [ ] 插件市场
-- [ ] GUI 仪表盘
-- [ ] macOS / Linux 支持
+如果鼠标/键盘被锁定，参见 [EMERGENCY_RECOVER.md](../EMERGENCY_RECOVER.md)。
 
 ---
 
