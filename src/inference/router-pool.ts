@@ -1,15 +1,18 @@
-/**
+﻿/**
  * OpenOxygen — Model Router with Pool Integration (26w11aE_P2)
  *
  * 整合 ModelProcessPool 的动态路由
  */
 
-import { createSubsystemLogger } from "../../logging/index.js";
-import type { ModelConfig, InferenceMode } from "../../types/index.js";
-import type { ChatMessage } from "../engine/index.js";
-import { ModelProcessPool, ModelRequest } from "../pool/index.js";
+import { createSubsystemLogger } from "../logging/index.js";
+import type { ModelConfig, InferenceMode } from "../types/index.js";
+import type { ChatMessage } from "./engine/index.js";
 
 const log = createSubsystemLogger("inference/router-pool");
+
+export type ModelRequest = {
+  messages: ChatMessage[];
+};
 
 export interface RoutingDecision {
   model: string;
@@ -127,9 +130,9 @@ export class PoolIntegratedRouter {
   }
 
   /**
-   * 执行推理
+   * 执行推理（直接调用）
    */
-  async infer(decision: RoutingDecision, request: ModelRequest): Promise<{
+  async infer(decision: RoutingDecision, request: { messages: ChatMessage[] }): Promise<{
     success: boolean;
     data?: unknown;
     error?: string;
@@ -137,16 +140,22 @@ export class PoolIntegratedRouter {
   }> {
     const start = Date.now();
 
-    // 确保模型已启动
-    await this.pool.startModel(decision.model);
+    try {
+      // 直接通过 fetch 调用 Ollama
+      const config = this.modelConfigs.get(decision.model);
+      if (!config) throw new Error(`Model ${decision.model} not configured`);
 
-    // 执行推理
-    const result = await this.pool.infer(decision.model, request);
+      const response = await fetch(`${config.baseUrl}/chat/completions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` },
+        body: JSON.stringify({ model: decision.model, messages: request.messages }),
+      });
 
-    return {
-      ...result,
-      latency: Date.now() - start,
-    };
+      const data = await response.json();
+      return { success: response.ok, data, latency: Date.now() - start };
+    } catch (err) {
+      return { success: false, error: String(err), latency: Date.now() - start };
+    }
   }
 
   private assessComplexity(instruction: string): number {
@@ -178,3 +187,5 @@ export class PoolIntegratedRouter {
     return 500;
   }
 }
+
+

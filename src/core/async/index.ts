@@ -56,7 +56,7 @@ export interface ResourceHints {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export class ThreadPool {
-  private workers: Worker[] = [];
+  private workers: unknown[] = [];
   private taskQueue: ComputeTask[] = [];
   private runningTasks = new Map<string, AbortController>();
   private maxConcurrency: number;
@@ -197,7 +197,7 @@ export class GPUDispatcher {
     }
 
     // 默认选择第一个可用设备
-    return available[0];
+    return available[0] || null;
   }
 
   /**

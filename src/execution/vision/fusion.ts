@@ -177,8 +177,8 @@ export class VisionLanguageFusion {
     }
 
     try {
-      const compressed = this.native.compressScreenshot(screenshotPath, 896, 85);
-      const base64 = this.native.imageToBase64(compressed.data);
+      const compressed = (this.native as any).compressScreenshot(screenshotPath, 896, 85);
+      const base64 = (this.native as any).imageToBase64(compressed.data);
       return {
         base64,
         width: compressed.compressedWidth,

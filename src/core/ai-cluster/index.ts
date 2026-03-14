@@ -66,7 +66,7 @@ export class ThoughtRouter {
    */
   analyzeComplexity(task: string): {
     strategy: "single" | "parallel" | "iterative";
-    roles: Array<"reasoner" | "critic" | "synthesizer">;
+    roles: Array<"reasoner" | "critic" | "synthesizer" | "verifier">;
     estimatedSteps: number;
   } {
     const lower = task.toLowerCase();

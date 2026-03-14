@@ -11,6 +11,7 @@ import { createSubsystemLogger } from "../logging/index.js";
 import { execSync } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
+// @ts-ignore — semver has no types
 import semver from "semver";
 
 const log = createSubsystemLogger("security/deps");
