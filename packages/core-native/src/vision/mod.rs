@@ -8,7 +8,7 @@
 //! 高性能图像操作：裁剪、缩放、灰度化、边缘检测、差异比较、
 //! 连通域分析、自适应阈值、模板匹配。
 
-pub mod mod;
+pub mod tokenizer;
 pub mod ui_automation;
 pub mod ui_automation_fast;
 

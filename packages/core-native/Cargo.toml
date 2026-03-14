@@ -37,7 +37,8 @@ windows = { version = "0.58", features = [
 ] }
 
 # Image processing
-image = { version = "0.25", features = ["png", "jpeg"] }
+image = { version = "0.25", features = ["png", "jpeg", "webp"] }
+base64 = "0.22"
 
 # System info
 sysinfo = "0.33"
@@ -66,8 +67,8 @@ tempfile = "3"
 # 26w11D: High-performance HTTP client
 reqwest = { version = "0.12", features = ["blocking", "json"] }
 
-# 26w11D: Persistent storage
-rocksdb = { version = "0.23", features = ["lz4"] }
+# 26w11D: Persistent storage (disabled for now - requires C++ build tools)
+# rocksdb = { version = "0.23", features = ["lz4"] }
 
 # 26w11D: Async utilities
 futures = "0.3"
