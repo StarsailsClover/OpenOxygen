@@ -47,6 +47,24 @@ All notable changes to OpenOxygen are documented here.
 - 任务间窗口隔离仍不够 → 需在每个任务开始时强制关闭无关窗口/对话框
 - LLM 反思引擎偶尔返回空 → 可能是 qwen3:4b thinking 模式消耗了所有 token
 
+### Round 5 Scaled Training — 10 Tasks (26w13a-training-r5.mjs)
+
+**7/10 success, 3/10 partial — best round, largest scale**
+
+- **T1 计算器: ✅** (26.7s) — Win键→搜索→打开→123+456=579→Alt+F4 完美闭环
+- **T2 Bilibili VLM: ⚠️** (47.8s) — URL搜索到达但 VLM 返回空（Ollama 偶发超时）
+- **T3 Gmail: ✅** (42.8s) — 收件箱→打开邮件→读取内容→返回
+- **T4 VS Code: ⚠️** (48.0s) — 代码粘贴成功但保存对话框处理仍有边界情况
+- **T5 微信: ✅** (8.0s) — 24 UIA 元素，VLM 完整描述界面布局（联系人/聊天/搜索）
+- **T6 Steam: ✅** (7.6s) — VLM 识别下载页面，Counter-Strike 2 可见
+- **T7 百度: ⚠️** (39.0s) — 搜索结果页加载但 VLM 坐标提取失败
+- **T8 豆包: ✅** (89.0s) — 3轮深度技术对话 + gpt-oss:20b 评估
+- **T9 系统快捷键: ✅** (29.1s) — Alt+Tab(10窗口)、Win+Tab(任务视图)、Win+D(桌面) 全部成功
+- **T10 文件管理器: ✅** (16.3s) — Win+E→导航到test文件夹→VLM确认文件列表→关闭
+
+**New apps covered: 计算器, 微信(WeChatAppEx.exe), Steam(steamwebhelper.exe), 文件资源管理器**
+**Memory: 29 experiences, 11 apps, 44 element types**
+
 ### Round 4 VLM-Driven Training (26w13a-training-r4.mjs)
 
 **Breakthrough: qwen3-vl:4b real screenshot analysis integrated.**
