@@ -47,6 +47,26 @@ All notable changes to OpenOxygen are documented here.
 - 任务间窗口隔离仍不够 → 需在每个任务开始时强制关闭无关窗口/对话框
 - LLM 反思引擎偶尔返回空 → 可能是 qwen3:4b thinking 模式消耗了所有 token
 
+### Round 4 VLM-Driven Training (26w13a-training-r4.mjs)
+
+**Breakthrough: qwen3-vl:4b real screenshot analysis integrated.**
+
+- VLM `/no_think` mode: 5s per screenshot analysis, accurate element identification
+- `vlmAnalyze`: screenshot → base64 → qwen3-vl → description
+- `vlmLocate`: VLM returns pixel coordinates for web elements (UIA can't see)
+- `vlmVerify`: screenshot → VLM confirms operation success/failure
+- Win key fix: `win+d` (show desktop) → `win` (open start menu) — solves focus issue
+- Strict window isolation: `cleanSlate()` closes all browsers before each task
+
+**Results: 3/5 success, 2/5 partial (best round yet)**
+- **T1 系统搜索: ✅ success** (33.6s) — Win键→搜索→记事本→写入→Ctrl+S→Alt+F4 完整闭环
+- **T2 Bilibili VLM: ⚠️ partial** — VLM 正确识别首页布局但坐标提取不稳定，URL 搜索 fallback 到了错误页面
+- **T3 Gmail: ✅ success** (33.4s) — VLM 判断登录状态→用户接管→收件箱→打开邮件→读取主题
+- **T4 VS Code: ⚠️ partial** — 保存对话框仍然干扰（VS Code 打开了旧的保存对话框而非新文件）
+- **T5 豆包3轮对话: ✅ success** (78.8s) — 3轮深度对话 + gpt-oss:20b 评估
+
+**Memory: 19 experiences, 7 apps, 44 element types**
+
 ### Round 3 Deep Training (26w13a-training-r3.mjs)
 
 **Architecture upgrades:**
