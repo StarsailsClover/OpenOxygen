@@ -47,6 +47,31 @@ All notable changes to OpenOxygen are documented here.
 - 任务间窗口隔离仍不够 → 需在每个任务开始时强制关闭无关窗口/对话框
 - LLM 反思引擎偶尔返回空 → 可能是 qwen3:4b thinking 模式消耗了所有 token
 
+### Round 3 Deep Training (26w13a-training-r3.mjs)
+
+**Architecture upgrades:**
+- Multi-AI collaboration: `fastThink` (qwen3:4b) + `deepThink` (gpt-oss:20b) + `clusterThink` (3-phase)
+- `verifyAndRetry`: 操作后验证结果，失败自动重试（最多3次）
+- `locateWebElement`: 浏览器内元素用 LLM 集群推理坐标（UIA 只能看到浏览器框架，看不到网页内容）
+- `sanitize`: 手机号/邮箱/银行卡/身份证自动脱敏
+- VS Code 代码整块剪贴板粘贴（避免自动补全干扰）
+- 系统快捷键：Win键打开开始菜单、Alt+F4关闭、Ctrl+S保存
+
+**Task results:**
+- **T1 系统搜索**: fail — Win键发送成功但开始菜单未在截图中显示，记事本未打开（可能是焦点问题）
+- **T2 Bilibili 深度**: partial — URL 直接搜索方式可行，但 navigateTo 输入被之前的内容干扰，最终到达了错误的视频页
+- **T3 Gmail**: partial — Gmail 页面未加载（前序 bilibili 视频页仍在前台），反思引擎正确识别了问题
+- **T4 VS Code**: partial — 保存对话框仍有问题（VS Code 的保存对话框与 Notepad 不同）
+- **T5 豆包深度对话**: **success** — 2轮深度对话成功！豆包回复"看屏幕操作软件是AI Agent最难落地的场景"
+
+**Key discovery: UIA 无法看到网页内容**
+- Chrome UIA 只暴露浏览器框架控件（标签栏、地址栏、任务栏搜索按钮）
+- bilibili/百度等网页内的搜索框、按钮、链接对 UIA 完全不可见
+- 必须用 VLM 视觉定位或 URL 直接导航方式操作网页
+- "游戏中心" bug 原因：UIA 匹配"搜索"时命中了 Windows 任务栏的 SearchButton(y=1112)，不是 bilibili 页面内元素
+
+**Memory: 14 experiences, 6 apps, 44 element types**
+
 ### Infrastructure Tests (P1-P4)
 - P1 Browser: 12/12 sites pass (Chrome + Edge, 中英文网站)
 - P2 Software: 2/2 available pass (Notepad 96 UIA, VS Code 55 UIA), 6 skip
