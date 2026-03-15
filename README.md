@@ -9,11 +9,11 @@
 [![Rust](https://img.shields.io/badge/Rust-1.94-orange)](https://www.rust-lang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-22+-green)](https://nodejs.org/)
 [![Tests](https://img.shields.io/badge/Tests-130%2B%20passing-brightgreen)]()
-[![Version](https://img.shields.io/badge/Version-26w11aE-blue)]()
+[![Version](https://img.shields.io/badge/Version-26w13aB-blue)]()
 
 *Beyond OpenClaw · Kernel-Level Control · Multi-Model Fusion · Zero-Trust Security*
 
-[**中文文档 →**](docs/README_CN.md) · [API Reference](docs/API.md) · [Roadmap](ROADMAP_26w11aE.md) · [Changelog](CHANGELOG.md)
+[**安装指南 →**](INSTALL.md) · [**快速开始 →**](docs/QUICKSTART.md) · [API Reference](docs/API.md) · [Changelog](CHANGELOG.md)
 
 </div>
 
