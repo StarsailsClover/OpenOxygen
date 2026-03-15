@@ -29,6 +29,24 @@ All notable changes to OpenOxygen are documented here.
 - 知乎等需登录网站应标记为 "requires-auth" 并跳过搜索测试
 - 视觉记忆系统工作正常，可在后续训练中积累空间经验
 
+### Round 2 Training Results (26w13a-training-r2.mjs)
+- **FIX: 中文输入** — clipboardSetText + Ctrl+V 替代 typeText，剪贴板方式可靠
+- **FIX: 应用检测** — native.listProcesses() 替代路径猜测，成功检测 QQ/豆包/ChatGPT/VS Code
+- **FIX: 用户接管** — PowerShell MessageBox 弹窗，阻塞等待用户操作完成
+- **T1 Bilibili**: partial — 搜索成功到达结果页，但 UIA 匹配了 Chrome "搜索标签页" 而非 bilibili 搜索框
+- **T2 QQ**: success — 用户接管弹窗成功，54 个 UIA 元素，界面布局完整分析
+- **T3 VS Code**: partial — 代码输入被自动补全干扰，保存对话框未关闭影响后续任务
+- **T4 百度**: partial — 前序窗口未关闭导致操作在错误窗口
+- **T5 知乎**: partial — Edge 空白标签页，知乎未加载
+- **T6 豆包**: success (实际) — 消息成功发送，AI 回复了"收到"，但反思引擎返回空
+- Visual memory: 10 experiences, 5 apps (bilibili, vscode, baidu, qq, doubao), 44 element types
+
+### Round 2 New Issues Found
+- Chrome UIA "搜索标签页" 按钮与网页内搜索框混淆 → 需排除 Chrome 自身控件
+- VS Code 自动补全干扰多行代码输入 → 需先禁用或用剪贴板整块粘贴
+- 任务间窗口隔离仍不够 → 需在每个任务开始时强制关闭无关窗口/对话框
+- LLM 反思引擎偶尔返回空 → 可能是 qwen3:4b thinking 模式消耗了所有 token
+
 ### Infrastructure Tests (P1-P4)
 - P1 Browser: 12/12 sites pass (Chrome + Edge, 中英文网站)
 - P2 Software: 2/2 available pass (Notepad 96 UIA, VS Code 55 UIA), 6 skip
