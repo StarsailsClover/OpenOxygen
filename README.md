@@ -13,7 +13,7 @@
 
 *Beyond OpenClaw · Kernel-Level Control · Multi-Model Fusion · Zero-Trust Security*
 
-[**安装指南 →**](INSTALL.md) · [**快速开始 →**](docs/QUICKSTART.md) · [API Reference](docs/API.md) · [Changelog](CHANGELOG.md)
+[**安装指南 →**](INSTALL.md) · [**快速开始 →**](docs/QUICKSTART.md) · [**验证安装 →**](#验证安装) · [API Reference](docs/API.md) · [Changelog](CHANGELOG.md)
 
 </div>
 
