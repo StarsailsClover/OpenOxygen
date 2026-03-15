@@ -1,0 +1,7 @@
+# OpenOxygen OUV Training R2
+def test_ouv():
+    print('Hello from OpenOxygen R2!')
+        return True
+
+        if __name__ == '__main__':
+            test_ouv()test_ouv_r2.py

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * OpenOxygen — Gateway Server (Hardened)
  *
  * 安全加固版网关：
@@ -45,6 +45,7 @@ export type GatewayServer = {
   stop: () => Promise<void>;
   readonly port: number;
   readonly isRunning: boolean;
+  readonly httpServer: import("node:http").Server | null;
 };
 
 type RequestContext = {
@@ -347,6 +348,25 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
         return;
       }
 
+      // POST /api/v1/task/:id/cancel — Cancel running task
+      if (method === "POST" && path.startsWith("/api/v1/task/") && path.endsWith("/cancel")) {
+        const taskId = path.split("/")[4];
+        // 广播取消事件到 WebSocket
+        emitEvent({ type: "plan.failed", planId: taskId || "", error: "User cancelled" });
+        respond(res, 200, { cancelled: true, taskId });
+        return;
+      }
+
+      // GET /api/v1/ws/status — WebSocket channel status
+      if (method === "GET" && path === "/api/v1/ws/status") {
+        respond(res, 200, {
+          websocket: true,
+          path: "/ws",
+          message: "Connect via WebSocket at ws://host:port/ws",
+        });
+        return;
+      }
+
       respond(res, 404, { error: "Not found", path: ctx.path });
     } catch (err) {
       log.error(`Request ${ctx.requestId} failed:`, err);
@@ -360,6 +380,9 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
     },
     get isRunning() {
       return running;
+    },
+    get httpServer() {
+      return server;
     },
     start: () =>
       new Promise<void>((resolve, reject) => {
@@ -401,3 +424,5 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
       }),
   };
 }
+
+
