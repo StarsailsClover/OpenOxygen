@@ -1,6 +1,6 @@
-# OpenOxygen 26w15a 新功能架构
+# OpenOxygen 26w14a 新功能架构
 
-## 26w15a_Phase_1: 终端操作模块 (Terminal Executor)
+## 26w14a_Phase_1: 终端操作模块 (Terminal Executor)
 
 ### 功能概述
 让 OpenOxygen 能像人类开发者一样使用终端执行操作。
@@ -35,7 +35,7 @@ const result = await quickExec("git status", "powershell");
 
 ---
 
-## 26w15a_Phase_2: OxygenBrowser 引擎
+## 26w14a_Phase_2: OxygenBrowser 引擎
 
 ### 功能概述
 内嵌 Chromium 浏览器，提供 CSS 选择器访问和 Cookie 继承。
@@ -78,7 +78,7 @@ const result = await quickExec("git status", "powershell");
 
 ---
 
-## 26w15a_Phase_3: 统一任务执行器 (Unified Executor)
+## 26w14a_Phase_3: 统一任务执行器 (Unified Executor)
 
 ### 功能概述
 自动选择 Terminal/GUI/Browser/Hybrid 执行模式。
