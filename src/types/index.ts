@@ -26,6 +26,17 @@ export type ModelProvider =
   | "stepfun"
   | "custom";
 
+// ─── Task Execution Strategies ──────────────────────────────────────────────
+
+export type ExecutionMode = "terminal" | "gui" | "browser" | "hybrid" | "auto";
+
+export type TaskStrategy = {
+  mode: ExecutionMode;
+  confidence: number;
+  reason: string;
+  fallback?: ExecutionMode;
+};
+
 export type ModelConfig = {
   provider: ModelProvider;
   model: string;
