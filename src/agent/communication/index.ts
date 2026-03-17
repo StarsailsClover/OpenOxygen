@@ -177,7 +177,7 @@ export function delegateTask(
     instruction,
     mode: options?.mode,
     fromAgent: fromAgentId,
-    toAgent: targetAgentId,
+    toAgent: targetAgentId as string,
     status: "pending",
     createdAt: nowMs(),
     retryCount: 0,
@@ -187,10 +187,10 @@ export function delegateTask(
   registry.tasks.set(task.id, task);
 
   // Update agent status
-  const agent = registry.agents.get(targetAgentId);
-  if (agent) {
-    agent.status = "busy";
-    agent.currentTask = task.id;
+  const targetAgent = registry.agents.get(targetAgentId);
+  if (targetAgent) {
+    targetAgent.status = "busy";
+    targetAgent.currentTask = task.id;
   }
 
   log.info(`Task delegated: ${task.id} from ${fromAgentId} to ${targetAgentId}`);
@@ -273,14 +273,14 @@ export type AggregatedResult = {
 };
 
 export function aggregateResults(taskIds: string[]): AggregatedResult {
-  const results: ExecutionResult[] = [];
+  const results: AgentDelegatedResult[] = [];
   const errors: string[] = [];
   let successCount = 0;
   let totalDuration = 0;
 
   for (const taskId of taskIds) {
     const task = registry.tasks.get(taskId);
-    if (task?.result) {
+    if (task && task.result) {
       results.push(task.result);
       if (task.result.success) {
         successCount++;
