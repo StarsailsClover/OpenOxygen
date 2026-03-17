@@ -13,6 +13,7 @@ const require = createRequire(import.meta.url);
 
 import { getGlobalMemory } from "../dist/memory/global/index.js";
 import { createSession, executeCommand, destroySession } from "../dist/execution/terminal/index.js";
+import { getAgentDecision, getAgentReflection } from "../dist/inference/structured/index.js";
 
 const native = require("../packages/core-native/index.js");
 const fs = require("node:fs");
@@ -96,11 +97,10 @@ function parseJSON(text) {
 // ═══ Agent Core ═══
 
 async function agentDecide(task, history) {
-  const recentHistory = history.slice(-5).map(h => `${h.action}(${h.target||""}) → ${h.result}`).join("\n");
-  
   const fg = native.getForegroundWindowInfo();
   const els = native.getUiElements(null).filter(e => e.name && !e.isOffscreen && e.width > 0).slice(0, 20);
   const elsSummary = els.map(e => `[${e.controlType}] "${e.name.substring(0, 25)}" (${e.x},${e.y})`).join("\n");
+  const recentHistory = history.slice(-5).map(h => `${h.action}(${h.target||""}) → ${h.result}`).join("\n");
 
   const prompt = `You are an AI Agent on Windows (1920x1080 screen).
 Task: ${task}
@@ -119,17 +119,15 @@ Examples:
 {"action":"gui_click","target":"search box","params":{"x":960,"y":540},"prediction":"Search box focused","reasoning":"Click on search box"}
 {"action":"terminal","target":"echo hello","params":{"command":"echo hello"},"prediction":"Prints hello","reasoning":"Test terminal"}`;
 
-  const resp = await llm(prompt);
-  log("DEBUG", `LLM raw (first 150): ${resp.substring(0, 150).replace(/\n/g, " ")}`);
-  const parsed = parseJSON(resp);
+  const result = await getAgentDecision(prompt);
   
-  if (parsed && parsed.action) {
-    return parsed;
+  if (result.success && result.data && result.data.action) {
+    log("DECIDE", `[${result.source}] ${result.data.action}(${(result.data.target || "").substring(0, 30)}) | Predict: ${(result.data.prediction || "").substring(0, 50)}`);
+    return result.data;
   }
   
-  // Fallback: try to extract action from text
-  log("WARN", `Decision parse failed, raw: ${resp.substring(0, 100)}`);
-  return { action: "screenshot", target: "parse_failed", params: {}, prediction: "Capture state for re-evaluation", reasoning: "LLM output not parseable" };
+  log("WARN", `Decision failed (source=${result.source}), raw: ${result.raw.substring(0, 80)}`);
+  return { action: "screenshot", target: "decision_failed", params: {}, prediction: "Capture state", reasoning: "LLM decision failed" };
 }
 
 async function agentReflect(task, history, lastResult) {
@@ -144,8 +142,12 @@ Last result: ${lastResult}
 Analyze and reply ONLY with JSON:
 {"predictionAccuracy":"accurate|partial|wrong","issue":"what went wrong","lesson":"what to do differently","nextAction":"suggested next action","confidence":0.5}`;
 
-  const resp = await llm(prompt, "gpt-oss:20b");
-  return parseJSON(resp) || { predictionAccuracy: "unknown", issue: "Reflection failed", lesson: "Retry", nextAction: "screenshot", confidence: 0.3 };
+  const result = await getAgentReflection(prompt);
+  
+  if (result.success && result.data) {
+    return result.data;
+  }
+  return { predictionAccuracy: "unknown", issue: "Reflection failed", lesson: "Retry", nextAction: "screenshot", confidence: 0.3 };
 }
 
 async function executeAction(decision) {
@@ -279,8 +281,6 @@ async function runRound(roundIndex, task, minSteps) {
 // ═══ Training Plan ═══
 
 const PLAN = [
-  { round: 11, task: "打开Chrome → 访问bilibili → 搜索'OpenOxygen' → 切换用户标签 → 进入用户主页 → 播放视频 → 调音量 → 全屏 → 退出全屏 → 点赞 → 收藏 → 分享 → 返回搜索 → 搜索另一个词 → 关闭浏览器", minSteps: 15 },
-  { round: 12, task: "Win键打开开始菜单 → 搜索记事本 → 打开 → 输入中英文混合文本 → Ctrl+H查找替换 → Ctrl+S保存到桌面 → 关闭 → 终端验证文件存在 → 读取内容 → 删除文件 → 验证删除 → 打开回收站 → 清空回收站 → 验证清空 → 截图确认", minSteps: 15 },
   { round: 13, task: "打开VS Code → Ctrl+N新建 → 输入Python fibonacci代码 → Ctrl+S保存test_r13.py → 打开终端Ctrl+` → python test_r13.py → 验证输出 → 修改代码加错误 → 运行观察错误 → 修复 → 运行成功 → git status → git add → git diff → 关闭VS Code", minSteps: 15 },
   { round: 14, task: "打开任务管理器 → 性能标签 → 截图CPU → 进程标签 → 内存排序 → 记录前5进程 → 启动标签 → 查看启动项 → 资源监视器 → 网络活动 → 磁盘活动 → 返回任务管理器 → 详细信息 → 查找node.exe → 关闭", minSteps: 15 },
   { round: 15, task: "打开Edge → 访问GitHub → 搜索OpenOxygen → 进入仓库 → 查看README → Issues标签 → 查看Issue → 返回 → Code标签 → 浏览src → 查看package.json → 复制URL → 终端git clone → 验证成功 → 清理", minSteps: 15 },
