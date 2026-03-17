@@ -9,7 +9,7 @@
 [![Rust](https://img.shields.io/badge/Rust-1.94-orange)](https://www.rust-lang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-22+-green)](https://nodejs.org/)
 [![Tests](https://img.shields.io/badge/Tests-130%2B%20passing-brightgreen)]()
-[![Version](https://img.shields.io/badge/Version-26w14a-blue)]()
+[![Version](https://img.shields.io/badge/Version-26w15a-blue)]()
 
 *Beyond OpenClaw · Kernel-Level Control · Multi-Model Fusion · Zero-Trust Security*
 
