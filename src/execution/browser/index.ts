@@ -186,16 +186,19 @@ export async function createBrowserSession(
 
   sessions.set(session.id, session);
 
-  // Wait for CDP
+  // Wait for CDP - connect to page target, not browser target
   await waitForCDP(session, cdpPort);
   
-  // Enable domains
+  // Enable domains on page target
   const cdp = session.cdpClient;
   if (cdp) {
-    await cdp.send("Page.enable");
-    await cdp.send("Runtime.enable");
-    await cdp.send("DOM.enable");
-    await cdp.send("CSS.enable");
+    try {
+      await cdp.send("Page.enable");
+      await cdp.send("Runtime.enable");
+      await cdp.send("DOM.enable");
+    } catch (e: any) {
+      log.warn(`CDP domain enable failed: ${e.message}`);
+    }
   }
 
   log.info(`Browser session created: ${session.id} (cookies: ${inheritedCookies})`);
@@ -205,20 +208,30 @@ export async function createBrowserSession(
 async function waitForCDP(session: BrowserSession, port: number, timeoutMs = 30000): Promise<void> {
   const http = await import("node:http");
   
-  return new Promise((resolve, reject) => {
+  // Step 1: Get page target (not browser target)
+  const pageWsUrl = await new Promise<string>((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error("CDP timeout")), timeoutMs);
     
     const check = () => {
-      const req = http.get(`http://127.0.0.1:${port}/json/version`, (res: any) => {
+      // First try /json/list to get page targets
+      const req = http.get(`http://127.0.0.1:${port}/json/list`, (res: any) => {
         let data = "";
         res.on("data", (chunk: string) => data += chunk);
         res.on("end", () => {
-          clearTimeout(timeout);
           try {
-            const info = JSON.parse(data);
-            session.wsEndpoint = info.webSocketDebuggerUrl || `ws://127.0.0.1:${port}/devtools/browser`;
-            session.cdpClient?.connect(session.wsEndpoint).then(resolve).catch(reject);
-          } catch { reject(new Error("Invalid CDP response")); }
+            const targets = JSON.parse(data);
+            // Find a page target
+            const pageTarget = targets.find((t: any) => t.type === "page");
+            if (pageTarget && pageTarget.webSocketDebuggerUrl) {
+              clearTimeout(timeout);
+              resolve(pageTarget.webSocketDebuggerUrl);
+            } else {
+              // No page target yet, retry
+              setTimeout(check, 500);
+            }
+          } catch {
+            setTimeout(check, 500);
+          }
         });
       });
       
@@ -228,6 +241,12 @@ async function waitForCDP(session: BrowserSession, port: number, timeoutMs = 300
     
     check();
   });
+
+  session.wsEndpoint = pageWsUrl;
+  
+  if (session.cdpClient) {
+    await session.cdpClient.connect(session.wsEndpoint);
+  }
 }
 
 function findChromium(): string | null {

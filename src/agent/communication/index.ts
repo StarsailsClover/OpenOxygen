@@ -162,14 +162,13 @@ export function delegateTask(
   },
 ): DelegatedTask {
   // Auto-select agent if "auto"
-  let targetAgentId = toAgentId;
+  let targetAgentId: string = typeof toAgentId === "string" && toAgentId !== "auto" ? toAgentId : "";
   if (toAgentId === "auto") {
     const available = listAvailableAgents();
     if (available.length === 0) {
       throw new Error("No available agents for delegation");
     }
-    // Simple load balancing: pick first available
-    targetAgentId = available[0].id;
+    targetAgentId = available[0]!.id;
   }
 
   const task: DelegatedTask = {
@@ -177,7 +176,7 @@ export function delegateTask(
     instruction,
     mode: options?.mode,
     fromAgent: fromAgentId,
-    toAgent: targetAgentId as string,
+    toAgent: targetAgentId,
     status: "pending",
     createdAt: nowMs(),
     retryCount: 0,
