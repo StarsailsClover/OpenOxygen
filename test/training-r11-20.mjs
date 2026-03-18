@@ -98,54 +98,67 @@ function parseJSON(text) {
 
 async function agentDecide(task, history) {
   const fg = native.getForegroundWindowInfo();
-  const els = native.getUiElements(null).filter(e => e.name && !e.isOffscreen && e.width > 0).slice(0, 20);
-  const elsSummary = els.map(e => `[${e.controlType}] "${e.name.substring(0, 25)}" (${e.x},${e.y})`).join("\n");
-  const recentHistory = history.slice(-5).map(h => `${h.action}(${h.target||""}) → ${h.result}`).join("\n");
+  const els = native.getUiElements(null)
+    .filter(e => e.name && !e.isOffscreen && e.width > 0)
+    .slice(0, 15)
+    .map(e => `[${e.controlType}]"${e.name.substring(0, 20)}"(${e.x},${e.y})`)
+    .join(", ");
+  const hist = history.slice(-3).map(h => `${h.action}(${(h.target||"").substring(0, 15)})→${h.result}`).join(", ");
 
-  const prompt = `You are an AI Agent on Windows (1920x1080 screen).
-Task: ${task}
-Current window: "${fg?.title || "unknown"}" (${fg?.className || ""})
-UI elements (top 20):
-${elsSummary}
-
-Recent actions:
-${recentHistory || "none"}
-
-Choose ONE action. Reply ONLY with a JSON object:
-{"action":"terminal|gui_click|gui_type|gui_hotkey|browser|screenshot|wait|done","target":"...","params":{"x":0,"y":0,"text":"","keys":"","command":"","url":""},"prediction":"what will happen","reasoning":"why this action"}
-
-Examples:
-{"action":"gui_hotkey","target":"win","params":{"keys":"win"},"prediction":"Start menu opens","reasoning":"Need to open start menu to search"}
-{"action":"gui_click","target":"search box","params":{"x":960,"y":540},"prediction":"Search box focused","reasoning":"Click on search box"}
-{"action":"terminal","target":"echo hello","params":{"command":"echo hello"},"prediction":"Prints hello","reasoning":"Test terminal"}`;
+  // Proven format for qwen3:4b: short, structured, JSON schema at end
+  const prompt = `Task: ${task.substring(0, 200)}
+Window: "${(fg?.title || "unknown").substring(0, 30)}"(${(fg?.className || "").substring(0, 20)})
+Elements: ${els.substring(0, 500)}
+History: ${hist || "none"}
+Pick ONE action as JSON: {"a":"click|type|hotkey|cmd|screenshot|wait|done","t":"target","x":0,"y":0,"text":"","keys":"","cmd":"","r":"reason"}`;
 
   const result = await getAgentDecision(prompt);
   
-  if (result.success && result.data && result.data.action) {
-    log("DECIDE", `[${result.source}] ${result.data.action}(${(result.data.target || "").substring(0, 30)}) | Predict: ${(result.data.prediction || "").substring(0, 50)}`);
-    return result.data;
+  if (result.success && result.data) {
+    // Normalize field names (model may use "a" or "action")
+    const d = result.data;
+    const action = d.a || d.action || "screenshot";
+    const target = d.t || d.target || "";
+    const x = d.x || d.params?.x || 0;
+    const y = d.y || d.params?.y || 0;
+    const text = d.text || d.params?.text || "";
+    const keys = d.keys || d.params?.keys || "";
+    const cmd = d.cmd || d.command || d.params?.command || "";
+    const reason = d.r || d.reason || d.reasoning || "";
+    const prediction = d.prediction || d.p || reason;
+
+    // Map short action names to full names
+    const actionMap = { click: "gui_click", type: "gui_type", hotkey: "gui_hotkey", cmd: "terminal" };
+    const fullAction = actionMap[action] || action;
+
+    log("DECIDE", `[${result.source}] ${fullAction}(${target.substring(0, 25)}) x=${x} y=${y} | ${reason.substring(0, 40)}`);
+    return { action: fullAction, target, params: { x, y, text, keys, command: cmd }, prediction, reasoning: reason };
   }
   
-  log("WARN", `Decision failed (source=${result.source}), raw: ${result.raw.substring(0, 80)}`);
-  return { action: "screenshot", target: "decision_failed", params: {}, prediction: "Capture state", reasoning: "LLM decision failed" };
+  log("WARN", `Decision failed (source=${result.source})`);
+  return { action: "screenshot", target: "decision_failed", params: {}, prediction: "Capture state", reasoning: "Parse failed" };
 }
 
 async function agentReflect(task, history, lastResult) {
-  const steps = history.slice(-5).map((h, i) => `${i + 1}. ${h.action}(${h.target||""}) predicted:"${h.prediction||""}" → actual:"${h.result}"`).join("\n");
+  const steps = history.slice(-3).map((h, i) => `${h.action}(${(h.target||"").substring(0,15)}) predicted:"${(h.prediction||"").substring(0,20)}" → ${h.result}`).join(", ");
 
-  const prompt = `You are reflecting on your actions as an AI Agent.
-Task: ${task}
-Recent steps:
-${steps}
-Last result: ${lastResult}
-
-Analyze and reply ONLY with JSON:
-{"predictionAccuracy":"accurate|partial|wrong","issue":"what went wrong","lesson":"what to do differently","nextAction":"suggested next action","confidence":0.5}`;
+  const prompt = `You tried: ${steps}
+Last result: ${lastResult.substring(0, 80)}
+Task: ${task.substring(0, 100)}
+What went wrong? JSON: {"issue":"problem","lesson":"what to learn","next":"next action","confidence":0.5}`;
 
   const result = await getAgentReflection(prompt);
   
   if (result.success && result.data) {
-    return result.data;
+    // Normalize
+    const d = result.data;
+    return {
+      predictionAccuracy: d.predictionAccuracy || d.accuracy || "unknown",
+      issue: d.issue || d.problem || "",
+      lesson: d.lesson || "",
+      nextAction: d.nextAction || d.next || "screenshot",
+      confidence: d.confidence || 0.5,
+    };
   }
   return { predictionAccuracy: "unknown", issue: "Reflection failed", lesson: "Retry", nextAction: "screenshot", confidence: 0.3 };
 }
@@ -162,9 +175,10 @@ async function executeAction(decision) {
       return { success: result.success, output: (result.output || "").substring(0, 200), error: result.error };
     }
     case "gui_click": {
-      const x = params?.x || 0; const y = params?.y || 0;
+      const x = parseInt(String(params?.x || 0));
+      const y = parseInt(String(params?.y || 0));
       if (x === 0 && y === 0) return { success: false, error: "No coordinates" };
-      native.mouseClick(x, y);
+      native.mouseClick(parseInt(x), parseInt(y));
       await sleep(800);
       return { success: true, output: `Clicked (${x},${y})` };
     }
@@ -281,14 +295,14 @@ async function runRound(roundIndex, task, minSteps) {
 // ═══ Training Plan ═══
 
 const PLAN = [
-  { round: 13, task: "打开VS Code → Ctrl+N新建 → 输入Python fibonacci代码 → Ctrl+S保存test_r13.py → 打开终端Ctrl+` → python test_r13.py → 验证输出 → 修改代码加错误 → 运行观察错误 → 修复 → 运行成功 → git status → git add → git diff → 关闭VS Code", minSteps: 15 },
-  { round: 14, task: "打开任务管理器 → 性能标签 → 截图CPU → 进程标签 → 内存排序 → 记录前5进程 → 启动标签 → 查看启动项 → 资源监视器 → 网络活动 → 磁盘活动 → 返回任务管理器 → 详细信息 → 查找node.exe → 关闭", minSteps: 15 },
-  { round: 15, task: "打开Edge → 访问GitHub → 搜索OpenOxygen → 进入仓库 → 查看README → Issues标签 → 查看Issue → 返回 → Code标签 → 浏览src → 查看package.json → 复制URL → 终端git clone → 验证成功 → 清理", minSteps: 15 },
-  { round: 16, task: "打开微信 → 查看聊天列表 → 打开文件传输助手 → 发送[OpenOxygen R16]消息 → 验证发送 → 返回列表 → 打开群聊 → 阅读消息 → 总结内容 → 发送[OpenOxygen]回复 → 返回列表 → 设置 → 存储空间 → 返回 → 最小化", minSteps: 15 },
-  { round: 17, task: "终端mkdir test_project → cd进入 → 创建index.js → npm init -y → 写HTTP服务器代码 → node index.js启动 → 浏览器访问localhost:3000 → 验证响应 → 停止服务器 → 修改端口 → 重启 → 验证 → 停止 → 清理目录 → 验证清理", minSteps: 15 },
-  { round: 18, task: "打开画图 → 矩形工具 → 画矩形 → 圆形工具 → 画圆 → 文字工具 → 输入OpenOxygen → 填充颜色 → 画笔自由线条 → Ctrl+Z撤销 → Ctrl+Y重做 → 橡皮擦 → 擦除部分 → Ctrl+S保存PNG → 关闭", minSteps: 15 },
+  { round: 13, task: "打开VS Code → Ctrl+N新建 → 输入Python代码 → Ctrl+S保存 → 打开终端 → 运行代码 → 验证输出 → 修改代码 → 再运行 → 修复错误 → 运行成功 → git status → git add → git diff → 关闭", minSteps: 15 },
+  { round: 14, task: "打开任务管理器 → 性能标签 → 截图CPU → 进程标签 → 内存排序 → 记录前5进程 → 启动标签 → 查看启动项 → 资源监视器 → 网络活动 → 磁盘活动 → 返回 → 详细信息 → 查找node.exe → 关闭", minSteps: 15 },
+  { round: 15, task: "打开Edge → 访问GitHub → 搜索OpenOxygen → 进入仓库 → 查看README → Issues标签 → 查看Issue → 返回 → Code标签 → 浏览src → 查看package.json → 复制URL → 终端git clone → 验证 → 清理", minSteps: 15 },
+  { round: 16, task: "打开微信 → 查看聊天列表 → 打开文件传输助手 → 发送[OpenOxygen R16]消息 → 验证发送 → 返回列表 → 打开群聊 → 阅读消息 → 总结内容 → 发送[OpenOxygen]回复 → 返回 → 设置 → 存储空间 → 返回 → 最小化", minSteps: 15 },
+  { round: 17, task: "终端mkdir test_project → 创建index.js → npm init -y → 写HTTP服务器代码 → 启动服务器 → 浏览器访问localhost:3000 → 验证响应 → 停止服务器 → 修改端口 → 重启 → 验证 → 停止 → 清理目录 → 验证清理 → 完成", minSteps: 15 },
+  { round: 18, task: "打开画图 → 矩形工具 → 画矩形 → 圆形工具 → 画圆 → 文字工具 → 输入OpenOxygen → 填充颜色 → 画笔自由线条 → Ctrl+Z撤销 → Ctrl+Y重做 → 橡皮擦 → 擦除部分 → Ctrl+S保存 → 关闭", minSteps: 15 },
   { round: 19, task: "打开计算器 → 科学模式 → sin(30) → cos(60) → tan(45) → 程序员模式 → 输入255 → 查看十六进制 → 标准模式 → (123*456+789)/2 → 历史记录 → 清除历史 → 日期计算 → 两日期差 → 关闭", minSteps: 15 },
-  { round: 20, task: "综合：Chrome访问百度 → 搜索AI Agent → 复制标题 → 打开记事本 → 粘贴 → 添加评论 → 保存 → 终端读取文件 → LLM分析内容 → 追加分析结果 → 打开文件验证 → 浏览器搜索另一个词 → 对比 → 生成报告 → 保存报告", minSteps: 15 },
+  { round: 20, task: "综合：Chrome访问百度 → 搜索AI Agent → 复制标题 → 打开记事本 → 粘贴 → 添加评论 → 保存 → 终端读取文件 → 分析内容 → 追加结果 → 打开文件验证 → 浏览器搜索另一个词 → 对比 → 生成报告 → 保存", minSteps: 15 },
 ];
 
 async function main() {
