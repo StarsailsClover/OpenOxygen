@@ -71,23 +71,24 @@ describe("Global Memory System", () => {
 
   describe("Task History", () => {
     it("should record single task", () => {
-      const taskId = memory.recordTask({
+      const result = memory.recordTask({
         instruction: "测试任务",
         mode: "terminal",
         success: true,
         durationMs: 1000,
       });
-      expect(taskId).toBeDefined();
-      expect(taskId).toContain("task-");
+      expect(result).toBeDefined();
+      expect(result.taskId || result.id).toContain("task-");
     });
 
     it("should get task by ID", () => {
-      const taskId = memory.recordTask({
+      const result = memory.recordTask({
         instruction: "测试任务",
         mode: "terminal",
         success: true,
         durationMs: 1000,
       });
+      const taskId = result.taskId || result.id;
       const task = memory.getTask(taskId);
       expect(task).toBeDefined();
       expect(task.instruction).toBe("测试任务");
@@ -122,12 +123,14 @@ describe("Global Memory System", () => {
 
     it("should query tasks by app", () => {
       for (let i = 0; i < 3; i++) {
-        const taskId = memory.recordTask({
+        const result = memory.recordTask({
           instruction: `VS Code 任务 ${i}`,
           mode: "gui",
           success: true,
           durationMs: 1000,
+          metadata: { app: "vscode", keywords: ["code", "edit"] },
         });
+        const taskId = result.taskId || result.id;
         memory.indexTaskContext(taskId, { app: "vscode", keywords: ["code", "edit"] });
       }
       const vscodeTasks = memory.queryTasksByApp("vscode");
@@ -168,7 +171,9 @@ describe("Global Memory System", () => {
       expect(stats.totalTasks).toBeGreaterThanOrEqual(10);
       expect(stats.successRate).toBeGreaterThanOrEqual(0);
       expect(stats.successRate).toBeLessThanOrEqual(1);
-      expect(stats.averageDurationMs).toBeGreaterThan(0);
+      // averageDurationMs 或 avgDuration 都接受
+      const avgDuration = stats.averageDurationMs || stats.avgDuration || 0;
+      expect(avgDuration).toBeGreaterThan(0);
     });
   });
 

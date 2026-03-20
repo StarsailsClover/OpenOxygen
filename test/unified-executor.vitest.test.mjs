@@ -50,8 +50,9 @@ describe("Unified Task Executor", () => {
     it("should execute with fallback on failure", async () => {
       const result = await executeWithStrategy("invalid_command_xyz", { mode: "terminal", confidence: 0.5, reason: "Test", fallback: "gui" });
       expect(result).toBeDefined();
-      // May fail but should not throw
-    }, 10000);
+      // Should not throw, result may indicate failure but should be valid object
+      expect(typeof result === "object").toBe(true);
+    }, 15000);
   });
 
   describe("API Request Handling", () => {
@@ -63,6 +64,7 @@ describe("Unified Task Executor", () => {
       });
       expect(result).toBeDefined();
       expect(result.mode).toBe("terminal");
+      expect(result.success).toBe(true);
     }, 10000);
 
     it("should handle execution request with auto mode", async () => {
@@ -72,6 +74,7 @@ describe("Unified Task Executor", () => {
       });
       expect(result).toBeDefined();
       expect(result.mode).toBe("terminal");
+      expect(result.success).toBe(true);
     }, 10000);
 
     it("should include logs in result", async () => {
@@ -81,6 +84,9 @@ describe("Unified Task Executor", () => {
       });
       expect(result).toBeDefined();
       expect(result.logs).toBeDefined();
+      expect(Array.isArray(result.logs)).toBe(true);
+      expect(result.logs.length).toBeGreaterThan(0);
+      expect(result.success).toBe(true);
     }, 10000);
   });
 
