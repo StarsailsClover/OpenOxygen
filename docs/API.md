@@ -1,222 +1,283 @@
-# API Reference
+# OpenOxygen API Reference (26w15aC)
 
-## Base URL
+## 概述
 
-```
-http://127.0.0.1:4800
-```
+OpenOxygen 提供统一的 API 接口，支持终端命令执行、GUI 自动化、浏览器自动化、任务编排等功能。
 
-Port is configurable via `gateway.port` in `openoxygen.json` or `OPENOXYGEN_GATEWAY_PORT` env var.
+## 核心模块
 
-## Authentication
+### 初始化
 
-Controlled by `gateway.auth` in config:
+```javascript
+import { initialize } from "openoxygen";
 
-| Mode | Header |
-|------|--------|
-| `none` | No header required |
-| `token` | `Authorization: Bearer <token>` |
-| `password` | `Authorization: Basic <base64(user:password)>` |
+const app = await initialize({
+  // 配置选项
+});
 
-The `/health` endpoint is always unauthenticated.
-
----
-
-## Endpoints
-
-### `GET /health`
-
-Health check. Always returns 200 if the server is running.
-
-**Response**
-```json
-{
-  "status": "ok",
-  "timestamp": 1772986064033,
-  "version": "0.1.0"
-}
+console.log(app.version); // "26w15aC"
 ```
 
----
+### 快速执行
 
-### `GET /api/v1/status`
+```javascript
+import { execute } from "openoxygen";
 
-Full system status.
+// 自动模式
+const result = await execute("npm install");
 
-**Response**
-```json
-{
-  "gateway": { "host": "127.0.0.1", "port": 4800 },
-  "agents": [{ "id": "default", "name": "OpenOxygen Default Agent" }],
-  "channels": [],
-  "plugins": [],
-  "models": [{ "provider": "ollama", "model": "qwen3:4b", "hasKey": true }],
-  "inferenceReady": true,
-  "uptime": 247.99
-}
+// 指定模式
+const result = await execute("打开哔哩哔哩", { mode: "browser" });
 ```
 
----
+## 终端执行
 
-### `GET /api/v1/agents`
+```javascript
+import { quickExec, createSession, executeCommand } from "openoxygen";
 
-List configured agents.
+// 快速执行
+const result = await quickExec("ls -la", "powershell");
 
-**Response**
-```json
-{
-  "agents": [
-    { "id": "default", "name": "OpenOxygen Default Agent" }
-  ]
-}
+// 会话模式
+const session = createSession("powershell");
+const result = await executeCommand(session.id, "echo Hello");
 ```
 
----
+## 浏览器自动化
 
-### `GET /api/v1/models`
+### Gmail
 
-List configured models (API keys are never exposed).
+```javascript
+import { GmailAutomation } from "openoxygen";
 
-**Response**
-```json
-{
-  "models": [
-    { "provider": "ollama", "model": "qwen3:4b", "hasKey": true }
-  ]
-}
+const gmail = new GmailAutomation();
+
+// 检查未读邮件
+const { emails, count } = await gmail.checkUnread("user@gmail.com");
+
+// 发送邮件
+await gmail.sendEmail({
+  to: "recipient@example.com",
+  subject: "Hello",
+  body: "Message content",
+});
 ```
 
----
+### 哔哩哔哩
 
-### `POST /api/v1/chat`
+```javascript
+import { BilibiliAutomation } from "openoxygen";
 
-Send a message to the inference engine.
+const bilibili = new BilibiliAutomation();
 
-**Request body** — either `message` (string) or `messages` (array):
+// 搜索视频
+const result = await bilibili.searchVideo("OpenOxygen");
 
-```json
-{
-  "message": "Hello, what can you do?",
-  "mode": "fast",
-  "systemPrompt": "You are a helpful assistant."
-}
+// 打开视频
+const info = await bilibili.openVideo("BV1xx411c7mD");
 ```
 
-Or multi-turn:
+### GitHub
 
-```json
-{
-  "messages": [
-    { "role": "system", "content": "You are a Windows expert." },
-    { "role": "user", "content": "List running processes." }
+```javascript
+import { GitHubAutomation } from "openoxygen";
+
+const github = new GitHubAutomation();
+
+// 检查通知
+const notifications = await github.checkNotifications("username");
+
+// 查看仓库
+const repo = await github.viewRepository("microsoft", "vscode");
+```
+
+## QQ 自动化
+
+```javascript
+import { QQWindowController, isQQRunning } from "openoxygen";
+
+// 检查 QQ 是否运行
+const running = await isQQRunning();
+
+// 发送消息
+const qq = new QQWindowController();
+await qq.sendMessage("联系人名称", "消息内容");
+
+// 检查未读
+const { unreadCount } = await qq.checkUnread();
+```
+
+## 任务编排
+
+### 工作流引擎
+
+```javascript
+import { WorkflowEngine, predefinedWorkflows } from "openoxygen";
+
+const engine = new WorkflowEngine();
+
+// 使用预定义工作流
+engine.register("daily-check", predefinedWorkflows.dailyCheck);
+const result = await engine.execute("daily-check");
+
+// 自定义工作流
+engine.register("my-workflow", {
+  steps: [
+    { name: "step1", type: "terminal", action: "exec", params: { command: "echo 1" } },
+    { name: "step2", type: "edge", action: "gmail.check", params: { email: "user@gmail.com" } },
   ],
-  "mode": "deep"
+});
+
+await engine.execute("my-workflow");
+```
+
+### 任务分解
+
+```javascript
+import { decomposeTask, createOrchestration, executeOrchestration } from "openoxygen";
+
+// 任务分解
+const plan = decomposeTask("部署项目到生产环境");
+// plan.strategy: "sequential"
+// plan.subtasks: [...]
+
+// 创建编排
+const orch = createOrchestration({
+  name: "部署编排",
+  subtasks: plan.subtasks,
+  strategy: plan.strategy,
+});
+
+// 执行
+const result = await executeOrchestration(orch.id);
+```
+
+## 文档生成
+
+```javascript
+import { DocumentGenerator } from "openoxygen";
+
+const docGen = new DocumentGenerator();
+
+// 生成日报
+await docGen.generateDailyReport({
+  date: "2026-03-19",
+  tasks: ["完成任务A", "完成任务B"],
+  progress: "正常",
+  issues: "无",
+  plans: ["计划任务C"],
+});
+
+// 生成项目报告
+await docGen.generateProjectReport({
+  title: "项目报告",
+  summary: "项目进展顺利",
+  details: ["完成模块1", "完成模块2"],
+  conclusion: "按计划推进",
+});
+
+// 网页提取
+const extraction = await docGen.extractFromWebpage("https://example.com", {
+  summarize: true,
+});
+```
+
+## 全局记忆
+
+```javascript
+import { getGlobalMemory } from "openoxygen";
+
+const memory = getGlobalMemory();
+
+// 存储偏好
+memory.setPreference("theme", "dark");
+
+// 获取偏好
+const theme = memory.getPreference("theme");
+
+// 记录任务
+memory.recordTask({
+  instruction: "npm install",
+  mode: "terminal",
+  success: true,
+  durationMs: 5000,
+});
+
+// 查询历史
+const tasks = memory.queryTasks({ mode: "terminal" });
+```
+
+## 多 Agent 通信
+
+```javascript
+import { registerAgent, delegateTask, listAgents } from "openoxygen";
+
+// 注册 Agent
+registerAgent("agent-1", "Worker 1", "worker", ["terminal", "gui"]);
+
+// 列出可用 Agent
+const agents = listAgents();
+
+// 委派任务
+const result = await delegateTask("agent-1", {
+  instruction: "检查系统状态",
+  timeout: 30000,
+});
+```
+
+## 错误处理
+
+所有 API 返回统一的结果格式：
+
+```javascript
+{
+  success: boolean,      // 是否成功
+  output?: any,          // 成功时的输出
+  error?: string,        // 失败时的错误信息
+  durationMs: number,    // 执行耗时
 }
 ```
 
-**Fields**
+示例：
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `message` | string | one of `message` / `messages` | Single user message |
-| `messages` | array | one of `message` / `messages` | Full conversation history |
-| `mode` | string | no | `fast` / `balanced` / `deep` (auto-detected if omitted) |
-| `systemPrompt` | string | no | Prepended system message |
+```javascript
+const result = await execute("some command");
 
-**Response**
-```json
-{
-  "id": "req-568ceda7-c2bb-4e4f-9a33-41facff38c1d",
-  "content": "Hello! I'm running on OpenOxygen...",
-  "toolCalls": null,
-  "model": "qwen3:4b",
-  "provider": "ollama",
-  "mode": "fast",
-  "usage": {
-    "promptTokens": 11,
-    "completionTokens": 64,
-    "totalTokens": 75
+if (result.success) {
+  console.log(result.output);
+} else {
+  console.error(result.error);
+}
+```
+
+## 配置
+
+```javascript
+import { createConfig } from "openoxygen";
+
+const config = createConfig({
+  // 终端配置
+  terminal: {
+    defaultShell: "powershell",
+    timeout: 30000,
   },
-  "durationMs": 121
-}
+  // 浏览器配置
+  browser: {
+    headless: false,
+    debugPort: 9222,
+  },
+  // 日志配置
+  logging: {
+    level: "info",
+    file: "openoxygen.log",
+  },
+});
 ```
 
-**Error responses**
+## 版本信息
 
-| Status | Condition |
-|--------|-----------|
-| 400 | Missing `message` and `messages` |
-| 503 | No inference engine available (no models configured) |
+```javascript
+import { VERSION } from "openoxygen";
 
----
-
-### `POST /api/v1/plan`
-
-Generate an execution plan for a goal.
-
-**Request body**
-
-```json
-{
-  "goal": "Organize desktop files into categorized folders",
-  "context": "Windows 11, ~30 files on desktop"
-}
+console.log(VERSION); // "26w15aC"
 ```
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `goal` | string | yes | What to accomplish |
-| `context` | string | no | Additional context for the planner |
-
-**Response**
-```json
-{
-  "id": "plan-13036f10-e938-47e5-a733-4dfaa7cc83f1",
-  "goal": "Organize desktop files into categorized folders",
-  "steps": [
-    {
-      "id": "step-abc",
-      "action": "file.list",
-      "params": { "path": "C:\\Users\\User\\Desktop" },
-      "dependencies": [],
-      "status": "pending"
-    }
-  ],
-  "createdAt": 1772986138782,
-  "updatedAt": 1772986138782,
-  "status": "executing",
-  "reflections": []
-}
-```
-
----
-
-## Inference Modes
-
-| Mode | Timeout | Use case |
-|------|---------|----------|
-| `fast` | 30 s | Simple questions, quick lookups |
-| `balanced` | 60 s | General tasks, explanations |
-| `deep` | 120 s | Complex analysis, multi-step planning |
-
-When `mode` is omitted the engine auto-detects complexity from the input message.
-
----
-
-## Error Format
-
-All errors follow the same shape:
-
-```json
-{
-  "error": "Human-readable description"
-}
-```
-
-| Status | Meaning |
-|--------|---------|
-| 400 | Bad request (missing fields, invalid JSON) |
-| 401 | Unauthorized (bad or missing auth header) |
-| 404 | Unknown route |
-| 500 | Internal server error |
-| 503 | Service unavailable (inference engine not ready) |
