@@ -1,105 +1,53 @@
 /**
- * OpenOxygen — Public API Exports
+ * OpenOxygen — Main Entry Point (26w15aD)
  *
- * 对外导出的公共接口，供外部集成使用。
+ * 统一导出所有核心模块
  */
 
-// ─── Types ──────────────────────────────────────────────────────────────────
-export type {
-  OxygenConfig,
-  OxygenRuntimeEnv,
-  OxygenEvent,
-  OxygenEventHandler,
-  ModelConfig,
-  ModelProvider,
-  AgentEntry,
-  ChannelConfig,
-  PluginConfig,
-  SecurityConfig,
-  MemoryConfig,
-  VisionConfig,
-  GatewayConfig,
-  SessionEntry,
-  ResolvedRoute,
-  ExecutionPlan,
-  PlanStep,
-  ReflectionEntry,
-  ToolInvocation,
-  ToolResult,
-  SystemOperation,
-  MemorySearchResult,
-  MemoryChunk,
-  MemorySource,
-  PluginManifest,
-  OxygenPluginDefinition,
-  PluginContext,
-  PluginHookPhase,
-  AuditEntry,
-  AuditSeverity,
-  InferenceMode,
-} from "./types/index.js";
+// Core
+export { createRuntime } from "./core/runtime/index.js";
+export { createGateway } from "./core/gateway/index.js";
+export { createConfig } from "./core/config/index.js";
 
-// ─── Core ───────────────────────────────────────────────────────────────────
-export { defaultRuntime, createTestRuntime, assertSupportedRuntime, getSystemInfo } from "./core/runtime/index.js";
-export { loadConfig, loadDotEnv, createDefaultConfig, resolveConfigPath, resolveStateDir, writeConfig, clearConfigCache } from "./core/config/index.js";
-export { createGatewayServer } from "./core/gateway/index.js";
-export type { GatewayServer, GatewayServerOptions } from "./core/gateway/index.js";
-export { resolveRoute } from "./core/routing/index.js";
-export type { ResolveRouteInput } from "./core/routing/index.js";
-export {
-  createSession, getSession, touchSession, deleteSession, listSessions,
-  buildMainSessionKey, buildPeerSessionKey, parseSessionKey,
-  loadSessionStore, saveSessionStore,
-} from "./core/sessions/index.js";
+// Memory
+export { GlobalMemory, getGlobalMemory } from "./memory/global/index.js";
 
-// ─── Inference ──────────────────────────────────────────────────────────────
-export { InferenceEngine } from "./inference/engine/index.js";
-export type { ChatMessage, ChatRole, InferenceRequest, InferenceResponse, ToolDefinition } from "./inference/engine/index.js";
-export { ModelRouter } from "./inference/router/index.js";
-export type { RoutingStrategy, RoutingConstraints, RoutingDecision } from "./inference/router/index.js";
-export { TaskPlanner, createEmptyPlan, addStep, getNextExecutableSteps, isPlanComplete } from "./inference/planner/index.js";
-export { ReflectionEngine } from "./inference/reflection/index.js";
-export type { ReflectionResult, ReflectionIssue } from "./inference/reflection/index.js";
+// Execution
+export * from "./execution/terminal/index.js";
+export * from "./execution/unified/index.js";
+export * from "./execution/edge-automation/index.js";
+export * from "./execution/qq-automation/index.js";
 
-// ─── Execution ──────────────────────────────────────────────────────────────
-export { executeSystemOperation, fileRead, fileWrite, fileList, processList, screenCapture, clipboardRead, clipboardWrite } from "./execution/windows/index.js";
-export { OxygenUltraVision } from "./execution/vision/index.js";
-export type { UIElement, ScreenAnalysis, VisionQuery, VisionResult } from "./execution/vision/index.js";
-export { executeSandboxed } from "./execution/sandbox/index.js";
+// Agent
+export * from "./agent/orchestrator/index.js";
+export * from "./agent/communication/index.js";
 
-// ─── Memory ─────────────────────────────────────────────────────────────────
-export { VectorStore } from "./memory/vector/index.js";
-export { MemoryManager } from "./memory/lifecycle/index.js";
+// Tasks
+export * from "./tasks/workflow-engine.js";
+export * from "./tasks/document-generator.js";
 
-// ─── Security ───────────────────────────────────────────────────────────────
-export { AuditTrail } from "./security/audit/index.js";
-export { checkPermission, assertPermission } from "./security/permissions/index.js";
-export {
-  RateLimiter,
-  validateGatewayBinding,
-  sanitizeGatewayUrl,
-  validateWebSocketOrigin,
-  sanitizeShellArg,
-  validateCommand,
-  sanitizeEnvironment,
-  detectPromptInjection,
-  sanitizeLogContent,
-  verifyPluginIntegrity,
-  computeFileHash,
-  auditPluginPermissions,
-  encryptSecret,
-  decryptSecret,
-  maskApiKey,
-  timingSafeEqual,
-} from "./security/hardening.js";
+// Utils
+export * from "./utils/index.js";
 
-// ─── Plugins ────────────────────────────────────────────────────────────────
-export { PluginRegistry, loadPlugins, runHooks } from "./plugins/loader/index.js";
-export { definePlugin, createToolResult, createToolError } from "./plugins/sdk/index.js";
+// Input/Output - Phase 1
+export * from "./input/index.js";
+export * from "./output/index.js";
 
-// ─── Compatibility ──────────────────────────────────────────────────────────
-export { translateOpenClawConfig, validateOpenClawSkill } from "./compat/openclaw/index.js";
+// Native Bridge - Phase 1
+export * from "./native/index.js";
 
-// ─── Utilities ──────────────────────────────────────────────────────────────
-export { generateId, generateShortId, sleep, withTimeout, isWindows, TypedEventBus } from "./utils/index.js";
-export { createSubsystemLogger, setLogLevel, enableConsoleCapture } from "./logging/index.js";
+// Version
+export const VERSION = "26w15aD";
+
+/**
+ * Initialize OpenOxygen
+ */
+export async function initialize(config = {}) {
+  console.log(`OpenOxygen ${VERSION} initializing...`);
+  const runtime = createRuntime(config);
+  const memory = getGlobalMemory();
+  console.log("OpenOxygen initialized successfully");
+  return { runtime, memory, version: VERSION };
+}
+
+export default { VERSION, initialize };
