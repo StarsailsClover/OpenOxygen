@@ -1,46 +1,82 @@
-# ─── Build Outputs ───────────────────────────────────────────
-dist/
-*.node
-packages/core-native/target/
-
-# ─── Dependencies ────────────────────────────────────────────
+﻿# Dependencies
 node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
 
-# ─── Environment & Secrets ───────────────────────────────────
-.env
-.env.local
-.env.*.local
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
 
-# ─── Runtime State ───────────────────────────────────────────
-.state/
+# Native build artifacts (keep only release)
+native/build/Debug/
+native/build/Release/.deps/
+native/build/Release/*.a
+native/build/Release/*.lib
+native/build/Release/*.exp
+native/build/Release/*.ilk
+native/build/Release/*.pdb
 
-# ─── Reference / Vendor (not shipped) ────────────────────────
-_reference/
+# Archives and development files
+archives/
+backup/
+*.backup
+*.bak
+*.old
+*.orig
 
-# ─── Archives & Installers ───────────────────────────────────
-*.zip
-*.exe
+# Rust build artifacts (if using Rust)
+packages/*/target/
+packages/*/Cargo.lock
 
-# ─── Test Artifacts ──────────────────────────────────────────
-test_capture.png
-test/e2e_capture.png
-test/p3_test.png
-test/p3_compress.png
-test/results/
-.state/screenshots/
-.state/bilibili_test.png
-
-# ─── Logs ────────────────────────────────────────────────────
+# Temporary files
+*.tmp
+*.temp
+.cache/
 *.log
+logs/
 
-# ─── OS / Editor ─────────────────────────────────────────────
-.DS_Store
-Thumbs.db
+# IDE and editors
 .vscode/
 .idea/
 *.swp
 *.swo
-/.ollama
-2603141948.md
-AgentLOG.md
-26w15aB-26w15aHRoadmap.md
+*~
+.DS_Store
+Thumbs.db
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Test outputs
+test-output/
+coverage/
+.nyc_output/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Documentation build
+docs/_build/
+docs/.vuepress/dist/
+
+# Misc
+*.pid
+*.seed
+*.pid.lock
+.eslintcache
+.prettiercache
+TEST_SUMMARY.md
+VERIFICATION_REPORT.md
+test-complete.cjs
+test-full-pipeline.cjs
+test-script-gen.cjs
+test-ollama.cjs
+test-simple.cjs
+DEPLOYMENT_FIX_SUMMARY.md
+.state/task-56f4a0c4-1f45-4169-a771-c38ef1acdb70.png
