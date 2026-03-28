@@ -1,4 +1,4 @@
-﻿# Dependencies
+# Dependencies
 node_modules/
 package-lock.json
 yarn.lock
@@ -8,6 +8,7 @@ pnpm-lock.yaml
 dist/
 build/
 *.tsbuildinfo
+*.map
 
 # Native build artifacts (keep only release)
 native/build/Debug/
@@ -71,6 +72,42 @@ docs/.vuepress/dist/
 *.pid.lock
 .eslintcache
 .prettiercache
+
+# State and cache
+.state/
+.cache/
+.ollama/
+
+# Images
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.webp
+
+# Test files
+test.txt
+
+# Model files
+*.gguf
+*.bin
+*.pt
+*.pth
+*.safetensors
+*.onnx
+*.tflite
+*.mlmodel
+
+# Large data files
+*.zip
+*.tar.gz
+*.tar.bz2
+*.7z
+*.rar
+
+# Reports
+reports/
 TEST_SUMMARY.md
 VERIFICATION_REPORT.md
 test-complete.cjs
@@ -79,4 +116,9 @@ test-script-gen.cjs
 test-ollama.cjs
 test-simple.cjs
 DEPLOYMENT_FIX_SUMMARY.md
-.state/task-56f4a0c4-1f45-4169-a771-c38ef1acdb70.png
+
+# Old roadmap files
+2603141948.md
+AgentLOG.md
+26w15aB-26w15aHRoadmap.md
+OLB.md
