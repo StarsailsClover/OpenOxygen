@@ -6,7 +6,7 @@
  */
 
 import { createSubsystemLogger } from "../logging/index.js";
-import { loadNativeModule } from "../native-bridge.js";
+import { loadNativeModuleESM } from "./esm-adapter.js";
 const log = createSubsystemLogger("native/keyboard");
 
 // Virtual key codes (Windows)
@@ -60,7 +60,7 @@ export function keyPress(key typeof VirtualKey | number) {
   const vk = typeof key === "string" ? VirtualKey[key] ;
   log.debug(`Pressing key: ${key} (VK: ${vk})`);
   
-  const native = loadNativeModule();
+  const native = await loadNativeModuleESM();
   if (native?.keyPress) {
     return native.keyPress(vk);
   }

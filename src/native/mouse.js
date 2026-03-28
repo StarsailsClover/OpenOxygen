@@ -6,7 +6,7 @@
  */
 
 import { createSubsystemLogger } from "../logging/index.js";
-import { loadNativeModule } from "../native-bridge.js";
+import { loadNativeModuleESM } from "./esm-adapter.js";
 const log = createSubsystemLogger("native/mouse");
 
 // Mouse button constants
@@ -39,7 +39,7 @@ const SCREEN_HEIGHT = 65535;
 export function mouseMove(x, y) {
   log.debug(`Moving mouse to (${x}, ${y})`);
   
-  const native = loadNativeModule();
+  const native = await loadNativeModuleESM();
   if (native?.mouseMove) {
     return native.mouseMove(x, y);
   }
