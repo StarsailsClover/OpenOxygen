@@ -8,4 +8,3 @@ export default {
     summarizeWebpage,
     translateSummary,
 };
-//# sourceMappingURL=index.js.map

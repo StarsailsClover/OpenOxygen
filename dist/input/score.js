@@ -183,4 +183,3 @@ export class HumanLikenessScorer {
 }
 // 全局评分器
 export const humanScorer = new HumanLikenessScorer();
-//# sourceMappingURL=score.js.map

@@ -8,6 +8,14 @@ import { createSubsystemLogger } from "../logging/index.js";
 import { generateId, nowMs, sleep } from "../utils/index.js";
 import { OxygenUltraVision } from "../execution/vision/index.js";
 const log = createSubsystemLogger("oxygen-browser/core");
+// Browser states
+export 
+// Browser options
+export 
+// Page information
+export 
+// Browser instance
+export 
 // Active browser instances
 const browsers = new Map();
 /**
@@ -20,12 +28,7 @@ export async function launchBrowser(options = {}) {
     const browser = {
         id,
         state: "opening",
-        options: {
-            width: options.width || 1280,
-            height: options.height || 720,
-            headless: options.headless || false,
-            ...options,
-        },
+        options,
         history: [],
     };
     browsers.set(id, browser);
@@ -50,22 +53,26 @@ async function initializeWebView2(browser) {
     // This would use the WebView2 runtime
     // For now, we create a placeholder
     browser.webview = {
-        id: browser.id,
-        navigate: async (url) => {
-            log.debug(`Navigating to: ${url}`);
-            await sleep(1000);
-        },
-        executeScript: async (script) => {
-            log.debug(`Executing script`);
-            return null;
-        },
-        takeScreenshot: async () => {
-            log.debug("Taking screenshot");
-            return null;
-        },
+        id, : .id,
+        navigate(url) { }
     };
-    await sleep(500); // Simulate initialization
+    {
+        log.debug(`Navigating to: ${url}`);
+        await sleep(1000);
+    }
+    executeScript(script);
+    {
+        log.debug(`Executing script`);
+        return null;
+    }
+    takeScreenshot();
+    {
+        log.debug("Taking screenshot");
+        return null;
+    }
 }
+;
+await sleep(500); // Simulate initialization
 /**
  * Navigate to URL
  * @param browserId - Browser instance ID
@@ -90,19 +97,22 @@ export async function navigate(browserId, url) {
         // Get page info
         const pageInfo = {
             url,
-            title: await getPageTitle(browser),
-            loadTime: nowMs() - startTime,
-        };
-        browser.currentPage = pageInfo;
-        browser.history.push(pageInfo);
-        browser.state = "ready";
-        log.info(`Navigation complete: ${pageInfo.title}`);
-        return pageInfo;
+            title, getPageTitle(browser) { },
+            loadTime() { }
+        } - startTime;
     }
-    catch (error) {
-        browser.state = "error";
-        throw error;
-    }
+    finally { }
+    ;
+    browser.currentPage = pageInfo;
+    browser.history.push(pageInfo);
+    browser.state = "ready";
+    log.info(`Navigation complete: ${pageInfo.title}`);
+    return pageInfo;
+}
+try { }
+catch (error) {
+    browser.state = "error";
+    throw error;
 }
 /**
  * Get page title
@@ -133,29 +143,32 @@ export async function executeScript(browserId, script) {
  * Take screenshot
  * @param browserId - Browser instance ID
  */
-export async function takeScreenshot(browserId) {
-    const browser = browsers.get(browserId);
-    if (!browser) {
+export async function takeScreenshot(browserId) { }
+<string /> | null > {
+    const: browser = browsers.get(browserId),
+    if(, browser) {
         throw new Error(`Browser not found: ${browserId}`);
-    }
-    log.debug(`Taking screenshot: ${browserId}`);
-    return browser.webview.takeScreenshot();
-}
+    },
+    log, : .debug(`Taking screenshot: ${browserId}`),
+    return: browser.webview.takeScreenshot()
+};
 /**
  * Go back in history
  * @param browserId - Browser instance ID
  */
-export async function goBack(browserId) {
-    const browser = browsers.get(browserId);
-    if (!browser || browser.history.length < 2) {
-        return null;
-    }
-    // Remove current page
-    browser.history.pop();
-    // Navigate to previous page
-    const previousPage = browser.history[browser.history.length - 1];
-    return navigate(browserId, previousPage.url);
+export async function goBack(browserId) { }
+<PageInfo /> | null > {
+    const: browser = browsers.get(browserId),
+    if(, browser) { }
+} || browser.history.length < 2;
+{
+    return null;
 }
+// Remove current page
+browser.history.pop();
+// Navigate to previous page
+const previousPage = browser.history[browser.history.length - 1];
+return navigate(browserId, previousPage.url);
 /**
  * Refresh current page
  * @param browserId - Browser instance ID
@@ -188,7 +201,9 @@ export async function closeBrowser(browserId) {
  * Get browser instance
  * @param browserId - Browser instance ID
  */
-export function getBrowser(browserId) {
+export function getBrowser(browserId) { }
+ | undefined;
+{
     return browsers.get(browserId);
 }
 /**
@@ -257,8 +272,8 @@ export async function inputText(browserId, selector, text) {
     const element = document.querySelector("${selector}");
     if (element) {
       element.value = "${escapedText}";
-      element.dispatchEvent(new Event('input', { bubbles: true }));
-      element.dispatchEvent(new Event('change', { bubbles: true }));
+      element.dispatchEvent(new Event('input', { bubbles }));
+      element.dispatchEvent(new Event('change', { bubbles }));
       return true;
     }
     return false;
@@ -295,4 +310,3 @@ export default {
     inputText,
     getElementText,
 };
-//# sourceMappingURL=core.js.map

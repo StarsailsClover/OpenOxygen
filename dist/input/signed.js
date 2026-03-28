@@ -175,4 +175,3 @@ export class SignedInputManager {
         this.nonceRegistry.destroy();
     }
 }
-//# sourceMappingURL=signed.js.map

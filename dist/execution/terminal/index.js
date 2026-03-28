@@ -8,7 +8,7 @@
  * - [ ] 流式输出捕获
  * - [ ] 与 Gateway API 集成
  */
-import { exec, spawn } from "node:child_process";
+import { spawn } from "node:child_process";
 import { createSubsystemLogger } from "../../logging/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
 import * as path from "node:path";
@@ -204,4 +204,3 @@ export async function quickExec(command, shellType = "powershell") {
     }
 }
 export { sessions };
-//# sourceMappingURL=index.js.map

@@ -1,7 +1,7 @@
 /**
- * OpenOxygen — Utility Functions
+ * OpenOxygen -Utility Functions
  *
- * 通用工具函数集，供全项目使用。
+ * ͨ�ù��ߺ���������ȫ��Ŀʹ��?
  */
 export declare function generateId(prefix?: string): string;
 export declare function generateShortId(length?: number): string;

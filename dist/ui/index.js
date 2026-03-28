@@ -10,13 +10,12 @@ export { registerHotkey, unregisterHotkey, isHotkeyRegistered, getRegisteredHotk
 // System Tray
 export { createTray, setTrayTooltip, showTrayMenu, showQuickInput, updateTrayStatus, destroyTray, } from "./tray.js";
 // Default export
-import * as winui from "./winui/app.js";
-import * as hotkey from "./hotkey.js";
-import * as tray from "./tray.js";
+import * as from from "./winui/app.js";
+import * as from from "./hotkey.js";
+import * as from from "./tray.js";
 export const UI = {
     ...winui,
     hotkey,
     tray,
 };
 export default UI;
-//# sourceMappingURL=index.js.map

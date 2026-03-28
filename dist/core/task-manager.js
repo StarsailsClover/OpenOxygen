@@ -4,7 +4,7 @@
  * 任务生命周期管理：创建、执行、打断、恢复、取消
  */
 import { createSubsystemLogger } from "../logging/index.js";
-import { generateId, nowMs } from "../utils/index.js";
+import { nowMs } from "../utils/index.js";
 import { TaskPlanner, getNextExecutableSteps, isPlanComplete, isPlanFailed, addReflection, updateStepStatus } from "../inference/planner/index.js";
 import { ReflectionEngine } from "../inference/reflection/index.js";
 const log = createSubsystemLogger("task-manager");
@@ -161,4 +161,3 @@ export class TaskManager {
         return result;
     }
 }
-//# sourceMappingURL=task-manager.js.map

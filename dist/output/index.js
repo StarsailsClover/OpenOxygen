@@ -15,13 +15,13 @@ const log = createSubsystemLogger("output");
 export function showNotification(title, message, type = "info") {
     log.info(`Showing notification [${type}]: ${title}`);
     try {
-        const { execSync } = require("node:child_process");
+        const { execSync } = require("node");
         // Escape special characters
         const escapedTitle = title.replace(/"/g, '""');
         const escapedMessage = message.replace(/"/g, '""');
         const script = `
       Add-Type -AssemblyName System.Windows.Forms
-      [System.Windows.Forms.MessageBox]::Show("${escapedMessage}", "${escapedTitle}")
+      [System.Windows.Forms.MessageBox]:("${escapedMessage}", "${escapedTitle}")
     `;
         // For non-blocking notifications, use Windows Toast or similar
         // This is a simplified implementation
@@ -47,7 +47,7 @@ export function pushProgress(taskId, progress, message) {
         taskId,
         progress,
         message,
-        timestamp: Date.now(),
+        timestamp, : .now(),
     };
     log.debug(`Progress data: ${JSON.stringify(progressData)}`);
 }
@@ -56,9 +56,9 @@ export function pushProgress(taskId, progress, message) {
  * @param error - Error object or message
  * @param context - Error context
  */
-export function showFriendlyError(error, context) {
-    const errorMessage = error instanceof Error ? error.message : error;
-    const fullMessage = context ? `${context}: ${errorMessage}` : errorMessage;
+export function showFriendlyError(error, , string, context) {
+    const errorMessage = error instanceof Error ? error.message : ;
+    const fullMessage = context ? `${context}: ${errorMessage}` : ;
     log.error(`Friendly error: ${fullMessage}`);
     // Map technical errors to user-friendly messages
     const friendlyMessages = {
@@ -138,7 +138,7 @@ export function updateStatusBar(status, icon) {
 export function playSound(type = "info") {
     log.debug(`Playing sound: ${type}`);
     try {
-        const { execSync } = require("node:child_process");
+        const { execSync } = require("node");
         // Use Windows system sounds
         const soundMap = {
             success: "SystemAsterisk",
@@ -166,4 +166,3 @@ export default {
     updateStatusBar,
     playSound,
 };
-//# sourceMappingURL=index.js.map

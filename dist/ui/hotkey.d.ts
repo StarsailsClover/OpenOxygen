@@ -1,7 +1,7 @@
 /**
- * OpenOxygen 鈥?Global Hotkey (26w15aD Phase 6)
+ * OpenOxygen -Global Hotkey (26w15aD Phase 6)
  *
- * 鍏ㄥ眬蹇嵎閿敜璧? * Alt+Space / Ctrl+Alt+O 蹇€熷敜璧? */
+ * 鍏ㄥ眬蹇嵎閿敜璧? * Alt+Space / Ctrl+Alt+O 蹇-熷敜璧? */
 export declare const DEFAULT_HOTKEYS: {
     readonly QUICK_INPUT: "Alt+Space";
     readonly SHOW_APP: "Ctrl+Alt+O";

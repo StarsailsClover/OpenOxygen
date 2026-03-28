@@ -6,11 +6,11 @@
  */
 import { createSubsystemLogger } from "../logging/index.js";
 import { resolveStateDir } from "../core/config/index.js";
-import path from "node:path";
-import fs from "node:fs";
+import path from "node";
+import fs from "node";
 const log = createSubsystemLogger("storage/sqlite");
 // better-sqlite3 是 CJS，需要 createRequire
-import { createRequire } from "node:module";
+import { createRequire } from "node";
 const require = createRequire(import.meta.url);
 // ═══════════════════════════════════════════════════════════════════════════
 // Database Manager
@@ -23,9 +23,10 @@ export class SQLiteStore {
         // 确保目录存在
         const dir = path.dirname(this.dbPath);
         if (!fs.existsSync(dir)) {
-            fs.mkdirSync(dir, { recursive: true });
+            fs.mkdirSync(dir, { recursive });
         }
         const BetterSqlite3 = require("better-sqlite3");
+        import("better-sqlite3");
         this.db = new BetterSqlite3(this.dbPath);
         // WAL 模式：并发读 + 崩溃安全
         this.db.pragma("journal_mode = WAL");
@@ -143,7 +144,7 @@ export class SQLiteStore {
         this.db.prepare(`
       INSERT INTO audit_log (id, timestamp, operation, actor, target, severity, details, rollbackable)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(entry.id, entry.timestamp, entry.operation, entry.actor, entry.target || null, entry.severity || "info", JSON.stringify(entry.details || {}), entry.rollbackable ? 1 : 0);
+    `).run(entry.id, entry.timestamp, entry.operation, entry.actor, entry.target || null, entry.severity || "info", JSON.stringify(entry.details || {}), entry.rollbackable ? 1 : );
     }
     queryAudit(params) {
         let sql = "SELECT * FROM audit_log WHERE 1=1";
@@ -168,7 +169,7 @@ export class SQLiteStore {
         return this.db.prepare(sql).all(...args);
     }
     getAuditCount() {
-        const row = this.db.prepare("SELECT COUNT(*) as count FROM audit_log").get();
+        const row = this.db.prepare("SELECT COUNT(*)  FROM audit_log").get();
         return row?.count || 0;
     }
     // ─── Vector Chunks ────────────────────────────────────────────────────
@@ -187,7 +188,7 @@ export class SQLiteStore {
         return result.changes;
     }
     getChunkCount() {
-        const row = this.db.prepare("SELECT COUNT(*) as count FROM vector_chunks").get();
+        const row = this.db.prepare("SELECT COUNT(*)  FROM vector_chunks").get();
         return row?.count || 0;
     }
     // ─── Model Stats ──────────────────────────────────────────────────────
@@ -195,10 +196,10 @@ export class SQLiteStore {
         this.db.prepare(`
       INSERT INTO model_stats (model, provider, prompt_tokens, completion_tokens, duration_ms, timestamp, mode, success)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(stats.model, stats.provider, stats.promptTokens, stats.completionTokens, stats.durationMs, Date.now(), stats.mode || null, stats.success !== false ? 1 : 0);
+    `).run(stats.model, stats.provider, stats.promptTokens, stats.completionTokens, stats.durationMs, Date.now(), stats.mode || null, stats.success !== false ? 1 : );
     }
     getModelStats(model, since) {
-        let sql = "SELECT model, provider, COUNT(*) as requests, SUM(prompt_tokens) as total_prompt, SUM(completion_tokens) as total_completion, AVG(duration_ms) as avg_duration, SUM(CASE WHEN success=1 THEN 1 ELSE 0 END) as successes FROM model_stats WHERE 1=1";
+        let sql = "SELECT model, provider, COUNT(*) , SUM(prompt_tokens) , SUM(completion_tokens) , AVG(duration_ms) , SUM(CASE WHEN success=1 THEN 1 ELSE 0 END)  FROM model_stats WHERE 1=1";
         const args = [];
         if (model) {
             sql += " AND model = ?";
@@ -213,52 +214,59 @@ export class SQLiteStore {
     }
     // ─── KV Store ─────────────────────────────────────────────────────────
     kvSet(key, value, ttlMs) {
-        const expiresAt = ttlMs ? Date.now() + ttlMs : null;
+        const expiresAt = ttlMs ? Date.now() + ttlMs : ;
         this.db.prepare(`
       INSERT OR REPLACE INTO kv_store (key, value, updated_at, expires_at)
       VALUES (?, ?, ?, ?)
     `).run(key, JSON.stringify(value), Date.now(), expiresAt);
     }
-    kvGet(key) {
-        const row = this.db.prepare("SELECT value, expires_at FROM kv_store WHERE key = ?").get(key);
-        if (!row)
-            return null;
-        if (row.expires_at && row.expires_at < Date.now()) {
-            this.db.prepare("DELETE FROM kv_store WHERE key = ?").run(key);
-            return null;
-        }
-        return JSON.parse(row.value);
-    }
-    kvDelete(key) {
+}
+ | null;
+{
+    const row = this.db.prepare("SELECT value, expires_at FROM kv_store WHERE key = ?").get(key);
+    if (!row)
+        return null;
+    if (row.expires_at && row.expires_at < Date.now()) {
         this.db.prepare("DELETE FROM kv_store WHERE key = ?").run(key);
+        return null;
     }
-    // ─── Utilities ────────────────────────────────────────────────────────
-    getStats() {
-        const sessions = this.db.prepare("SELECT COUNT(*) as c FROM sessions").get()?.c || 0;
-        const audit = this.db.prepare("SELECT COUNT(*) as c FROM audit_log").get()?.c || 0;
-        const chunks = this.db.prepare("SELECT COUNT(*) as c FROM vector_chunks").get()?.c || 0;
-        const kv = this.db.prepare("SELECT COUNT(*) as c FROM kv_store").get()?.c || 0;
-        const stats = this.db.prepare("SELECT COUNT(*) as c FROM model_stats").get()?.c || 0;
-        let dbSize = 0;
-        try {
-            dbSize = fs.statSync(this.dbPath).size;
-        }
-        catch { }
-        return { sessions, auditEntries: audit, vectorChunks: chunks, kvEntries: kv, modelRequests: stats, dbSizeBytes: dbSize };
+    return JSON.parse(row.value);
+}
+kvDelete(key);
+{
+    this.db.prepare("DELETE FROM kv_store WHERE key = ?").run(key);
+}
+// ─── Utilities ────────────────────────────────────────────────────────
+getStats();
+{
+    const sessions = (this.db.prepare("SELECT COUNT(*)  FROM sessions").get())?.c || 0;
+    const audit = (this.db.prepare("SELECT COUNT(*)  FROM audit_log").get())?.c || 0;
+    const chunks = (this.db.prepare("SELECT COUNT(*)  FROM vector_chunks").get())?.c || 0;
+    const kv = (this.db.prepare("SELECT COUNT(*)  FROM kv_store").get())?.c || 0;
+    const stats = (this.db.prepare("SELECT COUNT(*)  FROM model_stats").get())?.c || 0;
+    let dbSize = 0;
+    try {
+        dbSize = fs.statSync(this.dbPath).size;
     }
-    vacuum() {
-        this.db.exec("VACUUM");
-        log.info("Database vacuumed");
-    }
-    close() {
-        this.db.close();
-        log.info("SQLite store closed");
-    }
+    catch { }
+    return { sessions, auditEntries, vectorChunks, kvEntries, modelRequests, dbSizeBytes };
+}
+vacuum();
+{
+    this.db.exec("VACUUM");
+    log.info("Database vacuumed");
+}
+close();
+{
+    this.db.close();
+    log.info("SQLite store closed");
 }
 // ═══════════════════════════════════════════════════════════════════════════
 // Global Instance
 // ═══════════════════════════════════════════════════════════════════════════
-let globalStore = null;
+let globalStore;
+ | null;
+null;
 export function getStore(dbPath) {
     if (!globalStore) {
         globalStore = new SQLiteStore(dbPath);
@@ -271,4 +279,3 @@ export function closeStore() {
         globalStore = null;
     }
 }
-//# sourceMappingURL=sqlite.js.map

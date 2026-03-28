@@ -13,7 +13,7 @@
  *   - 用户 Cookie 仅复制到临时目录，不上传到 GitHub
  *   - .gitignore 已排除 .state/browser-* 目录
  */
-import { spawn, ChildProcess } from "node:child_process";
+import { spawn } from "node:child_process";
 import { WebSocket } from "ws";
 import { createSubsystemLogger } from "../../logging/index.js";
 import { generateId, generateShortId, nowMs } from "../../utils/index.js";
@@ -655,4 +655,3 @@ export async function compareWithExternalBrowser(url) {
     return results;
 }
 export { sessions };
-//# sourceMappingURL=index.js.map

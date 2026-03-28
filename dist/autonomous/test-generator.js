@@ -10,6 +10,10 @@ import { generateId, nowMs } from "../utils/index.js";
 import { GlobalMemory } from "../memory/global/index.js";
 import { decomposeTask, createOrchestration, executeOrchestration } from "../agent/orchestrator/index.js";
 const log = createSubsystemLogger("autonomous/test-generator");
+// Test pattern database
+// Function information
+// Generated test
+// Autonomous decision
 // Decision memory
 const decisionMemory = [];
 /**
@@ -78,13 +82,15 @@ export function analyzeFunction(fn) {
     // Extract parameters from function string
     const fnString = fn.toString();
     const paramMatch = fnString.match(/\(([^)]*)\)/);
-    const params = [];
+    const params, [];
+    "params";
+    [];
     if (paramMatch) {
         const paramList = paramMatch[1].split(",").map(p => p.trim()).filter(p => p);
         for (const param of paramList) {
             const [paramName, defaultValue] = param.split("=").map(p => p.trim());
             params.push({
-                name: paramName,
+                name,
                 type: "unknown",
                 optional: !!defaultValue,
             });
@@ -142,7 +148,7 @@ export async function autonomousDecompose(instruction) {
     log.info(`Autonomous decomposition: ${instruction}`);
     // Check memory for similar decompositions
     const memory = new GlobalMemory(".state", ".state/autonomous-memory.db");
-    const similarTasks = memory.queryTasks({ limit: 10 });
+    const similarTasks = memory.queryTasks({ limit });
     // Find similar task patterns
     const similarPatterns = similarTasks.filter(task => {
         const instructionWords = instruction.toLowerCase().split(/\s+/);
@@ -172,8 +178,8 @@ export async function autonomousDecompose(instruction) {
         context: `Decompose: ${instruction}`,
         decision: `Strategy: ${plan.strategy}, ${plan.subtasks.length} subtasks`,
         reasoning: `Based on ${similarPatterns.length} similar patterns with ${similarPatterns.filter(t => t.success).length / (similarPatterns.length || 1) * 100}% success rate`,
-        action: async () => plan,
-        success: true,
+        action() { }, plan,
+        success,
     });
     return plan;
 }
@@ -184,21 +190,21 @@ export async function autonomousDecompose(instruction) {
  */
 export async function autonomousExecute(instruction) {
     log.info(`Autonomous execution: ${instruction}`);
-    // Step 1: Decompose task
+    // Step 1 task
     const plan = await autonomousDecompose(instruction);
-    // Step 2: Create orchestration
+    // Step 2 orchestration
     const orch = createOrchestration({
         name: `Autonomous: ${instruction.substring(0, 50)}`,
-        subtasks: plan.subtasks,
-        strategy: plan.strategy,
+        subtasks, : .subtasks,
+        strategy, : .strategy,
     });
-    // Step 3: Execute with reflection
+    // Step 3 with reflection
     let result;
     let retryCount = 0;
     const maxRetries = 3;
     while (retryCount < maxRetries) {
         result = await executeOrchestration(orch.id);
-        // Step 4: Reflect on result
+        // Step 4 on result
         const reflection = reflectOnResult(result, instruction);
         if (reflection.success) {
             log.info(`Task completed successfully`);
@@ -206,7 +212,7 @@ export async function autonomousExecute(instruction) {
         }
         else {
             log.warn(`Task failed, reflection: ${reflection.reasoning}`);
-            // Step 5: Adjust and retry if needed
+            // Step 5 and retry if needed
             if (reflection.shouldRetry && retryCount < maxRetries - 1) {
                 retryCount++;
                 log.info(`Retrying (${retryCount}/${maxRetries})`);
@@ -221,13 +227,11 @@ export async function autonomousExecute(instruction) {
     // Record decision
     recordDecision({
         context: `Execute: ${instruction}`,
-        decision: result?.status || "unknown",
-        reasoning: `Completed after ${retryCount} retries`,
-        action: async () => result,
-        success: result?.status === "completed",
-    });
-    return result;
+        decision, status
+    } || "unknown", reasoning, `Completed after ${retryCount} retries`, action(), result, success?.status === "completed");
 }
+;
+return result;
 /**
  * Reflect on execution result
  * @param result - Execution result
@@ -236,15 +240,15 @@ export async function autonomousExecute(instruction) {
 function reflectOnResult(result, originalInstruction) {
     if (!result) {
         return {
-            success: false,
-            shouldRetry: true,
+            success,
+            shouldRetry,
             reasoning: "No result received",
         };
     }
     if (result.status === "completed") {
         return {
-            success: true,
-            shouldRetry: false,
+            success,
+            shouldRetry,
             reasoning: "Task completed successfully",
         };
     }
@@ -259,27 +263,27 @@ function reflectOnResult(result, originalInstruction) {
                 e.includes("temporarily"));
             if (recoverableErrors.length > 0) {
                 return {
-                    success: false,
-                    shouldRetry: true,
+                    success,
+                    shouldRetry,
                     reasoning: `Recoverable errors: ${recoverableErrors.join(", ")}`,
-                    adjustments: { increaseTimeout: true },
+                    adjustments,
                 };
             }
             return {
-                success: false,
-                shouldRetry: false,
+                success,
+                shouldRetry,
                 reasoning: `Non-recoverable errors: ${errors.join(", ")}`,
             };
         }
         return {
-            success: false,
-            shouldRetry: true,
+            success,
+            shouldRetry,
             reasoning: "Unknown failure",
         };
     }
     return {
-        success: false,
-        shouldRetry: false,
+        success,
+        shouldRetry,
         reasoning: `Unexpected status: ${result.status}`,
     };
 }
@@ -294,17 +298,19 @@ function adjustPlan(plan, reflection) {
         for (const subtask of plan.subtasks) {
             subtask.timeoutMs = (subtask.timeoutMs || 30000) * 2;
         }
-        log.info("Adjusted plan: increased timeouts");
+        log.info("Adjusted plan timeouts");
     }
 }
 /**
  * Record autonomous decision
  * @param decision - Decision to record
  */
-function recordDecision(decision) {
+function recordDecision(decision, , AutonomousDecision, , , ) { }
+ > ;
+{
     const fullDecision = {
-        id: generateId("decision"),
-        timestamp: nowMs(),
+        id() { },
+        timestamp() { },
         ...decision,
     };
     decisionMemory.push(fullDecision);
@@ -327,7 +333,7 @@ export function getDecisionHistory() {
 export function learnFromDecisions() {
     if (decisionMemory.length === 0) {
         return {
-            successRate: 0,
+            successRate,
             commonFailures: [],
             recommendations: [],
         };
@@ -372,4 +378,3 @@ export default {
     getDecisionHistory,
     learnFromDecisions,
 };
-//# sourceMappingURL=test-generator.js.map

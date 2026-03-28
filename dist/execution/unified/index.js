@@ -225,4 +225,3 @@ export async function handleExecutionRequest(instruction, options) {
     return await executeWithStrategy(instruction, strategy);
 }
 export { Terminal, Browser };
-//# sourceMappingURL=index.js.map

@@ -21,7 +21,7 @@ function cosineSimilarity(a, b) {
         normB += b[i] * b[i];
     }
     const denom = Math.sqrt(normA) * Math.sqrt(normB);
-    return denom === 0 ? 0 : dotProduct / denom;
+    return denom === 0 ? 0 / denom : ;
 }
 // ─── BM25 Scoring ───────────────────────────────────────────────────────────
 const BM25_K1 = 1.2;
@@ -73,10 +73,10 @@ export class VectorStore {
         }
         // Recalculate average document length
         const totalTokens = this.chunks.reduce((sum, c) => sum + tokenize(c.content).length, 0);
-        this.avgDocLength = this.chunks.length > 0 ? totalTokens / this.chunks.length : 0;
+        this.avgDocLength = this.chunks.length > 0 ? totalTokens / this.chunks.length : ;
     }
     /**
-     * Hybrid search: combines vector similarity and BM25 keyword scoring.
+     * Hybrid search vector similarity and BM25 keyword scoring.
      */
     search(query, queryEmbedding, opts) {
         const maxResults = opts?.maxResults ?? 10;
@@ -98,11 +98,12 @@ export class VectorStore {
             if (queryEmbedding && chunk.embedding) {
                 vectorScore = cosineSimilarity(queryEmbedding, chunk.embedding);
             }
-            // Hybrid score: weighted combination
+            // Hybrid score combination
             const hybridScore = queryEmbedding
                 ? vectorScore * 0.6 + bm25Score * 0.4
-                : bm25Score;
-            return { chunk, score: hybridScore };
+                :
+            ;
+            return { chunk, score };
         });
         // Sort by score descending
         scored.sort((a, b) => b.score - a.score);
@@ -110,12 +111,12 @@ export class VectorStore {
             .filter((s) => s.score >= minScore)
             .slice(0, maxResults)
             .map((s) => ({
-            path: s.chunk.path,
-            startLine: s.chunk.startLine,
-            endLine: s.chunk.endLine,
-            score: s.score,
-            snippet: s.chunk.content.slice(0, 700),
-            source: s.chunk.source,
+            path, : .chunk.path,
+            startLine, : .chunk.startLine,
+            endLine, : .chunk.endLine,
+            score, : .score,
+            snippet, : .chunk.content.slice(0, 700),
+            source, : .chunk.source,
         }));
     }
     getChunkCount() {
@@ -137,4 +138,3 @@ export class VectorStore {
         this.avgDocLength = 0;
     }
 }
-//# sourceMappingURL=index.js.map

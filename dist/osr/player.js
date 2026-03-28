@@ -9,10 +9,20 @@ import { sleep } from "../utils/index.js";
 import { mouseMove, mouseClick, mouseDoubleClick, mouseDrag, mouseScroll, } from "../native/mouse.js";
 import { keyPress, keyCombination, typeText, } from "../native/keyboard.js";
 const log = createSubsystemLogger("osr/player");
+// Playback states
+export 
+// Playback options
+export 
+// Playback session
+export 
 // Active playback
-let activePlayback = null;
+let activePlayback;
+ | null;
+null;
 // Playback abort controller
-let abortController = null;
+let abortController;
+ | null;
+null;
 /**
  * Play recording
  * @param recording - Recording session to play
@@ -30,7 +40,7 @@ export async function playRecording(recording, options = {}) {
     activePlayback = {
         recording,
         state: "playing",
-        currentIndex: startIndex,
+        currentIndex,
         options,
     };
     abortController = new AbortController();
@@ -84,32 +94,31 @@ export async function playRecording(recording, options = {}) {
 async function executeStep(step, speed) {
     switch (step.type) {
         case "mouse_move":
-            await executeMouseMove(step.data);
+            executeMouseMove(step.data);
             break;
         case "mouse_click":
-            await executeMouseClick(step.data);
+            executeMouseClick(step.data);
             break;
         case "mouse_drag":
-            await executeMouseDrag(step.data);
+            executeMouseDrag(step.data);
             break;
         case "key_press":
-            await executeKeyPress(step.data);
+            executeKeyPress(step.data);
             break;
         case "key_combination":
-            await executeKeyCombination(step.data);
+            executeKeyCombination(step.data);
             break;
         case "type_text":
-            await executeTypeText(step.data, speed);
+            executeTypeText(step.data, speed);
             break;
         case "window_focus":
             // Window focus changes are informational
             log.debug(`Window focus: ${step.data.windowTitle || step.data.action}`);
             break;
         case "delay":
-            await sleep(step.data.duration / speed);
+            sleep(step.data.duration / speed);
             break;
-        default:
-            log.warn(`Unknown step type: ${step.type}`);
+        default: warn(`Unknown step type: ${step.type}`);
     }
 }
 /**
@@ -225,7 +234,9 @@ export function seekTo(index) {
 /**
  * Get step at index
  */
-export function getStepAt(index) {
+export function getStepAt(index) { }
+ | null;
+{
     if (!activePlayback) {
         return null;
     }
@@ -243,4 +254,3 @@ export default {
     seekTo,
     getStepAt,
 };
-//# sourceMappingURL=player.js.map

@@ -42,4 +42,3 @@ export async function initialize(config = {}) {
         memory,
     };
 }
-//# sourceMappingURL=index.js.map

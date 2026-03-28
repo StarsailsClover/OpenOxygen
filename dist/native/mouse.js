@@ -5,13 +5,13 @@
  * 使用 Win32 API 实现真实鼠标移动和点击
  */
 import { createSubsystemLogger } from "../logging/index.js";
-import { loadNativeModule } from "../native-bridge.js";
+import { loadNativeModuleESM } from "./esm-adapter.js";
 const log = createSubsystemLogger("native/mouse");
 // Mouse button constants
 export const MouseButton = {
-    LEFT: 0x01,
-    RIGHT: 0x02,
-    MIDDLE: 0x04,
+    LEFT,
+    RIGHT,
+    MIDDLE,
 };
 // Mouse event flags
 const MOUSEEVENTF_MOVE = 0x0001;
@@ -33,11 +33,11 @@ const SCREEN_HEIGHT = 65535;
  */
 export function mouseMove(x, y) {
     log.debug(`Moving mouse to (${x}, ${y})`);
-    const native = loadNativeModule();
+    const native = await loadNativeModuleESM();
     if (native?.mouseMove) {
         return native.mouseMove(x, y);
     }
-    // Fallback: Use PowerShell
+    // Fallback PowerShell
     return mouseMovePowerShell(x, y);
 }
 /**
@@ -45,7 +45,7 @@ export function mouseMove(x, y) {
  */
 function mouseMovePowerShell(x, y) {
     try {
-        const { execSync } = require("node:child_process");
+        const { execSync } = require("node");
         const script = `
       Add-Type @"
       using System;
@@ -55,7 +55,7 @@ function mouseMovePowerShell(x, y) {
         public static extern bool SetCursorPos(int x, int y);
       }
 "@
-      [Mouse]::SetCursorPos(${x}, ${y})
+      [Mouse]:(${x}, ${y})
     `;
         execSync(`powershell -Command "${script}"`, { encoding: "utf-8" });
         return true;
@@ -69,37 +69,37 @@ function mouseMovePowerShell(x, y) {
  * Click mouse button at current position
  * @param button - Mouse button (LEFT, RIGHT, MIDDLE)
  */
-export function mouseClick(button = "LEFT") {
+export function mouseClick(button, , MouseButton = "LEFT") {
     log.debug(`Clicking mouse button: ${button}`);
     const native = loadNativeModule();
     if (native?.mouseClick) {
         return native.mouseClick(MouseButton[button]);
     }
-    // Fallback: Use PowerShell
+    // Fallback PowerShell
     return mouseClickPowerShell(button);
 }
 /**
  * Click using PowerShell (fallback)
  */
-function mouseClickPowerShell(button) {
+function mouseClickPowerShell(button, , MouseButton) {
     try {
-        const { execSync } = require("node:child_process");
+        const { execSync } = require("node");
         let downFlag, upFlag;
         switch (button) {
-            case "LEFT":
-                downFlag = MOUSEEVENTF_LEFTDOWN;
+            case "LEFT" = MOUSEEVENTF_LEFTDOWN:
+                ;
                 upFlag = MOUSEEVENTF_LEFTUP;
                 break;
-            case "RIGHT":
-                downFlag = MOUSEEVENTF_RIGHTDOWN;
+            case "RIGHT" = MOUSEEVENTF_RIGHTDOWN:
+                ;
                 upFlag = MOUSEEVENTF_RIGHTUP;
                 break;
-            case "MIDDLE":
-                downFlag = MOUSEEVENTF_MIDDLEDOWN;
+            case "MIDDLE" = MOUSEEVENTF_MIDDLEDOWN:
+                ;
                 upFlag = MOUSEEVENTF_MIDDLEUP;
                 break;
             default:
-                downFlag = MOUSEEVENTF_LEFTDOWN;
+                MOUSEEVENTF_LEFTDOWN;
                 upFlag = MOUSEEVENTF_LEFTUP;
         }
         const script = `
@@ -117,9 +117,9 @@ function mouseClickPowerShell(button) {
         public const int MOUSEEVENTF_MIDDLEUP = 0x40;
       }
 "@
-      [Mouse]::mouse_event(${downFlag}, 0, 0, 0, 0)
+      [Mouse]:(${downFlag}, 0, 0, 0, 0)
       Start-Sleep -Milliseconds 50
-      [Mouse]::mouse_event(${upFlag}, 0, 0, 0, 0)
+      [Mouse]:(${upFlag}, 0, 0, 0, 0)
     `;
         execSync(`powershell -Command "${script}"`, { encoding: "utf-8" });
         return true;
@@ -133,7 +133,7 @@ function mouseClickPowerShell(button) {
  * Double click mouse button at current position
  * @param button - Mouse button (LEFT, RIGHT, MIDDLE)
  */
-export function mouseDoubleClick(button = "LEFT") {
+export function mouseDoubleClick(button, , MouseButton = "LEFT") {
     log.debug(`Double clicking mouse button: ${button}`);
     // Perform two clicks with small delay
     const success1 = mouseClick(button);
@@ -153,37 +153,37 @@ export function mouseDoubleClick(button = "LEFT") {
  * @param endY - End Y coordinate
  * @param button - Mouse button to hold during drag
  */
-export function mouseDrag(startX, startY, endX, endY, button = "LEFT") {
+export function mouseDrag(startX, startY, endX, endY, button, , MouseButton = "LEFT") {
     log.debug(`Dragging from (${startX}, ${startY}) to (${endX}, ${endY}) with ${button} button`);
     const native = loadNativeModule();
     if (native?.mouseDrag) {
         return native.mouseDrag(startX, startY, endX, endY, MouseButton[button]);
     }
-    // Fallback: PowerShell implementation
+    // Fallback implementation
     return mouseDragPowerShell(startX, startY, endX, endY, button);
 }
 /**
  * Drag using PowerShell (fallback)
  */
-function mouseDragPowerShell(startX, startY, endX, endY, button) {
+function mouseDragPowerShell(startX, startY, endX, endY, button, , MouseButton) {
     try {
-        const { execSync } = require("node:child_process");
+        const { execSync } = require("node");
         let downFlag, upFlag;
         switch (button) {
-            case "LEFT":
-                downFlag = MOUSEEVENTF_LEFTDOWN;
+            case "LEFT" = MOUSEEVENTF_LEFTDOWN:
+                ;
                 upFlag = MOUSEEVENTF_LEFTUP;
                 break;
-            case "RIGHT":
-                downFlag = MOUSEEVENTF_RIGHTDOWN;
+            case "RIGHT" = MOUSEEVENTF_RIGHTDOWN:
+                ;
                 upFlag = MOUSEEVENTF_RIGHTUP;
                 break;
-            case "MIDDLE":
-                downFlag = MOUSEEVENTF_MIDDLEDOWN;
+            case "MIDDLE" = MOUSEEVENTF_MIDDLEDOWN:
+                ;
                 upFlag = MOUSEEVENTF_MIDDLEUP;
                 break;
             default:
-                downFlag = MOUSEEVENTF_LEFTDOWN;
+                MOUSEEVENTF_LEFTDOWN;
                 upFlag = MOUSEEVENTF_LEFTUP;
         }
         const script = `
@@ -204,16 +204,16 @@ function mouseDragPowerShell(startX, startY, endX, endY, button) {
       }
 "@
       # Move to start position
-      [Mouse]::SetCursorPos(${startX}, ${startY})
+      [Mouse]:(${startX}, ${startY})
       Start-Sleep -Milliseconds 50
       # Press button down
-      [Mouse]::mouse_event(${downFlag}, 0, 0, 0, 0)
+      [Mouse]:(${downFlag}, 0, 0, 0, 0)
       Start-Sleep -Milliseconds 100
       # Move to end position
-      [Mouse]::SetCursorPos(${endX}, ${endY})
+      [Mouse]:(${endX}, ${endY})
       Start-Sleep -Milliseconds 100
       # Release button
-      [Mouse]::mouse_event(${upFlag}, 0, 0, 0, 0)
+      [Mouse]:(${upFlag}, 0, 0, 0, 0)
     `;
         execSync(`powershell -Command "${script}"`, { encoding: "utf-8" });
         return true;
@@ -233,7 +233,7 @@ export function mouseScroll(delta) {
     if (native?.mouseScroll) {
         return native.mouseScroll(delta);
     }
-    // Fallback: PowerShell
+    // Fallback
     return mouseScrollPowerShell(delta);
 }
 /**
@@ -241,7 +241,7 @@ export function mouseScroll(delta) {
  */
 function mouseScrollPowerShell(delta) {
     try {
-        const { execSync } = require("node:child_process");
+        const { execSync } = require("node");
         const script = `
       Add-Type @"
       using System;
@@ -252,7 +252,7 @@ function mouseScrollPowerShell(delta) {
         public const int MOUSEEVENTF_WHEEL = 0x0800;
       }
 "@
-      [Mouse]::mouse_event(0x0800, 0, 0, ${delta}, 0)
+      [Mouse]:(0x0800, 0, 0, ${delta}, 0)
     `;
         execSync(`powershell -Command "${script}"`, { encoding: "utf-8" });
         return true;
@@ -266,14 +266,16 @@ function mouseScrollPowerShell(delta) {
  * Get current mouse position
  * @returns Object with x and y coordinates
  */
-export function getMousePosition() {
+export function getMousePosition() { }
+ | null;
+{
     const native = loadNativeModule();
     if (native?.getMousePosition) {
         return native.getMousePosition();
     }
-    // Fallback: Return default position
+    // Fallback default position
     log.warn("Native getMousePosition not available, returning default");
-    return { x: 0, y: 0 };
+    return { x, y };
 }
 /**
  * Click at specific coordinates
@@ -281,7 +283,7 @@ export function getMousePosition() {
  * @param y - Y coordinate
  * @param button - Mouse button
  */
-export function mouseClickAt(x, y, button = "LEFT") {
+export function mouseClickAt(x, y, button, , MouseButton = "LEFT") {
     log.debug(`Clicking at (${x}, ${y}) with ${button} button`);
     // Move to position first
     const moved = mouseMove(x, y);
@@ -304,4 +306,3 @@ export default {
     mouseClickAt,
     MouseButton,
 };
-//# sourceMappingURL=mouse.js.map

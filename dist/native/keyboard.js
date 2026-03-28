@@ -5,45 +5,45 @@
  * 使用 Win32 API 实现真实键盘输入
  */
 import { createSubsystemLogger } from "../logging/index.js";
-import { loadNativeModule } from "../native-bridge.js";
+import { loadNativeModuleESM } from "./esm-adapter.js";
 const log = createSubsystemLogger("native/keyboard");
 // Virtual key codes (Windows)
 export const VirtualKey = {
     // Letters
-    A: 0x41, B: 0x42, C: 0x43, D: 0x44, E: 0x45, F: 0x46,
-    G: 0x47, H: 0x48, I: 0x49, J: 0x4A, K: 0x4B, L: 0x4C,
-    M: 0x4D, N: 0x4E, O: 0x4F, P: 0x50, Q: 0x51, R: 0x52,
-    S: 0x53, T: 0x54, U: 0x55, V: 0x56, W: 0x57, X: 0x58,
-    Y: 0x59, Z: 0x5A,
+    A, B, C, D, E, F,
+    G, H, I, J, K, L,
+    M, N, O, P, Q, R,
+    S, T, U, V, W, X,
+    Y, Z,
     // Numbers
-    NUM0: 0x30, NUM1: 0x31, NUM2: 0x32, NUM3: 0x33, NUM4: 0x34,
-    NUM5: 0x35, NUM6: 0x36, NUM7: 0x37, NUM8: 0x38, NUM9: 0x39,
+    NUM0, NUM1, NUM2, NUM3, NUM4,
+    NUM5, NUM6, NUM7, NUM8, NUM9,
     // Function keys
-    F1: 0x70, F2: 0x71, F3: 0x72, F4: 0x73, F5: 0x74,
-    F6: 0x75, F7: 0x76, F8: 0x77, F9: 0x78, F10: 0x79,
-    F11: 0x7A, F12: 0x7B,
+    F1, F2, F3, F4, F5,
+    F6, F7, F8, F9, F10,
+    F11, F12,
     // Special keys
-    ENTER: 0x0D,
-    ESCAPE: 0x1B,
-    SPACE: 0x20,
-    TAB: 0x09,
-    BACKSPACE: 0x08,
-    DELETE: 0x2E,
-    INSERT: 0x2D,
-    HOME: 0x24,
-    END: 0x23,
-    PAGEUP: 0x21,
-    PAGEDOWN: 0x22,
-    UP: 0x26,
-    DOWN: 0x28,
-    LEFT: 0x25,
-    RIGHT: 0x27,
+    ENTER,
+    ESCAPE,
+    SPACE,
+    TAB,
+    BACKSPACE,
+    DELETE,
+    INSERT,
+    HOME,
+    END,
+    PAGEUP,
+    PAGEDOWN,
+    UP,
+    DOWN,
+    LEFT,
+    RIGHT,
     // Modifier keys
-    SHIFT: 0x10,
-    CONTROL: 0x11,
-    ALT: 0x12,
-    LWIN: 0x5B,
-    RWIN: 0x5C,
+    SHIFT,
+    CONTROL,
+    ALT,
+    LWIN,
+    RWIN,
 };
 // Key event flags
 const KEYEVENTF_EXTENDEDKEY = 0x0001;
@@ -52,10 +52,10 @@ const KEYEVENTF_KEYUP = 0x0002;
  * Press a single key
  * @param key - Virtual key code or key name
  */
-export function keyPress(key) {
-    const vk = typeof key === "string" ? VirtualKey[key] : key;
+export function keyPress(key, , VirtualKey, , number) {
+    const vk = typeof key === "string" ? VirtualKey[key] : ;
     log.debug(`Pressing key: ${key} (VK: ${vk})`);
-    const native = loadNativeModule();
+    const native = await loadNativeModuleESM();
     if (native?.keyPress) {
         return native.keyPress(vk);
     }
@@ -66,7 +66,7 @@ export function keyPress(key) {
  */
 function keyPressPowerShell(vk) {
     try {
-        const { execSync } = require("node:child_process");
+        const { execSync } = require("node");
         const script = `
       Add-Type @"
       using System;
@@ -77,9 +77,9 @@ function keyPressPowerShell(vk) {
         public const uint KEYEVENTF_KEYUP = 0x0002;
       }
 "@
-      [Keyboard]::keybd_event(${vk}, 0, 0, 0)
+      [Keyboard]:(${vk}, 0, 0, 0)
       Start-Sleep -Milliseconds 50
-      [Keyboard]::keybd_event(${vk}, 0, 2, 0)
+      [Keyboard]:(${vk}, 0, 2, 0)
     `;
         execSync(`powershell -Command "${script}"`, { encoding: "utf-8" });
         return true;
@@ -107,14 +107,14 @@ export function keyCombination(keys) {
  */
 function keyCombinationPowerShell(keys) {
     try {
-        const { execSync } = require("node:child_process");
+        const { execSync } = require("node");
         // Build script to press all keys down, then release in reverse order
         let pressScript = "";
         let releaseScript = "";
         for (const key of keys) {
             const vk = VirtualKey[key];
-            pressScript += `[Keyboard]::keybd_event(${vk}, 0, 0, 0)\n      `;
-            releaseScript = `[Keyboard]::keybd_event(${vk}, 0, 2, 0)\n      ` + releaseScript;
+            pressScript += `[Keyboard]:(${vk}, 0, 0, 0)\n      `;
+            releaseScript = `[Keyboard]:(${vk}, 0, 2, 0)\n      ` + releaseScript;
         }
         const script = `
       Add-Type @"
@@ -155,7 +155,7 @@ export function typeText(text) {
  */
 function typeTextPowerShell(text) {
     try {
-        const { execSync } = require("node:child_process");
+        const { execSync } = require("node");
         // Escape special characters for PowerShell
         const escapedText = text
             .replace(/"/g, '""')
@@ -164,7 +164,7 @@ function typeTextPowerShell(text) {
             .replace(/\$/g, "`$");
         const script = `
       Add-Type -AssemblyName System.Windows.Forms
-      [System.Windows.Forms.SendKeys]::SendWait("${escapedText}")
+      [System.Windows.Forms.SendKeys]:("${escapedText}")
     `;
         execSync(`powershell -Command "${script}"`, { encoding: "utf-8" });
         return true;
@@ -178,7 +178,7 @@ function typeTextPowerShell(text) {
  * Send a special key
  * @param key - Special key name
  */
-export function sendSpecialKey(key) {
+export function sendSpecialKey(key, , VirtualKey) {
     return keyPress(key);
 }
 /**
@@ -294,4 +294,3 @@ export default {
     pressDelete,
     VirtualKey,
 };
-//# sourceMappingURL=keyboard.js.map

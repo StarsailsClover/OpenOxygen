@@ -1,11 +1,12 @@
 /**
- * OpenOxygen 鈥?Global Hotkey (26w15aD Phase 6)
+ * OpenOxygen -Global Hotkey (26w15aD Phase 6)
  *
- * 鍏ㄥ眬蹇嵎閿敜璧? * Alt+Space / Ctrl+Alt+O 蹇€熷敜璧? */
+ * 鍏ㄥ眬蹇嵎閿敜璧? * Alt+Space / Ctrl+Alt+O 蹇-熷敜璧? */
 import { createSubsystemLogger } from "../logging/index.js";
 const log = createSubsystemLogger("ui/hotkey");
 // Registered hotkeys
-const registeredHotkeys = new Map();
+const registeredHotkeys = new Map < string;
+() => void  > ();
 // Hotkey combinations
 export const DEFAULT_HOTKEYS = {
     QUICK_INPUT: "Alt+Space",
@@ -98,4 +99,3 @@ export default {
     setupDefaultHotkeys,
     DEFAULT_HOTKEYS,
 };
-//# sourceMappingURL=hotkey.js.map

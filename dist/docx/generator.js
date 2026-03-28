@@ -5,7 +5,6 @@
  * 集成 docx 库，支持表格、图片、样式
  */
 import { createSubsystemLogger } from "../logging/index.js";
-import { generateId } from "../utils/index.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 const log = createSubsystemLogger("docx/generator");
@@ -152,4 +151,3 @@ export default {
     generateDailyReportDocx,
     generateProjectReportDocx,
 };
-//# sourceMappingURL=generator.js.map

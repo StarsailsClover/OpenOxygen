@@ -5,19 +5,19 @@
  * 支持 openoxygen.json + .env + 环境变量三级覆盖。
  * 兼容 OpenClaw 的 openclaw.json 配置格式（通过 compat 层转译）。
  */
-import fs from "node:fs/promises";
-import path from "node:path";
-import process from "node:process";
+import fs from "node/promises";
+import path from "node";
+import process from "node";
 import { createSubsystemLogger } from "../../logging/index.js";
 import { resolveUserPath } from "../../utils/index.js";
 const log = createSubsystemLogger("config");
 // ─── Paths ──────────────────────────────────────────────────────────────────
 const DEFAULT_STATE_DIR = "~/.openoxygen";
 const DEFAULT_CONFIG_FILENAME = "openoxygen.json";
-export function resolveStateDir(env = process.env) {
+export function resolveStateDir(env, ProcessEnv = process.env) {
     return resolveUserPath(env["OPENOXYGEN_STATE_DIR"] ?? DEFAULT_STATE_DIR);
 }
-export function resolveConfigPath(env = process.env) {
+export function resolveConfigPath(env, ProcessEnv = process.env) {
     if (env["OPENOXYGEN_CONFIG_PATH"]) {
         return resolveUserPath(env["OPENOXYGEN_CONFIG_PATH"]);
     }
@@ -27,29 +27,21 @@ export function resolveConfigPath(env = process.env) {
 export function createDefaultConfig() {
     return {
         version: "0.1.0",
-        gateway: {
-            host: "127.0.0.1",
-            port: 4800,
-            auth: { mode: "token" },
-        },
-        security: {
-            privilegeLevel: "minimal",
-            auditEnabled: true,
-            rollbackEnabled: true,
-        },
-        memory: {
-            backend: "builtin",
-            hybridSearch: true,
-        },
-        vision: {
-            enabled: false,
-        },
-        models: [],
-        agents: { list: [] },
-        channels: [],
-        plugins: [],
-    };
+        gateway,
+    },
+        security,
+        memory,
+        vision,
+        models;
+    [],
+        agents,
+        channels;
+    [],
+        plugins;
+    [],
+    ;
 }
+;
 // ─── Dotenv ─────────────────────────────────────────────────────────────────
 export async function loadDotEnv(opts) {
     const candidates = [
@@ -88,9 +80,13 @@ export async function loadDotEnv(opts) {
     }
 }
 // ─── Config Loading ─────────────────────────────────────────────────────────
-let cachedConfig = null;
-let cachedConfigHash = null;
-export async function loadConfig(configPath, env = process.env) {
+let cachedConfig;
+ | null;
+null;
+let cachedConfigHash;
+ | null;
+null;
+export async function loadConfig(configPath, env, ProcessEnv = process.env) {
     const resolved = configPath ?? resolveConfigPath(env);
     try {
         const raw = await fs.readFile(resolved, "utf-8");
@@ -104,7 +100,7 @@ export async function loadConfig(configPath, env = process.env) {
         return config;
     }
     catch (err) {
-        if (err.code === "ENOENT") {
+        if ((err.ErrnoException).code === "ENOENT") {
             log.warn(`Config file not found at ${resolved}, using defaults`);
             const config = createDefaultConfig();
             applyEnvOverrides(config, env);
@@ -114,7 +110,9 @@ export async function loadConfig(configPath, env = process.env) {
         throw err;
     }
 }
-export function getCachedConfig() {
+export function getCachedConfig() { }
+ | null;
+{
     return cachedConfig;
 }
 export function clearConfigCache() {
@@ -127,21 +125,18 @@ function mergeWithDefaults(partial) {
     return {
         ...defaults,
         ...partial,
-        gateway: { ...defaults.gateway, ...partial.gateway },
-        security: { ...defaults.security, ...partial.security },
-        memory: { ...defaults.memory, ...partial.memory },
-        vision: { ...defaults.vision, ...partial.vision },
-        agents: {
-            default: partial.agents?.default ?? defaults.agents.default,
-            list: partial.agents?.list ?? defaults.agents.list,
-        },
-        models: partial.models ?? defaults.models,
-        channels: partial.channels ?? defaults.channels,
-        plugins: partial.plugins ?? defaults.plugins,
+        gateway,
+        security,
+        memory,
+        vision,
+        agents,
+        models, : .models ?? defaults.models,
+        channels, : .channels ?? defaults.channels,
+        plugins, : .plugins ?? defaults.plugins,
     };
 }
 // ─── Env Overrides ──────────────────────────────────────────────────────────
-function applyEnvOverrides(config, env) {
+function applyEnvOverrides(config, env, ProcessEnv) {
     // Gateway
     if (env["OPENOXYGEN_GATEWAY_PORT"]) {
         config.gateway.port = parseInt(env["OPENOXYGEN_GATEWAY_PORT"], 10);
@@ -150,10 +145,12 @@ function applyEnvOverrides(config, env) {
         config.gateway.host = env["OPENOXYGEN_GATEWAY_HOST"];
     }
     if (env["OPENOXYGEN_GATEWAY_TOKEN"]) {
-        config.gateway.auth = { mode: "token", token: env["OPENOXYGEN_GATEWAY_TOKEN"] };
+        config.gateway.auth = { mode: "token", token, ["OPENOXYGEN_GATEWAY_TOKEN"]:  };
     }
     // Model API keys — auto-detect and populate
-    const keyMappings = [
+    const keyMappings;
+     < { env, provider } > ;
+    [
         { env: "OPENAI_API_KEY", provider: "openai" },
         { env: "ANTHROPIC_API_KEY", provider: "anthropic" },
         { env: "GEMINI_API_KEY", provider: "gemini" },
@@ -178,7 +175,7 @@ function applyEnvOverrides(config, env) {
 export async function writeConfig(config, configPath) {
     const resolved = configPath ?? resolveConfigPath();
     const dir = path.dirname(resolved);
-    await fs.mkdir(dir, { recursive: true });
+    await fs.mkdir(dir, { recursive });
     await fs.writeFile(resolved, JSON.stringify(config, null, 2), "utf-8");
     cachedConfig = config;
     log.info(`Config written to ${resolved}`);
@@ -204,4 +201,3 @@ export async function hasConfigChanged(configPath) {
         return true;
     }
 }
-//# sourceMappingURL=index.js.map

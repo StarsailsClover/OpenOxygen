@@ -10,8 +10,8 @@ export { connectCDP, enableDomains, navigateCDP, executeScriptCDP, queryElementC
 // OUV integration
 export { OUVBrowserIntegration, } from "./ouv-integration.js";
 // Default export
-import * as core from "./core.js";
-import * as cdp from "./cdp.js";
+import * as from from "./core.js";
+import * as from from "./cdp.js";
 import { OUVBrowserIntegration } from "./ouv-integration.js";
 export const Browser = {
     ...core,
@@ -19,4 +19,3 @@ export const Browser = {
     OUVBrowserIntegration,
 };
 export default Browser;
-//# sourceMappingURL=index.js.map

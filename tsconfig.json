@@ -24,27 +24,15 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "isolatedModules": true,
-    "verbatimModuleSyntax": true,
-    "noUncheckedIndexedAccess": true,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "exactOptionalPropertyTypes": false,
-    "paths": {
-      "@openoxygen/core/*": ["./src/core/*"],
-      "@openoxygen/inference/*": ["./src/inference/*"],
-      "@openoxygen/execution/*": ["./src/execution/*"],
-      "@openoxygen/memory/*": ["./src/memory/*"],
-      "@openoxygen/security/*": ["./src/security/*"],
-      "@openoxygen/compat/*": ["./src/compat/*"],
-      "@openoxygen/plugins/*": ["./src/plugins/*"],
-      "@openoxygen/types/*": ["./src/types/*"],
-      "@openoxygen/utils/*": ["./src/utils/*"]
-    }
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "isolatedModules": false,
+    "verbatimModuleSyntax": false,
+    "allowJs": true,
+    "checkJs": false,
+    "noEmitOnError": false
   },
   "include": ["src/**/*.ts", "src/**/*.js"],
-  "exclude": ["node_modules", "dist", "test", "_reference"]
+  "exclude": ["node_modules", "dist", "test", "_reference", "**/*.bak", "src/native"]
 }

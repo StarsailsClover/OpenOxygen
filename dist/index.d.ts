@@ -19,7 +19,7 @@ export declare const VERSION = "26w15aD_REFACTOR";
  * Initialize OpenOxygen
  */
 export declare function initialize(config?: {}): Promise<{
-    runtime: import("./core/runtime.js").Runtime;
-    memory: import("./memory/global/index.js").GlobalMemory;
+    runtime: any;
+    memory: any;
 }>;
 //# sourceMappingURL=index.d.ts.map

@@ -8,11 +8,10 @@ export { registerAgent, unregisterAgent, getAgent, listAgents, findBestAgent, de
 // Communication
 export { sendMessage, broadcastMessage, onMessage, offMessage, requestTask, sendResult, sendError, sendHeartbeat, } from "./communication.js";
 // Default export
-import * as runtime from "./runtime.js";
-import * as communication from "./communication.js";
+import * as from from "./runtime.js";
+import * as from from "./communication.js";
 export const MultiAgent = {
     ...runtime,
     ...communication,
 };
 export default MultiAgent;
-//# sourceMappingURL=index.js.map

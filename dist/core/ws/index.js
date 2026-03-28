@@ -261,4 +261,3 @@ export class RealtimeChannel {
         log.info("WebSocket channel closed");
     }
 }
-//# sourceMappingURL=index.js.map

@@ -1,13 +1,93 @@
 /**
- * OpenOxygen — Permission System
+ * OpenOxygen - Permission System
  *
- * 最小权限原则：操作前权限校验、路径白名单、可执行文件黑名单。
+ * Zero-trust permission management for secure execution
+ * Provides fine-grained access control for all operations
  */
-import type { SecurityConfig, SystemOperation } from "../../types/index.js";
-export type PermissionCheckResult = {
-    allowed: boolean;
+import type { PermissionContext } from "../../types/index.js";
+export type PermissionLevel = "none" | "read" | "write" | "execute" | "admin";
+export interface ResourcePermission {
+    resource: string;
+    level: PermissionLevel;
+    conditions?: PermissionCondition[];
+}
+export interface PermissionCondition {
+    type: "time" | "path" | "size" | "rate" | "custom";
+    operator: "eq" | "ne" | "gt" | "lt" | "gte" | "lte" | "in" | "contains";
+    value: unknown;
+}
+export interface PermissionSet {
+    id: string;
+    name: string;
+    description: string;
+    permissions: ResourcePermission[];
+    inheritedFrom?: string[];
+    createdAt: number;
+    updatedAt: number;
+}
+export interface PermissionRequest {
+    action: string;
+    resource: string;
+    context?: PermissionContext;
+}
+export interface PermissionResult {
+    granted: boolean;
     reason?: string;
-};
-export declare function checkPermission(operation: SystemOperation, config: SecurityConfig, target?: string): PermissionCheckResult;
-export declare function assertPermission(operation: SystemOperation, config: SecurityConfig, target?: string): void;
+    level?: PermissionLevel;
+    expiresAt?: number;
+}
+export declare const DEFAULT_PERMISSION_SETS: Record<string, PermissionSet>;
+declare class PermissionManager {
+    private permissionSets;
+    private activeGrants;
+    constructor();
+    /**
+     * Check if an action is permitted
+     */
+    checkPermission(request: PermissionRequest, permissionSetId?: string): PermissionResult;
+    /**
+     * Grant temporary permission
+     */
+    grantTemporaryPermission(request: PermissionRequest, durationMs: number, permissionSetId?: string): PermissionResult;
+    /**
+     * Create custom permission set
+     */
+    createPermissionSet(set: Omit<PermissionSet, "id" | "createdAt" | "updatedAt">): PermissionSet;
+    /**
+     * Update permission set
+     */
+    updatePermissionSet(id: string, updates: Partial<PermissionSet>): PermissionSet | null;
+    /**
+     * Delete permission set
+     */
+    deletePermissionSet(id: string): boolean;
+    /**
+     * Get permission set
+     */
+    getPermissionSet(id: string): PermissionSet | undefined;
+    /**
+     * List all permission sets
+     */
+    listPermissionSets(): PermissionSet[];
+    /**
+     * Validate permission set
+     */
+    validatePermissionSet(set: PermissionSet): {
+        valid: boolean;
+        errors: string[];
+    };
+    private matchesPattern;
+    private actionToLevel;
+    private isLevelSufficient;
+    private checkConditions;
+    private getContextValue;
+    private evaluateCondition;
+}
+export declare const permissionManager: PermissionManager;
+export declare function checkPermission(request: PermissionRequest, permissionSetId?: string): PermissionResult;
+export declare function grantTemporaryPermission(request: PermissionRequest, durationMs: number, permissionSetId?: string): PermissionResult;
+export declare function createPermissionSet(set: Omit<PermissionSet, "id" | "createdAt" | "updatedAt">): PermissionSet;
+export declare function getPermissionSet(id: string): PermissionSet | undefined;
+export declare function listPermissionSets(): PermissionSet[];
+export {};
 //# sourceMappingURL=index.d.ts.map

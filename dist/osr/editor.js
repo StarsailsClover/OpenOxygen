@@ -12,11 +12,14 @@ const log = createSubsystemLogger("osr/editor");
  * @param index - Index to insert at
  * @param step - Step to insert
  */
-export function insertStep(recording, index, step) {
+export function insertStep(recording, index, step, , RecordedStep, , , ) { }
+ >
+;
+{
     const { generateId, nowMs } = require("../utils/index.js");
     const newStep = {
-        id: generateId("step"),
-        timestamp: nowMs(),
+        id() { },
+        timestamp() { },
         ...step,
     };
     recording.steps.splice(index, 0, newStep);
@@ -64,16 +67,16 @@ export function modifyStep(recording, index, updates) {
 export function applyCoordinateOffset(recording, offsetX, offsetY) {
     for (const step of recording.steps) {
         switch (step.type) {
-            case "mouse_move":
-                step.data.x += offsetX;
+            case "mouse_move".data.x += offsetX:
+                ;
                 step.data.y += offsetY;
                 break;
-            case "mouse_click":
-                step.data.x += offsetX;
+            case "mouse_click".data.x += offsetX:
+                ;
                 step.data.y += offsetY;
                 break;
-            case "mouse_drag":
-                step.data.startX += offsetX;
+            case "mouse_drag".data.startX += offsetX:
+                ;
                 step.data.startY += offsetY;
                 step.data.endX += offsetX;
                 step.data.endY += offsetY;
@@ -92,7 +95,7 @@ export function applyCoordinateOffset(recording, offsetX, offsetY) {
 export function addDelay(recording, index, durationMs) {
     return insertStep(recording, index, {
         type: "delay",
-        data: { duration: durationMs },
+        data,
     });
 }
 /**
@@ -121,7 +124,7 @@ export function optimizeRecording(recording) {
             if (dx < 5 && dy < 5) {
                 continue; // Skip small movements
             }
-            lastMousePos = { x: step.data.x, y: step.data.y };
+            lastMousePos = { x, : .data.x, y, : .data.y };
         }
         optimized.push(step);
     }
@@ -142,8 +145,8 @@ export function duplicateStep(recording, index) {
     const { generateId, nowMs } = require("../utils/index.js");
     const duplicated = {
         ...step,
-        id: generateId("step"),
-        timestamp: nowMs(),
+        id() { },
+        timestamp() { },
     };
     recording.steps.splice(index + 1, 0, duplicated);
     log.info(`Duplicated step at index ${index}`);
@@ -195,4 +198,3 @@ export default {
     exportToJSON,
     importFromJSON,
 };
-//# sourceMappingURL=editor.js.map
