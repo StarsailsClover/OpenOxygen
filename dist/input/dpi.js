@@ -123,4 +123,3 @@ export class DPIManager {
 }
 // 全局 DPI 管理器
 export const dpiManager = new DPIManager();
-//# sourceMappingURL=dpi.js.map

@@ -8,9 +8,8 @@
 import { exec } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
-import process from "node:process";
 import { createSubsystemLogger } from "../../logging/index.js";
-import { assertWindows, nowMs, withTimeout } from "../../utils/index.js";
+import { assertWindows, nowMs } from "../../utils/index.js";
 const log = createSubsystemLogger("execution/windows");
 // ─── PowerShell Executor ────────────────────────────────────────────────────
 function runPowerShell(command, timeoutMs = 30_000) {
@@ -296,4 +295,3 @@ export async function executeSystemOperation(operation, params) {
             return { success: false, error: `Unknown operation: ${operation}`, durationMs: 0 };
     }
 }
-//# sourceMappingURL=index.js.map

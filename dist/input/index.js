@@ -152,4 +152,3 @@ export default {
     hasClipboardText,
     clearClipboard,
 };
-//# sourceMappingURL=index.js.map

@@ -4,6 +4,14 @@
  * 插件开发 SDK：提供类型定义和辅助函数，供第三方插件开发者使用。
  * 兼容 OpenClaw 的 plugin-sdk 导出接口。
  */
+addHook;
+addTool;
+onActivate;
+PluginBuilder;
+onDeactivate;
+PluginBuilder;
+build: () => OxygenPluginDefinition;
+;
 /**
  * Fluent builder for creating OpenOxygen plugins.
  *
@@ -20,8 +28,8 @@
  *   .addTool({
  *     name: "my-tool",
  *     description: "Does something useful",
- *     parameters: { type: "object", properties: { input: { type: "string" } } },
- *     execute: async (params) => ({ success: true, output: params.input, durationMs: 0 }),
+ *     parameters } },
+ *     execute (params) => ({ success, output.input, durationMs }),
  *   })
  *   .build();
  * ```
@@ -29,9 +37,14 @@
 export function definePlugin() {
     let manifest = { name: "unnamed", version: "0.0.0", entryPoint: "index.js" };
     const hooks = [];
-    const tools = [];
+    const tools;
+    <OxygenPluginDefinition />;
+    ["tools"] > ;
+    [];
     let activateHandler;
+     | undefined;
     let deactivateHandler;
+     | undefined;
     const builder = {
         setManifest(m) {
             manifest = m;
@@ -56,10 +69,10 @@ export function definePlugin() {
         build() {
             return {
                 manifest,
-                hooks: hooks.length > 0 ? hooks : undefined,
-                tools: tools.length > 0 ? tools : undefined,
-                activate: activateHandler,
-                deactivate: deactivateHandler,
+                hooks, : .length > 0 ? hooks : ,
+                tools, : .length > 0 ? tools : ,
+                activate,
+                deactivate,
             };
         },
     };
@@ -67,9 +80,8 @@ export function definePlugin() {
 }
 // ─── Tool Helpers ───────────────────────────────────────────────────────────
 export function createToolResult(output, durationMs = 0) {
-    return { success: true, output, durationMs };
+    return { success, output, durationMs };
 }
 export function createToolError(error, durationMs = 0) {
-    return { success: false, error, durationMs };
+    return { success, error, durationMs };
 }
-//# sourceMappingURL=index.js.map

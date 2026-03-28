@@ -12,6 +12,7 @@
 import { createSubsystemLogger } from "../../logging/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
 const log = createSubsystemLogger("async/compute");
+export 
 // ═══════════════════════════════════════════════════════════════════════════
 // Thread Pool Manager
 // ═══════════════════════════════════════════════════════════════════════════
@@ -28,123 +29,136 @@ export class ThreadPool {
     /**
      * 提交任务到线程池
      */
-    async submit(task) {
-        const fullTask = {
-            ...task,
-            id: generateId("task"),
-            createdAt: nowMs(),
+    async submit(task, , ComputeTask, , , ) { }
+}
+ > ;
+{
+    const fullTask = {
+        ...task,
+        id() { },
+        createdAt() { },
+    };
+    return new Promise((resolve, reject) => {
+        const wrappedFn = async () => {
+            try {
+                const result = await task.fn();
+                resolve(result);
+                return result;
+            }
+            catch (err) {
+                reject(err);
+                throw err;
+            }
         };
-        return new Promise((resolve, reject) => {
-            const wrappedFn = async () => {
-                try {
-                    const result = await task.fn();
-                    resolve(result);
-                    return result;
-                }
-                catch (err) {
-                    reject(err);
-                    throw err;
-                }
-            };
-            this.taskQueue.push({ ...fullTask, fn: wrappedFn });
-            this.schedule();
-        });
+        this.taskQueue.push({ ...fullTask, fn });
+        this.schedule();
+    });
+}
+schedule();
+{
+    if (this.currentConcurrency >= this.maxConcurrency)
+        return;
+    if (this.taskQueue.length === 0)
+        return;
+    // 按优先级排序
+    const priorityOrder = { critical, high, normal, low, background };
+    this.taskQueue.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+    const task = this.taskQueue.shift();
+    this.execute(task);
+}
+async;
+execute(task);
+{
+    this.currentConcurrency++;
+    const controller = new AbortController();
+    this.runningTasks.set(task.id, controller);
+    const startTime = nowMs();
+    log.debug(`[${task.type}:${task.priority}] Task ${task.id} started`);
+    try {
+        await task.fn();
     }
-    /**
-     * 优先级调度
-     */
-    schedule() {
-        if (this.currentConcurrency >= this.maxConcurrency)
-            return;
-        if (this.taskQueue.length === 0)
-            return;
-        // 按优先级排序
-        const priorityOrder = { critical: 0, high: 1, normal: 2, low: 3, background: 4 };
-        this.taskQueue.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
-        const task = this.taskQueue.shift();
-        this.execute(task);
-    }
-    async execute(task) {
-        this.currentConcurrency++;
-        const controller = new AbortController();
-        this.runningTasks.set(task.id, controller);
-        const startTime = nowMs();
-        log.debug(`[${task.type}:${task.priority}] Task ${task.id} started`);
-        try {
-            await task.fn();
-        }
-        finally {
-            const duration = nowMs() - startTime;
-            this.runningTasks.delete(task.id);
-            this.currentConcurrency--;
-            log.debug(`[${task.type}] Task ${task.id} completed in ${duration}ms`);
-            this.schedule();
-        }
-    }
-    /**
-     * 取消指定任务
-     */
-    cancel(taskId) {
-        const controller = this.runningTasks.get(taskId);
-        if (controller) {
-            controller.abort();
-            return true;
-        }
-        return false;
-    }
-    /**
-     * 获取当前状态
-     */
-    getStatus() {
-        return {
-            queued: this.taskQueue.length,
-            running: this.currentConcurrency,
-            maxConcurrency: this.maxConcurrency,
-        };
+    finally {
+        const duration = nowMs() - startTime;
+        this.runningTasks.delete(task.id);
+        this.currentConcurrency--;
+        log.debug(`[${task.type}] Task ${task.id} completed in ${duration}ms`);
+        this.schedule();
     }
 }
-export class GPUDispatcher {
+/**
+ * 取消指定任务
+ */
+cancel(taskId);
+{
+    const controller = this.runningTasks.get(taskId);
+    if (controller) {
+        controller.abort();
+        return true;
+    }
+    return false;
+}
+/**
+ * 获取当前状态
+ */
+getStatus();
+{
+    return {
+        queued, : .taskQueue.length,
+        running, : .currentConcurrency,
+        maxConcurrency, : .maxConcurrency,
+    };
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// GPU Task Dispatcher
+// ═══════════════════════════════════════════════════════════════════════════
+export export class GPUDispatcher {
     devices = [];
-    deviceQueues = new Map();
-    constructor() {
-        this.detectDevices();
+}
+ > ;
+new Map();
+constructor();
+{
+    this.detectDevices();
+}
+detectDevices();
+{
+    // 实际实现需要调用 native 模块检测 GPU
+    // 这里提供框架接口
+    log.info("GPU device detection (requires native module)");
+}
+/**
+ * 选择最优 GPU 设备
+ */
+selectDevice(hints) | null;
+{
+    const available = this.devices.filter(d => d.isAvailable);
+    if (available.length === 0)
+        return null;
+    if (hints.gpuMemoryMB) {
+        // 选择满足显存要求的最小设备
+        return available
+            .filter(d => d.memoryMB >= hints.gpuMemoryMB)
+            .sort((a, b) => a.memoryMB - b.memoryMB)[0] || null;
     }
-    detectDevices() {
-        // 实际实现需要调用 native 模块检测 GPU
-        // 这里提供框架接口
-        log.info("GPU device detection (requires native module)");
+    // 默认选择第一个可用设备
+    return available[0] || null;
+}
+/**
+ * 提交 GPU 任务
+ */
+async;
+submitToGPU(task);
+{
+    const device = this.selectDevice(task.resourceHints || {});
+    if (!device) {
+        throw new Error("No suitable GPU device available");
     }
-    /**
-     * 选择最优 GPU 设备
-     */
-    selectDevice(hints) {
-        const available = this.devices.filter(d => d.isAvailable);
-        if (available.length === 0)
-            return null;
-        if (hints.gpuMemoryMB) {
-            // 选择满足显存要求的最小设备
-            return available
-                .filter(d => d.memoryMB >= hints.gpuMemoryMB)
-                .sort((a, b) => a.memoryMB - b.memoryMB)[0] || null;
-        }
-        // 默认选择第一个可用设备
-        return available[0] || null;
-    }
-    /**
-     * 提交 GPU 任务
-     */
-    async submitToGPU(task) {
-        const device = this.selectDevice(task.resourceHints || {});
-        if (!device) {
-            throw new Error("No suitable GPU device available");
-        }
-        // 添加到设备队列
-        const queue = this.deviceQueues.get(device.id) || [];
-        queue.push(task);
-        this.deviceQueues.set(device.id, queue);
-        log.info(`GPU task ${task.id} queued on device ${device.name}`);
-        return task.fn();
-    }
+    // 添加到设备队列
+    const queue = this.deviceQueues.get(device.id) || [];
+    queue.push(task);
+    this.deviceQueues.set(device.id, queue);
+    log.info(`GPU task ${task.id} queued on device ${device.name}`);
+    return task.fn();
 }
 // ═══════════════════════════════════════════════════════════════════════════
 // Async Compute Stack (Main Export)
@@ -153,10 +167,10 @@ export class AsyncComputeStack {
     threadPool;
     gpuDispatcher;
     metrics = {
-        tasksSubmitted: 0,
-        tasksCompleted: 0,
-        tasksFailed: 0,
-        totalLatency: 0,
+        tasksSubmitted,
+        tasksCompleted,
+        tasksFailed,
+        totalLatency,
     };
     constructor(options) {
         this.threadPool = new ThreadPool(options?.maxThreads);
@@ -169,12 +183,12 @@ export class AsyncComputeStack {
         const startTime = nowMs();
         this.metrics.tasksSubmitted++;
         const task = {
-            id: generateId("compute"),
-            type: options.type || "compute",
-            priority: options.priority || "normal",
+            id() { },
+            type, : .type || "compute",
+            priority, : .priority || "normal",
             fn,
-            createdAt: startTime,
-            resourceHints: options.resourceHints,
+            createdAt,
+            resourceHints, : .resourceHints,
         };
         try {
             let result;
@@ -196,39 +210,45 @@ export class AsyncComputeStack {
     /**
      * 批量提交任务（并行执行）
      */
-    async batch(tasks, options = {}) {
-        const limit = options.concurrency || this.threadPool.getStatus().maxConcurrency;
-        const results = [];
-        // 使用 p-limit 风格的并发控制
-        const executing = [];
-        for (let i = 0; i < tasks.length; i++) {
-            const task = tasks[i];
-            const promise = this.submit(task, options).then(result => {
-                results[i] = result;
-            });
-            executing.push(promise);
-            if (executing.length >= limit) {
-                await Promise.race(executing);
-                executing.splice(executing.findIndex(p => p === promise), 1);
-            }
-        }
-        await Promise.all(executing);
-        return results;
+    async batch(tasks, ) { }
+}
+() => Promise > ,
+    options = {};
+<T />;
+[] > {
+    const: limit = options.concurrency || this.threadPool.getStatus().maxConcurrency,
+    const: results = [],
+    // 使用 p-limit 风格的并发控制
+    const: executing[] = [],
+    for(let, i = 0, i, , tasks) { }, : .length, i
+}++;
+{
+    const task = tasks[i];
+    const promise = this.submit(task, options).then(result => {
+        results[i] = result;
+    });
+    executing.push(promise);
+    if (executing.length >= limit) {
+        await Promise.race(executing);
+        executing.splice(executing.findIndex(p => p === promise), 1);
     }
-    /**
-     * 获取性能指标
-     */
-    getMetrics() {
-        const avgLatency = this.metrics.tasksCompleted > 0
-            ? this.metrics.totalLatency / this.metrics.tasksCompleted
-            : 0;
-        return {
-            ...this.metrics,
-            averageLatency: avgLatency,
-            threadPool: this.threadPool.getStatus(),
-        };
-    }
+}
+await Promise.all(executing);
+return results;
+/**
+ * 获取性能指标
+ */
+getMetrics();
+{
+    const avgLatency = this.metrics.tasksCompleted > 0
+        ? this.metrics.totalLatency / this.metrics.tasksCompleted
+        :
+    ;
+    return {
+        ...this.metrics,
+        averageLatency,
+        threadPool, : .threadPool.getStatus(),
+    };
 }
 // 全局实例
 export const computeStack = new AsyncComputeStack();
-//# sourceMappingURL=index.js.map

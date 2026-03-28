@@ -1,7 +1,7 @@
 /**
- * OpenOxygen — Error Code System (26w12aA)
+ * OpenOxygen - Error Code System (26w12aA)
  *
- * 统一错误码体系
+ * Unified error code system for all modules
  */
 export declare enum ErrorCode {
     GATEWAY_NOT_READY = 1001,
@@ -48,8 +48,7 @@ export interface OxygenError {
     requestId?: string;
 }
 export declare function createError(code: ErrorCode, message: string, details?: Record<string, unknown>, requestId?: string): OxygenError;
-export declare function errorToHttp(error: OxygenError): {
-    status: number;
-    body: unknown;
-};
+export declare function isOxygenError(error: unknown): error is OxygenError;
+export declare function getErrorMessage(error: unknown): string;
+export declare function getErrorCode(error: unknown): ErrorCode;
 //# sourceMappingURL=errors.d.ts.map

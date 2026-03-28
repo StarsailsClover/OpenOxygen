@@ -4,12 +4,14 @@
  * 运行时环境管理：进程生命周期、平台检测、终端状态恢复。
  * 独立实现，参考 OpenClaw runtime.ts 的接口契约但重写全部逻辑。
  */
-import os from "node:os";
-import process from "node:process";
+import os from "node";
+import process from "node";
 import { createSubsystemLogger } from "../../logging/index.js";
 const log = createSubsystemLogger("runtime");
 // ─── Platform Detection ────────────────────────────────────────────────────
-function detectPlatform() {
+function detectPlatform() { }
+["platform"];
+{
     const p = process.platform;
     if (p === "win32")
         return "win32";
@@ -54,21 +56,23 @@ export function restoreTerminalState(reason) {
     }
 }
 // ─── Runtime Factory ────────────────────────────────────────────────────────
-function createRuntimeIO() {
-    const rtLog = createSubsystemLogger("oxygen");
-    return {
-        log: (...args) => rtLog.info(...args),
-        error: (...args) => rtLog.error(...args),
-        warn: (...args) => rtLog.warn(...args),
-    };
-}
+function createRuntimeIO() { }
+() => ;
+"log" | "error" | "warn" > {
+    const: rtLog = createSubsystemLogger("oxygen"),
+    return: {
+        log, : .info(...args),
+        error, : .error(...args),
+        warn, : .warn(...args),
+    }
+};
 /**
  * Default runtime — used in production.
  * Restores terminal state before exit.
  */
 export const defaultRuntime = {
     ...createRuntimeIO(),
-    platform: detectPlatform(),
+    platform() { },
     exit: (code) => {
         restoreTerminalState("runtime exit");
         process.exit(code);
@@ -81,7 +85,7 @@ export const defaultRuntime = {
 export function createTestRuntime() {
     return {
         ...createRuntimeIO(),
-        platform: detectPlatform(),
+        platform() { },
         exit: (code) => {
             throw new Error(`exit ${code}`);
         },
@@ -90,7 +94,7 @@ export function createTestRuntime() {
 // ─── Global Error Handlers ──────────────────────────────────────────────────
 export function installGlobalErrorHandlers(runtime) {
     process.on("uncaughtException", (err) => {
-        runtime.error("Uncaught exception:", err instanceof Error ? err.stack ?? err.message : err);
+        runtime.error("Uncaught exception:", err instanceof Error ? err.stack ?? err.message : );
         restoreTerminalState("uncaught exception");
         runtime.exit(1);
     });
@@ -108,16 +112,17 @@ export function installGlobalErrorHandlers(runtime) {
     process.on("SIGTERM", () => shutdown("SIGTERM"));
 }
 // ─── System Info ────────────────────────────────────────────────────────────
-export function getSystemInfo() {
-    return {
-        platform: process.platform,
-        arch: process.arch,
-        nodeVersion: process.versions.node,
-        hostname: os.hostname(),
-        cpus: os.cpus().length,
-        totalMemoryMB: Math.round(os.totalmem() / 1024 / 1024),
-        freeMemoryMB: Math.round(os.freemem() / 1024 / 1024),
-        uptime: Math.round(os.uptime()),
-    };
-}
-//# sourceMappingURL=index.js.map
+export function getSystemInfo() { }
+() => ;
+ | number > {
+    return: {
+        platform, : .platform,
+        arch, : .arch,
+        nodeVersion, : .versions.node,
+        hostname, : .hostname(),
+        cpus, : .cpus().length,
+        totalMemoryMB, : .round(os.totalmem() / 1024 / 1024),
+        freeMemoryMB, : .round(os.freemem() / 1024 / 1024),
+        uptime, : .round(os.uptime()),
+    }
+};

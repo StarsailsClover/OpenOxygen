@@ -174,4 +174,3 @@ function deepMergeConfig(base, overrides) {
         plugins: [...base.plugins, ...(overrides.plugins ?? [])],
     };
 }
-//# sourceMappingURL=entry.js.map

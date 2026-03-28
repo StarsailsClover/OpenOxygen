@@ -1,43 +1,44 @@
 /**
- * OpenOxygen — Main Entry Point (26w15aD)
+ * OpenOxygen Core - Refactored Entry Point (26w15aD_REFACTOR)
  *
- * 统一导出所有核心模块
+ * Core exports for OpenOxygen framework
  */
-// Core
-export { createRuntime } from "./core/runtime/index.js";
-export { createGateway } from "./core/gateway/index.js";
-export { createConfig } from "./core/config/index.js";
+// Core modules
+export { createRuntime } from './core/runtime.js';
+export { createGateway } from './core/gateway.js';
 // Memory
-export { GlobalMemory, getGlobalMemory } from "./memory/global/index.js";
+export { GlobalMemory, getGlobalMemory } from './memory/global/index.js';
+// Native (C++ bindings)
+export { mouseMove, mouseClick, mouseDrag, mouseScroll, keyPress, keyCombination, typeText } from './native/index.js';
+// Ollama
+export { ensureOllamaRunning, getOllamaStatus, isModelAvailable, } from './ollama/index.js';
+// Browser
+export { launchBrowser, navigate, closeBrowser } from './browser/index.js';
+// Multi-Agent
+export { registerAgent, delegateTask, resumeTask } from './multi-agent/index.js';
+// UI
+export { launchWinUI, registerHotkey } from './ui/index.js';
 // Execution
-export * from "./execution/terminal/index.js";
-export * from "./execution/unified/index.js";
-export * from "./execution/edge-automation/index.js";
-export * from "./execution/qq-automation/index.js";
-// Agent
-export * from "./agent/orchestrator/index.js";
-export * from "./agent/communication/index.js";
+export { handleExecutionRequest } from './execution/unified/index.js';
 // Tasks
-export * from "./tasks/workflow-engine.js";
-export * from "./tasks/document-generator.js";
+export { registerWorkflow, executeWorkflow, listWorkflows, getWorkflow, deleteWorkflow } from './tasks/workflow-engine.js';
 // Utils
-export * from "./utils/index.js";
-// Input/Output - Phase 1
-export * from "./input/index.js";
-export * from "./output/index.js";
-// Native Bridge - Phase 1
-export * from "./native/index.js";
+export { generateId, nowMs, sleep } from './utils/index.js';
 // Version
-export const VERSION = "26w15aD";
+export const VERSION = '26w15aD_REFACTOR';
 /**
  * Initialize OpenOxygen
  */
 export async function initialize(config = {}) {
     console.log(`OpenOxygen ${VERSION} initializing...`);
+    // Initialize core
+    const { createRuntime } = await import('./core/runtime.js');
+    const { getGlobalMemory } = await import('./memory/global/index.js');
     const runtime = createRuntime(config);
     const memory = getGlobalMemory();
-    console.log("OpenOxygen initialized successfully");
-    return { runtime, memory, version: VERSION };
+    console.log('OpenOxygen initialized successfully');
+    return {
+        runtime,
+        memory,
+    };
 }
-export default { VERSION, initialize };
-//# sourceMappingURL=index.js.map

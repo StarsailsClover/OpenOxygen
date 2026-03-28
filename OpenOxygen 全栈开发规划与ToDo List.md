@@ -45,15 +45,15 @@
 
 - **开发内容**：
 
-    - [x] 验证插件加载、技能执行、全局上下文共享等基础功能
+    - 验证插件加载、技能执行、全局上下文共享等基础功能
 
-    - [x] 测试与 OpenClaw 生态的无缝兼容性
+    - 测试与 OpenClaw 生态的无缝兼容性
 
-    - [x] 完善错误处理、日志记录与用户提示机制
+    - 完善错误处理、日志记录与用户提示机制
 
-    - [x] 完善 API 文档、技能开发指南、插件开发文档
+    - 完善 API 文档、技能开发指南、插件开发文档
 
-    - [x] 优化内存管理与插件加载性能
+    - 优化内存管理与插件加载性能
 
 - **技术实现要点**：
 
@@ -79,13 +79,13 @@
 
 - **开发内容**：
 
-    - [x] 多 AI 接力分工场景测试，验证断点续传能力
+    - 多 AI 接力分工场景测试，验证断点续传能力
 
-    - [x] 跨浏览器 / 跨网站兼容性测试（Chrome/Edge/ 主流站点）
+    - 跨浏览器 / 跨网站兼容性测试（Chrome/Edge/ 主流站点）
 
-    - [x] 主流软件兼容性测试（Office/IDE/ 通讯软件 / 美化软件 / VPN 等）
+    - 主流软件兼容性测试（Office/IDE/ 通讯软件 / 美化软件 / VPN 等）
 
-    - [x] 异构 Windows 设备部署验证，修复跨环境部署问题
+    - 异构 Windows 设备部署验证，修复跨环境部署问题
 
     - 对接 UI\-TARS/Qwen\-VL/GPT\-4V 等视觉模型，为 OUV 提供基准
 
@@ -653,6 +653,8 @@
 
     - 集成带终端的本地 / 云端文件管理系统（云端预留至 26w26a\+ OxygenCloud）
 
+    - OpenOxygen工作区和工作环境的重要载体，工作区为某个文件夹，由用户指定，默认工作区为非系统盘用户文件夹的文档文件夹下.OpenOxygen/[工作区名称]，工作区带OpenOxygen工作环境，OpenOxygen有总工作区，在部署目录下/Workspace，包含总工作环境、Github（StarsailsClover/OpenOxygen） Issue/PR自动提交、GitHub更新自动部署（在Release描述内带： !::OpenOxygenAutoUpdateAdvise-[版本号占位符] 的需要自动部署更新）
+
     - 冷接入 VSC 等 IDE，实现快速编译与语法纠错
 
     - 支持全网络资源下载，兼容 P2P 加速
@@ -715,7 +717,9 @@
 
 - **预期成果**：
 
-    - 摆脱浏览器依赖，提供原生桌面体验
+    - 摆脱浏览器控制台依赖，提供原生桌面体验
+
+    - 与OxygenBrowser集成强耦合
 
     - 用户操作门槛降低，体验连贯性提升
 
@@ -927,4 +931,67 @@
 
 - OpenClaw 社区：[https://github\.com/openclaw](https://github.com/openclaw)
 
-> （注：文档部分内容可能由 AI 生成）
+
+
+
+# 用户请求-输出完整流程
+```mermaid
+flowchart TD
+    A1[用户请求]
+    Z[读取分层记忆]
+    A1 --> Z
+    Z --> A2[请求格式标准化]
+    A2 --> E1{是否包含文件？}
+    E1 -->|是| B1{是否为图片文件？}
+    B1 -->|是| C1[OUV三层融合处理] 
+    C1 --> D1[图片语义提取] --> F1{是否包含文件夹？}
+    B1 -->|否| F1{是否包含文件夹？}
+    F1 -->|是| G1[文件安全检测] 
+    G1 --> G2[OxygenBrowser创建工作区] 
+    G2 --> G3[拉取文件夹资源] --> H1[文件语义嵌入]
+    F1 -->|否| I1{是否为多文件？}
+    I1 -->|是| J1[文件安全检测] --> J2[OxygenBrowser创建工作区] --> H1
+    I1 -->|否| K1[文件安全检测] --> K2[OxygenBrowser解析文件] --> H1
+    E1 -->|否| L1[安全分级检查] 
+    L1 --> M1[自然语言语义整理]
+    M1 --> AA[启动Ollama] 
+    H1 --> AA
+    AA --> BB[获取Ollama模型列表] 
+    BB --> CC{模型列表是否一致？}
+    CC -->|否| DD[更新分层记忆] --> EE[LLM Router动态选模型]
+    CC -->|是| EE[LLM Router动态选模型]
+    EE --> AF[启动OLB优化推理]
+    AF --> B_DEC{弱LLM判断}
+    B_DEC -->|简单/中等·无需Agent| C_LLM[弱/中等LLM直接推理]
+    C_LLM --> D_ANSWER[生成回答] 
+    D_ANSWER --> MEM1[记忆沉淀-短期] --> OUT[输出结果]
+    B_DEC -->|简单/中等·需Agent| E_HTN[HTN规划器拆解任务]
+    E_HTN --> F_CLEAR{需求清晰？}
+    F_CLEAR -->|否| G_ASK[询问用户补充信息] --> E_HTN
+    F_CLEAR -->|是| H_DAG[DAG依赖图构建]
+    H_DAG --> I_ENV[环境感知监听]
+    I_ENV --> J_OUV[OUV启动]
+    J_OUV --> K_MODE[决策执行方式]
+    K_MODE --> L_RUN[执行原子操作]
+    L_RUN <-.-> M_REFLECT[中等LLM实时反思]
+    M_REFLECT --> N_SUCCESS{操作成功？}
+    N_SUCCESS -->|是| MEM2[记忆沉淀-中期] --> OUT
+    N_SUCCESS -->|否| O_REPLAN[HTN重规划] --> J_OUV
+    B_DEC -->|复杂·无需Agent| P_COT[强LLM开启CoT推理]
+    P_COT --> Q_DISCUSS[多AI异步研讨]
+    Q_DISCUSS --> R_SAFE[提示注入安全检测]
+    R_SAFE --> S_SUMMARY[生成结构化回答] --> MEM3[记忆沉淀-长期] --> OUT
+    B_DEC -->|复杂·需Agent| T_LLMHTN[强LLM+HTN联合拆解]
+    T_LLMHTN --> U_CLEAR{需求清晰？}
+    U_CLEAR -->|否| V_ASK[询问用户补充信息] --> T_LLMHTN
+    U_CLEAR -->|是| W_MEM[搜索分层记忆召回案例]
+    W_MEM --> X_DAG[DAG依赖图构建]
+    X_DAG --> Y_PLAN[多AI研讨方案]
+    Y_PLAN --> Z_VISION[OUV启动]
+    Z_VISION --> AA1_MODE[决策执行方式]
+    AA1_MODE --> AB_RUN[执行原子操作]
+    AB_RUN <-.-> AC_REFLECT[强LLM实时反思]
+    AC_REFLECT --> AD_SUCCESS{操作成功？}
+    AD_SUCCESS -->|是| MEM3 --> OUT
+    AD_SUCCESS -->|否| AE_REPLAN[HTN重规划] --> Z_VISION
+```

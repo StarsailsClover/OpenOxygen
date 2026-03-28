@@ -8,16 +8,11 @@
  * 4. Cross-platform compatibility
  */
 
-import { 
-  OUVVisualUnderstandingController,
-  ensureOllamaRunning,
-  getOllamaStatus,
-  InferenceEngine,
-  mouseMove,
-  mouseClick,
-  keyPress,
-  typeText
-} from '../dist/index.js';
+// Direct imports from dist
+import { OUVVisualUnderstandingController } from '../dist/ouv/visual-understanding.js';
+import { ensureOllamaRunning, getOllamaStatus } from '../dist/ollama/launcher.js';
+import { mouseMove, mouseClick, keyPress, typeText } from '../dist/native/index.js';
+import { InferenceEngine } from '../dist/inference/engine/index.js';
 
 const TESTS = {
   passed: 0,

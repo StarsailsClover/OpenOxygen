@@ -367,7 +367,7 @@ function getScreenResolution(): { width: number; height: number } {
  */
 function saveRecordingToMemory(session: RecordingSession): void {
   try {
-    const memory = new GlobalMemory(".state", ".state/osr-recordings.db");
+    const memory = new GlobalMemory(".state");
     memory.setPreference(`osr_${session.id}`, JSON.stringify(session));
     memory.close();
     log.info(`Recording saved to memory: ${session.id}`);

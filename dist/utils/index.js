@@ -1,13 +1,13 @@
 /**
- * OpenOxygen — Utility Functions
+ * OpenOxygen -Utility Functions
  *
- * 通用工具函数集，供全项目使用。
+ * ͨ�ù��ߺ���������ȫ��Ŀʹ��?
  */
 import crypto from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
-// ─── ID Generation ──────────────────────────────────────────────────────────
+// �-�-�- ID Generation �-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-
 export function generateId(prefix) {
     const uuid = crypto.randomUUID();
     return prefix ? `${prefix}-${uuid}` : uuid;
@@ -21,7 +21,7 @@ export function generateTimestampId(prefix) {
     const suffix = generateShortId();
     return `${prefix}-${ts}-${suffix}`;
 }
-// ─── Path Utilities ─────────────────────────────────────────────────────────
+// �-�-�- Path Utilities �-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-
 export function resolveUserPath(input) {
     if (input.startsWith("~")) {
         return path.join(os.homedir(), input.slice(1));
@@ -42,7 +42,7 @@ export function sanitizePath(s) {
     // eslint-disable-next-line no-control-regex
     return s.replace(/\0/g, "");
 }
-// ─── Environment ────────────────────────────────────────────────────────────
+// �-�-�- Environment �-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-
 export function isTruthyEnv(value) {
     if (!value)
         return false;
@@ -51,7 +51,7 @@ export function isTruthyEnv(value) {
 export function getEnvOrDefault(key, defaultValue) {
     return process.env[key] ?? defaultValue;
 }
-// ─── Timing ─────────────────────────────────────────────────────────────────
+// �-�-�- Timing �-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-
 export function nowMs() {
     return Date.now();
 }
@@ -61,7 +61,7 @@ export function elapsed(startMs) {
 export async function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
-// ─── Data ───────────────────────────────────────────────────────────────────
+// �-�-�- Data �-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-
 export function deepClone(obj) {
     return structuredClone(obj);
 }
@@ -70,7 +70,7 @@ export function truncateString(s, maxLen, suffix = "...") {
         return s;
     return s.slice(0, maxLen - suffix.length) + suffix;
 }
-// ─── Platform ───────────────────────────────────────────────────────────────
+// �-�-�- Platform �-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-
 export function isWindows() {
     return process.platform === "win32";
 }
@@ -82,7 +82,7 @@ export function assertWindows(context) {
 export function getMachineDisplayName() {
     return os.hostname();
 }
-// ─── Async ──────────────────────────────────────────────────────────────────
+// �-�-�- Async �-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-�-
 export async function withTimeout(promise, timeoutMs, label = "operation") {
     let timer;
     const timeout = new Promise((_, reject) => {
@@ -123,4 +123,3 @@ export class TypedEventBus {
         }
     }
 }
-//# sourceMappingURL=index.js.map

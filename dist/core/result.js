@@ -2,14 +2,21 @@
  * OpenOxygen — Unified Result Type
  *
  * 统一的操作结果类型，替代分散的 success/error 模式。
- * 所有模块应使用 OxygenResult<T> 作为返回类型。
+ * 所有模块应使用 OxygenResult 作为返回类型。
  */
-// ─── Factory Functions ──────────────────────────────────────────────────────
-export function ok(data, meta) {
-    return { ok: true, data, ...meta };
+data ?  : ;
+error ?  : ;
+code ?  : ; // 错误码：OXY_001, OXY_002...
+durationMs ?  : ;
+metadata ?  : ;
+;
+ > ;
+{
+    return { ok, data, ...meta };
 }
-export function err(error, code, meta) {
-    return { ok: false, error, code, ...meta };
+ > ;
+{
+    return { ok, error, code, ...meta };
 }
 // ─── Error Codes ────────────────────────────────────────────────────────────
 export const ErrorCodes = {
@@ -36,4 +43,3 @@ export const ErrorCodes = {
     CONFIG_INVALID: "OXY_C001",
     CONFIG_NOT_FOUND: "OXY_C002",
 };
-//# sourceMappingURL=result.js.map

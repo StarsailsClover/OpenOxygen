@@ -203,4 +203,3 @@ if (typeof process !== "undefined") {
         process.exit(0);
     });
 }
-//# sourceMappingURL=safety.js.map

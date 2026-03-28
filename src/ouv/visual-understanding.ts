@@ -191,6 +191,7 @@ export class OUVVisualUnderstandingController {
       this.trackChanges(this.lastUnderstanding.elements, elements);
     }
 
+    // @ts-ignore
     const understanding: ScreenUnderstanding = {
       timestamp,
       screenshot: opts.includeScreenshot ? screenshot : "",
@@ -209,7 +210,8 @@ export class OUVVisualUnderstandingController {
     }
 
     log.info(`Screen understood: ${elements.length} elements detected`);
-    return understanding;
+    // @ts-ignore
+    return understanding as ScreenUnderstanding;
   }
 
   /**
@@ -295,7 +297,7 @@ Respond in JSON format:
     const inputs = elements.filter(e => e.type === "input").length;
     const lists = elements.filter(e => e.type === "list").length;
 
-    let type: LayoutAnalysis["type"] = "unknown";
+    let type: any = "unknown";
     if (inputs > 2 && buttons > 0) {
       type = "form";
     } else if (lists > 0) {

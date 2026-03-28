@@ -162,4 +162,3 @@ export function createOpenClawPluginAdapter(clawPlugin) {
         __adapted: true,
     };
 }
-//# sourceMappingURL=index.js.map

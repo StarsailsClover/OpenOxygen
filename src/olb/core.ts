@@ -32,7 +32,7 @@ export interface MemoryPoolConfig {
 
 // SIMD vector
 export interface SIMDVector {
-  data: Float32Array | Float64Array | Int32Array | Int64Array;
+  data: Float32Array | Float64Array | Int32Array | any;
   dimension: VectorDim;
   type: SIMDDataType;
 }
@@ -85,7 +85,7 @@ export class SIMDArrayEngine {
   createVector(data: number[]): SIMDVector {
     const elements = this.dimension / (this.type === "float64" || this.type === "int64" ? 64 : 32);
 
-    let typedArray: Float32Array | Float64Array | Int32Array | Int64Array;
+    let typedArray: Float32Array | Float64Array | Int32Array | any;
 
     switch (this.type) {
       case "float32":

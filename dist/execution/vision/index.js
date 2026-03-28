@@ -289,4 +289,3 @@ Describe what you see and suggest the best action to fulfill the instruction. Be
         return this.latestAnalysis;
     }
 }
-//# sourceMappingURL=index.js.map

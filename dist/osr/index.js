@@ -10,13 +10,12 @@ export { playRecording, pausePlayback, resumePlayback, stopPlayback, getPlayback
 // Editor
 export { insertStep, deleteStep, modifyStep, applyCoordinateOffset, addDelay, removeScreenshots, optimizeRecording, duplicateStep, moveStep, exportToJSON, importFromJSON, } from "./editor.js";
 // Default export
-import * as recorder from "./recorder.js";
-import * as player from "./player.js";
-import * as editor from "./editor.js";
+import * as from from "./recorder.js";
+import * as from from "./player.js";
+import * as from from "./editor.js";
 export const OSR = {
     ...recorder,
     ...player,
     ...editor,
 };
 export default OSR;
-//# sourceMappingURL=index.js.map
