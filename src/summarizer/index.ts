@@ -1,7 +1,5 @@
 /**
- * OpenOxygen — Summarizer Module (26w15aD Phase 7)
- *
- * 统一导出总结功能
+ * OpenOxygen - Summarizer Module (26w15aD Phase 7)
  */
 
 export {
@@ -10,7 +8,13 @@ export {
   translateSummary,
   type SummaryOptions,
   type SummaryResult,
-} from "./index.js";
+} from "./impl.js";
+
+import {
+  summarize,
+  summarizeWebpage,
+  translateSummary,
+} from "./impl.js";
 
 export default {
   summarize,

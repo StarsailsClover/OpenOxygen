@@ -1,13 +1,12 @@
 /**
- * OpenOxygen — Summarizer Module (26w15aD Phase 7)
- *
- * 统一导出总结功能
+ * OpenOxygen - Summarizer Module (26w15aD Phase 7)
  */
-export { summarize, summarizeWebpage, translateSummary, type SummaryOptions, type SummaryResult, } from "./index.js";
+export { summarize, summarizeWebpage, translateSummary, type SummaryOptions, type SummaryResult, } from "./impl.js";
+import { summarize, summarizeWebpage, translateSummary } from "./impl.js";
 declare const _default: {
-    summarize: any;
-    summarizeWebpage: any;
-    translateSummary: any;
+    summarize: typeof summarize;
+    summarizeWebpage: typeof summarizeWebpage;
+    translateSummary: typeof translateSummary;
 };
 export default _default;
 //# sourceMappingURL=index.d.ts.map

@@ -7,11 +7,9 @@ export { launchBrowser, navigate, executeScript, takeScreenshot, goBack, refresh
 export { connectCDP, enableDomains, navigateCDP, executeScriptCDP, queryElementCDP, clickElementCDP, takeScreenshotCDP, getMetricsCDP, disconnectCDP, type CDPClient, } from "./cdp.js";
 export { OUVBrowserIntegration, type VisualElement, } from "./ouv-integration.js";
 import * as core from "./core.js";
-import * as cdp from "./cdp.js";
-import { OUVBrowserIntegration } from "./ouv-integration.js";
 export declare const Browser: {
-    cdp: typeof cdp;
-    OUVBrowserIntegration: typeof OUVBrowserIntegration;
+    cdp: any;
+    OUVBrowserIntegration: any;
     launchBrowser(options?: core.BrowserOptions): Promise<core.BrowserInstance>;
     navigate(browserId: string, url: string): Promise<core.PageInfo>;
     executeScript(browserId: string, script: string): Promise<any>;

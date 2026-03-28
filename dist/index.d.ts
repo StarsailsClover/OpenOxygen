@@ -1,36 +1,25 @@
 /**
- * OpenOxygen — Main Entry Point (26w15aD)
+ * OpenOxygen Core - Refactored Entry Point (26w15aD_REFACTOR)
  *
- * 统一导出所有核心模块
+ * Core exports for OpenOxygen framework
  */
-export { createRuntime } from "./core/runtime/index.js";
-export { createGateway } from "./core/gateway/index.js";
-export { createConfig } from "./core/config/index.js";
-export { GlobalMemory, getGlobalMemory } from "./memory/global/index.js";
-export * from "./execution/terminal/index.js";
-export * from "./execution/unified/index.js";
-export * from "./execution/edge-automation/index.js";
-export * from "./execution/qq-automation/index.js";
-export * from "./agent/orchestrator/index.js";
-export * from "./agent/communication/index.js";
-export * from "./tasks/workflow-engine.js";
-export * from "./tasks/document-generator.js";
-export * from "./utils/index.js";
-export * from "./input/index.js";
-export * from "./output/index.js";
-export * from "./native/index.js";
-export declare const VERSION = "26w15aD";
+export { createRuntime } from './core/runtime.js';
+export { createGateway } from './core/gateway.js';
+export { GlobalMemory, getGlobalMemory } from './memory/global/index.js';
+export { mouseMove, mouseClick, mouseDrag, mouseScroll, keyPress, keyCombination, typeText } from './native/index.js';
+export { ensureOllamaRunning, getOllamaStatus, isModelAvailable, } from './ollama/index.js';
+export { launchBrowser, navigate, closeBrowser } from './browser/index.js';
+export { registerAgent, delegateTask, resumeTask } from './multi-agent/index.js';
+export { launchWinUI, registerHotkey } from './ui/index.js';
+export { handleExecutionRequest } from './execution/unified/index.js';
+export { registerWorkflow, executeWorkflow, listWorkflows, getWorkflow, deleteWorkflow } from './tasks/workflow-engine.js';
+export { generateId, nowMs, sleep } from './utils/index.js';
+export declare const VERSION = "26w15aD_REFACTOR";
 /**
  * Initialize OpenOxygen
  */
 export declare function initialize(config?: {}): Promise<{
-    runtime: any;
-    memory: any;
-    version: string;
+    runtime: import("./core/runtime.js").Runtime;
+    memory: import("./memory/global/index.js").GlobalMemory;
 }>;
-declare const _default: {
-    VERSION: string;
-    initialize: typeof initialize;
-};
-export default _default;
 //# sourceMappingURL=index.d.ts.map

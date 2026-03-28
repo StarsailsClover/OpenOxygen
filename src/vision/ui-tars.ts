@@ -211,7 +211,7 @@ What is the next action?`,
     const response = await this.inferenceEngine.infer({
       messages,
       model: { provider: "ollama", model: this.config.model },
-      mode: "precise",
+      mode: "balanced",
     });
 
     try {
