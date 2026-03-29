@@ -1,282 +1,221 @@
 # OpenOxygen
 
-<div align="center">
+[![Version](https://img.shields.io/badge/Version-26w13a--main--26.103.0-blue)]()
+[![License](https://img.shields.io/badge/License-Apache%202.0-green)]()
+[![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)]()
 
-**The Next-Generation Windows-Native AI Agent Framework**
+**OpenOxygen** - 下一代 AI Agent 平台，专为 Windows 原生环境优化，提供极致性能与全栈自动化能力。
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
-[![Rust](https://img.shields.io/badge/Rust-1.94-orange)](https://www.rust-lang.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-22+-green)](https://nodejs.org/)
-[![Tests](https://img.shields.io/badge/Tests-130%2B%20passing-brightgreen)]()
-[![Version](https://img.shields.io/badge/Version-26w15aC-blue)]()
-
-*Beyond OpenClaw · Kernel-Level Control · Multi-Model Fusion · Zero-Trust Security*
-
-[**安装指南 →**](docs/install/INSTALL.md) · [**快速开始 →**](docs/QUICKSTART.md) · [**路线图 →**](ROADMAP_UNIFIED.md) · [API Reference](docs/API.md) · [Changelog](CHANGELOG.md)
-
-</div>
+[English](#english) | [中文](#中文)
 
 ---
 
-## Why OpenOxygen?
+## 中文
 
-OpenOxygen is not a fork or wrapper — it is a **from-scratch** AI Agent framework that **surpasses** OpenClaw in every dimension:
+### 🚀 核心特性
 
-| | OpenClaw | OpenOxygen |
-|---|---------|------------|
-| **Core** | Python interpreter | Rust native + SIMD |
-| **Speed** | ~500ms inference | **21ms** inference |
-| **Vision** | Basic screenshot | 3-layer fusion (UIA + CV + VLM) |
-| **Input** | SendKeys | Signed sequences + human-likeness scoring |
-| **Security** | Basic auth | Zero-trust + CVE hardened + audit trail |
-| **Models** | Single model | Multi-model cluster with consensus |
-| **Scale** | Single machine | Distributed gateway (planned) |
+#### 🔒 安全架构
+- **零信任权限系统** - 细粒度访问控制
+- **Worker Thread 沙箱** - 安全代码隔离
+- **全链路审计** - 完整操作日志
 
-We maintain **interface compatibility** with OpenClaw for migration, but our architecture is entirely independent.
+#### ⚡ 极致性能
+- **OLB (OxygenLLMBooster)** - Rust 核心加速引擎
+- **Flash Attention V3** - 优化注意力机制
+- **TurboKV Cache** - 3-bit 量化 (6x 内存降低)
+- **Paged Memory** - 页级显存管理
 
-### Performance
+#### 🛠️ 全栈自动化
+- **30+ 高频技能** - Office/浏览器/系统运维
+- **多模态引擎** - 音频/视觉/视频统一处理
+- **OxygenBrowser** - Agent 专用浏览器
+- **OpenClaw 兼容** - 无缝迁移工具
 
-| Metric | Value | Method |
-|--------|-------|--------|
-| Inference round-trip | **21 ms** | Gateway → Engine → LLM |
-| Screen capture | **85 ms** | Win32 BitBlt (2048×1152) |
-| UI element detection | **253 elements** | Win32 UI Automation |
-| Vector search (1000×128d) | **14 ms** | SIMD cosine similarity |
-| Human-likeness score | **81/100** | Timing + movement + pattern |
-| Security tests | **47/47** | CVE + injection + replay |
-| Total tests | **130+** | E2E + security + P1-P4 |
+#### 🧠 智能规划
+- **HTN 规划器** - 层次化任务分解
+- **AI Cluster** - 多模型融合推理
+- **反思引擎** - 自我优化与学习
 
----
-
-## Architecture
-
-```
-                        ┌──────────────────────┐
-                        │   Gateway (:4800)     │
-                        │   Hardened HTTP/WS    │
-                        └──────────┬───────────┘
-                                   │
-          ┌────────────────────────┼────────────────────────┐
-          │                        │                        │
-┌─────────▼──────────┐  ┌─────────▼──────────┐  ┌─────────▼──────────┐
-│  Inference Engine   │  │  Execution Layer   │  │   Memory System    │
-├────────────────────┤  ├────────────────────┤  ├────────────────────┤
-│ • Multi-Model Pool │  │ • Windows Control  │  │ • Vector Store     │
-│ • Dynamic Router   │  │ • OUV v2 Vision    │  │ • BM25 Hybrid      │
-│ • AI Think Cluster │  │ • Signed Input     │  │ • Lifecycle Mgr    │
-│ • Reflection Loop  │  │ • DPI Awareness    │  │                    │
-└────────┬───────────┘  └──────────┬─────────┘  └────────────────────┘
-         │                         │
-         └─────────────┬───────────┘
-                       │
-           ┌───────────▼───────────┐
-           │   Rust Native Core    │
-           │   8.2 MB · NAPI-RS    │
-           ├───────────────────────┤
-           │ • Win32 API (BitBlt,  │
-           │   SendInput, UIA)     │
-           │ • SIMD Vector Ops     │
-           │ • Image Processing    │
-           │ • Vision Tokenizer    │
-           │ • HTTP Client (reqwest│
-           │   + tokio)            │
-           └───────────────────────┘
-```
-
----
-
-## Quick Start
-
-### Prerequisites
-
-- **Windows 10/11** (x64)
-- **Node.js 22+**
-- **Rust 1.82+** (for native module)
-- **(Optional) Ollama** for local LLM
-
-### Install
+### 📦 安装
 
 ```bash
+# 克隆仓库
 git clone https://github.com/StarsailsClover/OpenOxygen.git
 cd OpenOxygen
+
+# 安装依赖
 npm install
-npm run build:native    # Rust → .node
-npm run build:ts        # TypeScript → dist/
-cp .env.example .env
-npm start
+
+# 构建项目
+npm run build
+
+# 运行测试
+npm test
 ```
 
-### Verify
-
-```bash
-curl http://127.0.0.1:4800/health
-# {"status":"ok","version":"0.1.0"}
-
-curl -X POST http://127.0.0.1:4800/api/v1/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message":"Hello","mode":"fast"}'
-```
-
----
-
-## Local LLM (Ollama)
-
-```bash
-ollama pull qwen3:4b        # 2.5GB — fast queries
-ollama pull qwen3-vl:4b     # 3.3GB — vision tasks
-ollama pull gpt-oss:20b     # 13GB  — deep reasoning
-npm start
-```
-
-Models are auto-detected. The router selects the best model per task.
-
----
-
-## Key Features
-
-### OxygenUltraVision (3-Layer Vision)
-
-| Layer | Technology | Speed | Accuracy |
-|-------|-----------|-------|----------|
-| 1. UI Automation | Win32 IUIAutomation COM | <50ms | 100% (standard controls) |
-| 2. Image Processing | Rust Sobel + connected components | <200ms | ~80% |
-| 3. Vision LLM | qwen3-vl:4b | ~500ms | ~85% |
-
-### Signed Input Sequences
+### 🎯 快速开始
 
 ```typescript
-const mgr = new SignedInputManager({ secretKey: "..." });
-const seq = mgr.createSequence([
-  { type: "move", params: { x: 400, y: 300 } },
-  { type: "click", params: { x: 400, y: 300 } },
-]);
-// HMAC-SHA256 signed, nonce anti-replay, time-window expiry
-await mgr.execute(seq, executor);
+import { skillRegistry } from "./skills/registry";
+
+// 执行自动化技能
+const result = await skillRegistry.execute("browser.launch");
+
+// 使用 HTN 规划器
+const plan = await htnPlanner.plan(domain, goalTask);
+
+// 调用 MCP 工具
+const result = await mcpClient.callTool(serverId, toolName, args);
 ```
 
-### AI Thinking Cluster
+### 📚 文档
 
-Multi-model consensus reasoning:
-- **ThoughtRouter**: Routes sub-tasks to optimal models
-- **ConsensusEngine**: Weighted voting across model outputs
-- **ReflectionLoop**: Iterative self-improvement (max 3 rounds)
+- [API 文档](docs/API.md) - 完整 API 参考
+- [技能指南](docs/SKILLS.md) - 技能使用与开发
+- [架构文档](docs/ARCHITECTURE.md) - 系统设计
+- [迁移指南](docs/MIGRATION.md) - OpenClaw 迁移
 
-### Security
-
-| Threat | Defense |
-|--------|---------|
-| CVE-2026-25253 (URL injection) | Query string stripping, bind validation |
-| ClawJacked (WS hijack) | Origin whitelist, rate limiter, timing-safe auth |
-| Command injection | Shell metachar filter, command blacklist |
-| Prompt injection | 3-level detection, high-risk blocking |
-| Supply chain | SHA-256 integrity, dependency audit |
-| Credential leak | AES-256-GCM encryption, API key masking |
-| Input replay | Nonce registry, HMAC signatures |
-| Mouse lock | Safety guard, auto-release, emergency stop |
-
----
-
-## Project Structure
+### 🏗️ 项目结构
 
 ```
-openoxygen/
-├── src/                          # TypeScript (40 files)
-│   ├── core/
-│   │   ├── gateway/              # Hardened HTTP server
-│   │   ├── config/               # Config + env overrides
-│   │   ├── runtime/              # Process lifecycle
-│   │   ├── routing/              # Message → Agent routing
-│   │   ├── sessions/             # Session management
-│   │   ├── async/                # Thread pool + GPU dispatcher
-│   │   └── ai-cluster/          # Multi-model consensus
-│   ├── inference/
-│   │   ├── engine/               # Provider adapters
-│   │   ├── router/               # Model selection + key rotation
-│   │   ├── planner/              # Goal → step decomposition
-│   │   └── reflection/           # Post-execution evaluation
-│   ├── execution/
-│   │   └── vision/               # OUV v2 + fusion pipeline
-│   ├── input/
-│   │   ├── safety.ts             # Anti-lock safety guard
-│   │   ├── signed.ts             # HMAC signed sequences
-│   │   ├── score.ts              # Human-likeness scoring
-│   │   └── dpi.ts                # Multi-monitor DPI
-│   ├── memory/                   # Vector store + BM25 + lifecycle
-│   ├── security/
-│   │   ├── hardening.ts          # CVE defenses
-│   │   ├── audit/                # Append-only audit log
-│   │   ├── permissions/          # Privilege enforcement
-│   │   ├── tempfs.ts             # Secure temp files
-│   │   ├── privilege.ts          # Windows isolation
-│   │   └── deps.ts               # Dependency audit
-│   ├── compat/openclaw/          # Config + plugin adapter
-│   ├── plugins/                  # Loader + SDK
-│   └── types/                    # Shared type definitions
-│
-├── packages/core-native/         # Rust (17 files, 8.2MB binary)
-│   └── src/
-│       ├── input/                # SendInput + smooth + virtual driver
-│       ├── vision/               # UIA + Sobel + tokenizer
-│       ├── windows/              # Capture, clipboard, process, registry
-│       ├── memory/               # SIMD vector search
-│       ├── inference/            # reqwest HTTP client
-│       └── sandbox/              # Process isolation
-│
-├── test/                         # 9 test suites
-├── tools/                        # Mock LLM, utilities
-├── docs/                         # API, CN docs, release notes
-└── openoxygen.json               # Configuration
+OpenOxygen/
+├── src/                    # 源代码
+│   ├── core/              # 核心模块
+│   ├── execution/         # 执行层
+│   ├── inference/         # 推理层
+│   ├── agent/             # Agent 层
+│   ├── skills/            # 技能库
+│   ├── planning/          # 规划系统 (HTN)
+│   ├── protocols/         # 协议 (MCP)
+│   ├── browser/           # OxygenBrowser
+│   └── tests/             # 测试套件
+├── OLB/                   # OxygenLLMBooster (Rust)
+├── desktop/               # 桌面客户端 (Tauri)
+├── docs/                  # 文档
+└── scripts/               # 构建脚本
 ```
 
----
+### 🛣️ 路线图
 
-## API
+- [x] P-0: 核心功能 (85%)
+- [x] P-1: 高优先级 (70%)
+- [x] P-2: 中优先级 (40%)
+- [ ] 桌面客户端完善
+- [ ] CUDA 优化
+- [ ] 知识图谱
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/health` | Health check |
-| `GET` | `/api/v1/status` | System status |
-| `GET` | `/api/v1/models` | List models |
-| `POST` | `/api/v1/chat` | Chat inference |
-| `POST` | `/api/v1/plan` | Task planning |
+### 🤝 贡献
 
-See [docs/API.md](docs/API.md) for full reference.
+欢迎贡献！请阅读 [贡献指南](CONTRIBUTING.md)。
 
----
+### 📄 许可证
 
-## Development
-
-### Phase Status (26w11aE)
-
-| Phase | Status | Key Deliverable |
-|-------|--------|-----------------|
-| P1: Security | ✅ | CVE hardening, AI cluster, async stack |
-| P2: Multi-Model | ✅ | 3-model config, dynamic router |
-| P3: Vision-Language | ✅ | OUV v2 fusion, tokenizer |
-| P4: Input Hardening | ✅ | Signed sequences, human scoring |
-| P5: Persistence | 🔄 | RocksDB vector store |
-| P6: Distributed | ⏳ | Gateway cluster |
-| P7: Marketplace | ⏳ | Plugin ecosystem |
-| P8: GUI | ⏳ | Desktop dashboard |
-| P9: Release | ⏳ | Production v26w11aE |
-
-### Branch Strategy
-
-- `main` — Stable releases only
-- `dev` — Active development (P1-P8)
-- `feature/*` — Individual features
+Apache 2.0 License - 详见 [LICENSE](LICENSE)
 
 ---
 
-## Contributing
+## English
 
-1. Fork → branch → commit → PR
-2. Run `npm test` before submitting
-3. Rust changes: `cargo build --release` in `packages/core-native`
+### 🚀 Core Features
+
+#### 🔒 Security Architecture
+- **Zero-trust permission system** - Fine-grained access control
+- **Worker Thread sandbox** - Secure code isolation
+- **Full audit trail** - Complete operation logging
+
+#### ⚡ Extreme Performance
+- **OLB (OxygenLLMBooster)** - Rust core acceleration engine
+- **Flash Attention V3** - Optimized attention mechanism
+- **TurboKV Cache** - 3-bit quantization (6x memory reduction)
+- **Paged Memory** - Page-level GPU memory management
+
+#### 🛠️ Full-Stack Automation
+- **30+ high-frequency skills** - Office/Browser/System operations
+- **Multimodal engine** - Audio/Vision/Video unified processing
+- **OxygenBrowser** - Agent-optimized browser
+- **OpenClaw compatible** - Seamless migration tools
+
+#### 🧠 Intelligent Planning
+- **HTN Planner** - Hierarchical task decomposition
+- **AI Cluster** - Multi-model fusion inference
+- **Reflection Engine** - Self-improvement and learning
+
+### 📦 Installation
+
+```bash
+# Clone repository
+git clone https://github.com/StarsailsClover/OpenOxygen.git
+cd OpenOxygen
+
+# Install dependencies
+npm install
+
+# Build project
+npm run build
+
+# Run tests
+npm test
+```
+
+### 🎯 Quick Start
+
+```typescript
+import { skillRegistry } from "./skills/registry";
+
+// Execute automation skill
+const result = await skillRegistry.execute("browser.launch");
+
+// Use HTN planner
+const plan = await htnPlanner.plan(domain, goalTask);
+
+// Call MCP tool
+const result = await mcpClient.callTool(serverId, toolName, args);
+```
+
+### 📚 Documentation
+
+- [API Reference](docs/API.md) - Complete API documentation
+- [Skills Guide](docs/SKILLS.md) - Skill usage and development
+- [Architecture](docs/ARCHITECTURE.md) - System design
+- [Migration Guide](docs/MIGRATION.md) - OpenClaw migration
+
+### 🏗️ Project Structure
+
+```
+OpenOxygen/
+├── src/                    # Source code
+│   ├── core/              # Core modules
+│   ├── execution/         # Execution layer
+│   ├── inference/         # Inference layer
+│   ├── agent/             # Agent layer
+│   ├── skills/            # Skill library
+│   ├── planning/          # Planning system (HTN)
+│   ├── protocols/         # Protocols (MCP)
+│   ├── browser/           # OxygenBrowser
+│   └── tests/             # Test suites
+├── OLB/                   # OxygenLLMBooster (Rust)
+├── desktop/               # Desktop client (Tauri)
+├── docs/                  # Documentation
+└── scripts/               # Build scripts
+```
+
+### 🛣️ Roadmap
+
+- [x] P-0: Core features (85%)
+- [x] P-1: High priority (70%)
+- [x] P-2: Medium priority (40%)
+- [ ] Desktop client completion
+- [ ] CUDA optimization
+- [ ] Knowledge graph
+
+### 🤝 Contributing
+
+Contributions welcome! Please read [Contributing Guide](CONTRIBUTING.md).
+
+### 📄 License
+
+Apache 2.0 License - See [LICENSE](LICENSE)
 
 ---
 
-## License
-
-[MIT](LICENSE) © 2026 ND-SailsIsHere
+**Made with ❤️ by the OpenOxygen Team**
