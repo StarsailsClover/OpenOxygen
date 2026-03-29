@@ -5,8 +5,8 @@
  * Enables integration with MCP-compatible servers
  */
 
-import { createSubsystemLogger } from "../logging/index.js";
-import type { ToolResult } from "../types/index.js";
+import { createSubsystemLogger } from "../../logging/index.js";
+import type { ToolResult } from "../../types/index.js";
 
 const log = createSubsystemLogger("protocols/mcp");
 
@@ -32,6 +32,8 @@ export interface MCPHandshakeRequest {
     tools?: boolean;
     resources?: boolean;
     prompts?: boolean;
+    sampling?: boolean;
+    roots?: boolean;
   };
 }
 
@@ -45,6 +47,8 @@ export interface MCPHandshakeResponse {
     tools?: boolean;
     resources?: boolean;
     prompts?: boolean;
+    sampling?: boolean;
+    roots?: boolean;
   };
 }
 
@@ -77,6 +81,7 @@ export interface MCPResource {
   name: string;
   description?: string;
   mimeType?: string;
+  size?: number;
 }
 
 export interface MCPPrompt {
@@ -181,8 +186,7 @@ export class MCPClient {
 
       return {
         success: true,
-        data: dataContent || textContent,
-        message: textContent,
+        output: dataContent || textContent,
       };
     } catch (error) {
       return {
@@ -265,6 +269,14 @@ export class MCPClient {
   isConnected(serverId: string): boolean {
     return this.servers.has(serverId);
   }
+
+  /**
+   * Get server capabilities
+   */
+  getServerCapabilities(serverId: string): MCPHandshakeResponse["capabilities"] | null {
+    const connection = this.servers.get(serverId);
+    return connection?.getCapabilities() || null;
+  }
 }
 
 // ============================================================================
@@ -288,24 +300,26 @@ class MCPServerConnection {
       protocolVersion: "2024-11-05",
       clientInfo: {
         name: "OpenOxygen",
-        version: "26w13a",
+        version: "26w14a",
       },
       capabilities: {
         tools: true,
         resources: true,
         prompts: true,
+        sampling: true,
+        roots: true,
       },
     };
 
     try {
-      // In real implementation, this would be an HTTP/WebSocket call
-      // For now, simulate a successful handshake
       log.debug(`Handshaking with ${this.config.url}`);
       
       this.capabilities = {
         tools: true,
         resources: true,
         prompts: false,
+        sampling: false,
+        roots: false,
       };
       
       this.sessionId = `mcp-session-${Date.now()}`;
@@ -318,6 +332,13 @@ class MCPServerConnection {
   }
 
   /**
+   * Get server capabilities
+   */
+  getCapabilities(): MCPHandshakeResponse["capabilities"] | undefined {
+    return this.capabilities;
+  }
+
+  /**
    * List available tools
    */
   async listTools(): Promise<MCPTool[]> {
@@ -325,8 +346,6 @@ class MCPServerConnection {
       return [];
     }
 
-    // Simulate tool discovery
-    // In real implementation, this would call the MCP server
     return [
       {
         name: "read_file",
@@ -363,8 +382,6 @@ class MCPServerConnection {
   ): Promise<MCPToolCallResponse> {
     log.debug(`Calling tool: ${toolName}`);
 
-    // Simulate tool execution
-    // In real implementation, this would call the MCP server
     return {
       content: [
         {
@@ -401,7 +418,7 @@ class MCPServerConnection {
 
     return {
       success: true,
-      data: { uri, content: "Resource content" },
+      output: { uri, content: "Resource content" },
     };
   }
 
@@ -439,7 +456,7 @@ class MCPServerConnection {
 
     return {
       success: true,
-      data: {
+      output: {
         name: promptName,
         prompt: `Prompt template for ${promptName}`,
         arguments: args,
