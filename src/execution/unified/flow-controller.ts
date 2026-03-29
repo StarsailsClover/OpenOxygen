@@ -11,10 +11,16 @@ import {
   clarifyRequirement,
   chainOfThought,
   multiAIDeliberation,
-  realTimeReflection
+  realTimeReflection,
 } from "../../llm/index.js";
-import { TaskPlanner, TaskOrchestrator } from "../../agent/orchestrator/index.js";
-import { handleExecutionRequest as legacyExecute, executeWithStrategy } from "./index.js";
+import {
+  TaskPlanner,
+  TaskOrchestrator,
+} from "../../agent/orchestrator/index.js";
+import {
+  handleExecutionRequest as legacyExecute,
+  executeWithStrategy,
+} from "./index.js";
 
 const log = createSubsystemLogger("execution/flow-controller");
 
@@ -37,7 +43,7 @@ export async function processRequest(request: {
 }> {
   const startTime = nowMs();
   const executionPath: string[] = [];
-  
+
   log.info(`Processing request: ${request.instruction.substring(0, 100)}...`);
   executionPath.push("A: Start");
 
@@ -45,12 +51,14 @@ export async function processRequest(request: {
     // === Flow B: Complexity Assessment ===
     executionPath.push("B: Complexity Assessment");
     const complexity = await llmJudgeComplexity(request.instruction);
-    log.info(`Complexity assessed: ${complexity.complexity}, needsAgent: ${complexity.needsAgent}`);
+    log.info(
+      `Complexity assessed: ${complexity.complexity}, needsAgent: ${complexity.needsAgent}`,
+    );
 
     // === Flow C: Requirement Clarification ===
     executionPath.push("C: Requirement Clarification");
     const clarification = await clarifyRequirement(request.instruction);
-    
+
     if (!clarification.isClear) {
       // Return clarification questions
       executionPath.push("D: Return Questions");
@@ -59,27 +67,28 @@ export async function processRequest(request: {
         error: "Need clarification",
         result: {
           questions: clarification.questions,
-          type: "clarification_needed"
+          type: "clarification_needed",
         },
         executionPath,
-        durationMs: nowMs() - startTime
+        durationMs: nowMs() - startTime,
       };
     }
 
-    const clarifiedInstruction = clarification.clarifiedInstruction || request.instruction;
+    const clarifiedInstruction =
+      clarification.clarifiedInstruction || request.instruction;
 
     // === Flow E: Check if Agent needed ===
     if (!complexity.needsAgent) {
       // Simple task - direct execution
       executionPath.push("E: Direct Execution");
       const result = await legacyExecute(clarifiedInstruction);
-      
+
       executionPath.push("F: Return Result");
       return {
         success: result.success,
         result: result.output,
         executionPath,
-        durationMs: nowMs() - startTime
+        durationMs: nowMs() - startTime,
       };
     }
 
@@ -112,7 +121,7 @@ export async function processRequest(request: {
       executionPath.push("M: Multi-AI Deliberation");
       const deliberation = await multiAIDeliberation({
         instruction: clarifiedInstruction,
-        agentTypes: ["planner", "executor", "reviewer"]
+        agentTypes: ["planner", "executor", "reviewer"],
       });
       log.info(`Multi-AI deliberation consensus: ${deliberation.consensus}`);
     }
@@ -124,18 +133,17 @@ export async function processRequest(request: {
       success: true,
       result: { orchestrationId: orch.id },
       executionPath,
-      durationMs: nowMs() - startTime
+      durationMs: nowMs() - startTime,
     };
-
   } catch (error) {
     log.error("Flow controller error:", error);
     executionPath.push("Error Handler");
-    
+
     return {
       success: false,
       error: error instanceof Error ? error.message : String(error),
       executionPath,
-      durationMs: nowMs() - startTime
+      durationMs: nowMs() - startTime,
     };
   }
 }
@@ -149,19 +157,22 @@ export async function executeSimpleTask(instruction: string): Promise<{
   error?: string;
 }> {
   log.info(`Executing simple task: ${instruction}`);
-  
+
   try {
     const result = await legacyExecute(instruction);
-    
+
     return {
       success: result.success,
-      output: typeof result.output === 'string' ? result.output : String(result.output ?? ''),
-      error: result.error ? String(result.error) : undefined
+      output:
+        typeof result.output === "string"
+          ? result.output
+          : String(result.output ?? ""),
+      error: result.error ? String(result.error) : undefined,
     };
   } catch (error: any) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     };
   }
 }
@@ -179,30 +190,30 @@ export async function executeComplexTaskWithDeliberation(request: {
   error?: string;
 }> {
   log.info(`Executing complex task with deliberation: ${request.instruction}`);
-  
+
   try {
     // Multi-AI deliberation
     const deliberation = await multiAIDeliberation({
       instruction: request.instruction,
-      agentTypes: request.agentTypes || ["planner", "executor", "reviewer"]
+      agentTypes: request.agentTypes || ["planner", "executor", "reviewer"],
     });
 
     // Execute based on consensus
     const result = await executeWithStrategy(deliberation.consensus, {
       mode: "hybrid",
       confidence: 1,
-      reason: "Multi-AI deliberation consensus"
+      reason: "Multi-AI deliberation consensus",
     });
 
     return {
       success: result.success,
       result: result.output,
-      deliberation
+      deliberation,
     };
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     };
   }
 }
@@ -219,18 +230,20 @@ export async function reflectOnExecution(params: {
   adjustments?: any;
   feedback: string;
 }> {
-  log.info(`Reflecting on execution: ${params.taskId}, step ${params.currentStep}`);
-  
+  log.info(
+    `Reflecting on execution: ${params.taskId}, step ${params.currentStep}`,
+  );
+
   const reflection = await realTimeReflection({
     taskId: params.taskId,
     currentStep: params.currentStep,
-    context: params.context
+    context: params.context,
   });
 
   return {
     shouldContinue: reflection.shouldContinue,
     adjustments: reflection.adjustments,
-    feedback: reflection.feedback
+    feedback: reflection.feedback,
   };
 }
 
@@ -238,5 +251,5 @@ export default {
   processRequest,
   executeSimpleTask,
   executeComplexTaskWithDeliberation,
-  reflectOnExecution
+  reflectOnExecution,
 };

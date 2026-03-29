@@ -17,7 +17,13 @@ const log = createSubsystemLogger("phase3/autonomous-planning");
 export type GoalType = "simple" | "complex" | "ongoing" | "deadline";
 
 // Goal status
-export type GoalStatus = "pending" | "planning" | "executing" | "completed" | "failed" | "cancelled";
+export type GoalStatus =
+  | "pending"
+  | "planning"
+  | "executing"
+  | "completed"
+  | "failed"
+  | "cancelled";
 
 // Goal definition
 export interface Goal {
@@ -93,7 +99,11 @@ export interface ResourceAllocation {
 
 // Replan trigger
 export interface ReplanTrigger {
-  type: "task_failed" | "resource_unavailable" | "deadline_at_risk" | "new_constraint";
+  type:
+    | "task_failed"
+    | "resource_unavailable"
+    | "deadline_at_risk"
+    | "new_constraint";
   taskId?: string;
   details: string;
 }
@@ -134,7 +144,7 @@ export class AutonomousPlanningController {
       priority?: number;
       deadline?: number;
       parentId?: string;
-    } = {}
+    } = {},
   ): Promise<Goal> {
     const goalId = generateId("goal");
     log.info(`[${goalId}] Creating goal: ${description}`);
@@ -209,14 +219,16 @@ Provide tasks in JSON format:
     } catch (error: any) {
       log.error(`[${goal.id}] Goal decomposition failed: ${error.message}`);
       // Create single task as fallback
-      goal.tasks = [{
-        id: generateId("task"),
-        description: goal.description,
-        estimatedDuration: 300000,
-        dependencies: [],
-        requiredResources: [],
-        status: "pending",
-      }];
+      goal.tasks = [
+        {
+          id: generateId("task"),
+          description: goal.description,
+          estimatedDuration: 300000,
+          dependencies: [],
+          requiredResources: [],
+          status: "pending",
+        },
+      ];
     }
   }
 
@@ -241,13 +253,16 @@ Provide tasks in JSON format:
       schedule,
       resources: resourceAllocations,
       criticalPath,
-      estimatedCompletion: schedule.length > 0 ? schedule[schedule.length - 1].endTime : nowMs(),
+      estimatedCompletion:
+        schedule.length > 0 ? schedule[schedule.length - 1].endTime : nowMs(),
     };
 
     this.activePlans.set(goal.id, plan);
     goal.status = "planning";
 
-    log.info(`[${goal.id}] Execution plan created with ${schedule.length} scheduled tasks`);
+    log.info(
+      `[${goal.id}] Execution plan created with ${schedule.length} scheduled tasks`,
+    );
     return plan;
   }
 
@@ -264,8 +279,8 @@ Provide tasks in JSON format:
 
     while (pendingTasks.length > 0) {
       // Find tasks with satisfied dependencies
-      const readyTasks = pendingTasks.filter(task =>
-        task.dependencies.every(depId => completedTasks.has(depId))
+      const readyTasks = pendingTasks.filter((task) =>
+        task.dependencies.every((depId) => completedTasks.has(depId)),
       );
 
       if (readyTasks.length === 0) {
@@ -284,7 +299,7 @@ Provide tasks in JSON format:
         completedTasks.add(task.id);
 
         // Remove from pending
-        const index = pendingTasks.findIndex(t => t.id === task.id);
+        const index = pendingTasks.findIndex((t) => t.id === task.id);
         if (index > -1) pendingTasks.splice(index, 1);
 
         currentTime = scheduleEntry.endTime;
@@ -301,8 +316,8 @@ Provide tasks in JSON format:
     const allocations: ResourceAllocation[] = [];
 
     for (const [resourceType, available] of this.resources) {
-      const requiredTasks = tasks.filter(t =>
-        t.requiredResources.includes(resourceType)
+      const requiredTasks = tasks.filter((t) =>
+        t.requiredResources.includes(resourceType),
       );
 
       if (requiredTasks.length > 0) {
@@ -310,7 +325,7 @@ Provide tasks in JSON format:
           resourceType,
           allocated: requiredTasks.length,
           available,
-          tasks: requiredTasks.map(t => t.id),
+          tasks: requiredTasks.map((t) => t.id),
         });
       }
     }
@@ -323,15 +338,15 @@ Provide tasks in JSON format:
    */
   private findCriticalPath(tasks: PlannedTask[]): string[] {
     // Simplified: return tasks with no dependencies first
-    return tasks
-      .filter(t => t.dependencies.length === 0)
-      .map(t => t.id);
+    return tasks.filter((t) => t.dependencies.length === 0).map((t) => t.id);
   }
 
   /**
    * Execute goal
    */
-  async executeGoal(goalId: string): Promise<{ success: boolean; result?: any }> {
+  async executeGoal(
+    goalId: string,
+  ): Promise<{ success: boolean; result?: any }> {
     const goal = this.goals.get(goalId);
     if (!goal) {
       throw new Error(`Goal not found: ${goalId}`);
@@ -377,7 +392,7 @@ Provide tasks in JSON format:
       goal.completedAt = nowMs();
       log.info(`[${goalId}] Execution completed successfully`);
 
-      return { success: true, result: goal.tasks.map(t => t.result) };
+      return { success: true, result: goal.tasks.map((t) => t.result) };
     } catch (error: any) {
       goal.status = "failed";
       log.error(`[${goalId}] Execution failed: ${error.message}`);
@@ -388,7 +403,9 @@ Provide tasks in JSON format:
   /**
    * Execute a single task
    */
-  private async executeTask(task: PlannedTask): Promise<{ success: boolean; data?: any; error?: string }> {
+  private async executeTask(
+    task: PlannedTask,
+  ): Promise<{ success: boolean; data?: any; error?: string }> {
     log.info(`Executing task: ${task.description}`);
 
     try {
@@ -410,7 +427,10 @@ Provide tasks in JSON format:
   /**
    * Check if replanning is needed
    */
-  private async checkReplanNeeded(goal: Goal, task: PlannedTask): Promise<ReplanTrigger | null> {
+  private async checkReplanNeeded(
+    goal: Goal,
+    task: PlannedTask,
+  ): Promise<ReplanTrigger | null> {
     // Check deadline
     if (goal.deadline && nowMs() > goal.deadline - 60000) {
       return { type: "deadline_at_risk", details: "Deadline approaching" };
@@ -420,7 +440,11 @@ Provide tasks in JSON format:
     for (const resource of task.requiredResources) {
       const available = this.resources.get(resource) || 0;
       if (available <= 0) {
-        return { type: "resource_unavailable", taskId: task.id, details: `Resource ${resource} unavailable` };
+        return {
+          type: "resource_unavailable",
+          taskId: task.id,
+          details: `Resource ${resource} unavailable`,
+        };
       }
     }
 
@@ -454,8 +478,8 @@ Provide tasks in JSON format:
 
       case "deadline_at_risk":
         // Prioritize critical path
-        const criticalTasks = goal.tasks.filter(t =>
-          this.activePlans.get(goal.id)?.criticalPath.includes(t.id)
+        const criticalTasks = goal.tasks.filter((t) =>
+          this.activePlans.get(goal.id)?.criticalPath.includes(t.id),
         );
         for (const task of criticalTasks) {
           task.estimatedDuration = Math.floor(task.estimatedDuration * 0.8); // Reduce duration by 20%
@@ -470,8 +494,14 @@ Provide tasks in JSON format:
   /**
    * Attempt to heal failed task
    */
-  private async attemptHeal(goal: Goal, task: PlannedTask, error: string): Promise<boolean> {
-    log.info(`[${goal.id}] Attempting to heal failed task ${task.id}: ${error}`);
+  private async attemptHeal(
+    goal: Goal,
+    task: PlannedTask,
+    error: string,
+  ): Promise<boolean> {
+    log.info(
+      `[${goal.id}] Attempting to heal failed task ${task.id}: ${error}`,
+    );
 
     // Simple retry
     task.status = "pending";

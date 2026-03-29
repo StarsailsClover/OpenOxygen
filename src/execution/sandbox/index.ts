@@ -50,7 +50,14 @@ export function createDefaultSandboxConfig(): SandboxConfig {
     timeoutMs: 30_000,
     maxMemoryMB: 256,
     allowedModules: ["path", "url", "crypto", "util"],
-    blockedAPIs: ["child_process", "fs", "net", "dgram", "cluster", "worker_threads"],
+    blockedAPIs: [
+      "child_process",
+      "fs",
+      "net",
+      "dgram",
+      "cluster",
+      "worker_threads",
+    ],
   };
 }
 
@@ -157,7 +164,7 @@ const activeExecutions = new Map<string, SandboxExecution>();
 
 /**
  * Execute code in a secure sandbox using Worker Threads
- * 
+ *
  * Security features:
  * - Code runs in isolated Worker Thread
  * - No access to Node.js APIs (fs, net, child_process, etc.)
@@ -205,7 +212,7 @@ export async function executeSandboxed(
 
   try {
     const result = await executeInWorker(code, context, config);
-    
+
     execution.status = result.success ? "completed" : "failed";
     execution.endTime = nowMs();
     execution.result = result.result;
@@ -213,7 +220,9 @@ export async function executeSandboxed(
       execution.error = result.error;
     }
 
-    log.info(`Sandbox execution completed: ${execId} (${result.success ? "success" : "failed"})`);
+    log.info(
+      `Sandbox execution completed: ${execId} (${result.success ? "success" : "failed"})`,
+    );
 
     return {
       success: result.success,
@@ -272,7 +281,9 @@ async function executeInWorker(
       // Set timeout
       timeoutId = setTimeout(() => {
         cleanup();
-        reject(new Error(`Sandbox execution timed out after ${config.timeoutMs}ms`));
+        reject(
+          new Error(`Sandbox execution timed out after ${config.timeoutMs}ms`),
+        );
       }, config.timeoutMs);
 
       worker.on("message", (message: SandboxWorkerMessage) => {
@@ -335,12 +346,21 @@ function validateCode(code: string): { valid: boolean; reason?: string } {
     { pattern: /\bXMLHttpRequest\b/, desc: "XMLHttpRequest is not allowed" },
     { pattern: /\bWebSocket\b/, desc: "WebSocket is not allowed" },
     { pattern: /\blocalStorage\b/, desc: "localStorage access is not allowed" },
-    { pattern: /\bsessionStorage\b/, desc: "sessionStorage access is not allowed" },
+    {
+      pattern: /\bsessionStorage\b/,
+      desc: "sessionStorage access is not allowed",
+    },
     { pattern: /\bdocument\b/, desc: "document access is not allowed" },
     { pattern: /\bwindow\b/, desc: "window access is not allowed" },
-    { pattern: /\bconstructor\s*\[\s*"prototype"\s*\]/, desc: "Prototype pollution attempt detected" },
+    {
+      pattern: /\bconstructor\s*\[\s*"prototype"\s*\]/,
+      desc: "Prototype pollution attempt detected",
+    },
     { pattern: /__proto__/, desc: "Prototype access is not allowed" },
-    { pattern: /prototype\s*\.\s*constructor/, desc: "Constructor manipulation is not allowed" },
+    {
+      pattern: /prototype\s*\.\s*constructor/,
+      desc: "Constructor manipulation is not allowed",
+    },
   ];
 
   for (const { pattern, desc } of dangerousPatterns) {
@@ -351,7 +371,10 @@ function validateCode(code: string): { valid: boolean; reason?: string } {
 
   // Check code length
   if (code.length > 100_000) {
-    return { valid: false, reason: "Code exceeds maximum length of 100,000 characters" };
+    return {
+      valid: false,
+      reason: "Code exceeds maximum length of 100,000 characters",
+    };
   }
 
   return { valid: true };

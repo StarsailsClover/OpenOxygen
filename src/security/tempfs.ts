@@ -9,8 +9,20 @@
  */
 
 import { createSubsystemLogger } from "../logging/index.js";
-import { randomBytes, createCipheriv, createDecipheriv, scryptSync } from "node:crypto";
-import { mkdirSync, writeFileSync, readFileSync, unlinkSync, existsSync, chmodSync } from "node:fs";
+import {
+  randomBytes,
+  createCipheriv,
+  createDecipheriv,
+  scryptSync,
+} from "node:crypto";
+import {
+  mkdirSync,
+  writeFileSync,
+  readFileSync,
+  unlinkSync,
+  existsSync,
+  chmodSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
@@ -24,19 +36,19 @@ const log = createSubsystemLogger("security/tempfs");
 const TEMPFS_CONFIG = {
   // 临时文件权限: 0600 (rw-------)
   fileMode: 0o600,
-  
+
   // 目录权限: 0700 (rwx------)
   dirMode: 0o700,
-  
+
   // 自动清理间隔: 5 分钟
   cleanupIntervalMs: 5 * 60 * 1000,
-  
+
   // 文件最大存活时间: 1 小时
   maxAgeMs: 60 * 60 * 1000,
-  
+
   // 敏感文件最大存活时间: 5 分钟
   sensitiveMaxAgeMs: 5 * 60 * 1000,
-  
+
   // 内存加密密钥派生参数
   keyDerivation: {
     algorithm: "aes-256-gcm",
@@ -66,19 +78,22 @@ export class SecureTempDirectory {
     try {
       // 创建隔离目录，权限 0700
       if (!existsSync(this.basePath)) {
-        mkdirSync(this.basePath, { recursive: true, mode: TEMPFS_CONFIG.dirMode });
+        mkdirSync(this.basePath, {
+          recursive: true,
+          mode: TEMPFS_CONFIG.dirMode,
+        });
       }
-      
+
       // 确保权限正确（Windows 忽略，Linux/macOS 生效）
       try {
         chmodSync(this.basePath, TEMPFS_CONFIG.dirMode);
       } catch {
         // Windows 不支持 chmod，忽略错误
       }
-      
+
       // 启动自动清理
       this.startCleanupTimer();
-      
+
       log.info(`Secure temp directory initialized: ${this.basePath}`);
     } catch (err) {
       log.error("Failed to initialize secure temp directory:", err);
@@ -92,19 +107,21 @@ export class SecureTempDirectory {
   createFile(options?: {
     prefix?: string;
     suffix?: string;
-    sensitive?: boolean;  // 是否包含敏感数据
-    encrypted?: boolean;  // 是否内存加密
+    sensitive?: boolean; // 是否包含敏感数据
+    encrypted?: boolean; // 是否内存加密
   }): SecureTempFile {
     const opts = options || {};
     const filename = `${opts.prefix || "tmp"}-${Date.now()}-${randomBytes(4).toString("hex")}${opts.suffix || ""}`;
     const filepath = join(this.basePath, filename);
-    
+
     const file = new SecureTempFile(filepath, {
       sensitive: opts.sensitive ?? false,
       encrypted: opts.encrypted ?? false,
-      maxAgeMs: opts.sensitive ? TEMPFS_CONFIG.sensitiveMaxAgeMs : TEMPFS_CONFIG.maxAgeMs,
+      maxAgeMs: opts.sensitive
+        ? TEMPFS_CONFIG.sensitiveMaxAgeMs
+        : TEMPFS_CONFIG.maxAgeMs,
     });
-    
+
     this.activeFiles.add(filepath);
     return file;
   }
@@ -122,7 +139,7 @@ export class SecureTempDirectory {
   cleanup(): void {
     const now = Date.now();
     const files = this.listFiles();
-    
+
     for (const file of files) {
       try {
         const stat = readFileSync(file);
@@ -139,7 +156,7 @@ export class SecureTempDirectory {
    */
   destroy(): void {
     this.stopCleanupTimer();
-    
+
     // 清理所有活跃文件
     for (const filepath of this.activeFiles) {
       try {
@@ -148,7 +165,7 @@ export class SecureTempDirectory {
         // 忽略错误
       }
     }
-    
+
     // 尝试删除目录
     try {
       // 需要空目录才能删除
@@ -157,14 +174,16 @@ export class SecureTempDirectory {
     } catch {
       // 忽略错误
     }
-    
+
     log.info(`Secure temp directory destroyed: ${this.basePath}`);
   }
 
   private listFiles(): string[] {
     try {
       const { readdirSync } = require("node:fs");
-      return readdirSync(this.basePath).map((f: string) => join(this.basePath, f));
+      return readdirSync(this.basePath).map((f: string) =>
+        join(this.basePath, f),
+      );
     } catch {
       return [];
     }
@@ -199,23 +218,30 @@ export class SecureTempFile {
   private encryptionKey?: Buffer;
   private encryptionSalt?: Buffer;
 
-  constructor(filepath: string, options: {
-    sensitive: boolean;
-    encrypted: boolean;
-    maxAgeMs: number;
-  }) {
+  constructor(
+    filepath: string,
+    options: {
+      sensitive: boolean;
+      encrypted: boolean;
+      maxAgeMs: number;
+    },
+  ) {
     this.path = filepath;
     this.options = options;
     this.createdAt = Date.now();
-    
+
     // 如果启用加密，生成密钥
     if (options.encrypted) {
       this.encryptionSalt = randomBytes(TEMPFS_CONFIG.keyDerivation.saltLength);
       // 使用进程 ID 和环境变量派生密钥
       const keyMaterial = `${process.pid}-${process.env.OPENOXYGEN_SECRET || "default"}`;
-      this.encryptionKey = scryptSync(keyMaterial, this.encryptionSalt, TEMPFS_CONFIG.keyDerivation.keyLength);
+      this.encryptionKey = scryptSync(
+        keyMaterial,
+        this.encryptionSalt,
+        TEMPFS_CONFIG.keyDerivation.keyLength,
+      );
     }
-    
+
     // 创建空文件并设置权限
     this.createEmptyFile();
   }
@@ -225,20 +251,20 @@ export class SecureTempFile {
    */
   write(data: string | Buffer): void {
     let finalData: Buffer;
-    
+
     if (typeof data === "string") {
       finalData = Buffer.from(data, "utf-8");
     } else {
       finalData = data;
     }
-    
+
     // 如果启用加密，先加密数据
     if (this.options.encrypted && this.encryptionKey && this.encryptionSalt) {
       finalData = this.encrypt(finalData);
     }
-    
+
     writeFileSync(this.path, finalData);
-    
+
     // 设置权限 0600
     try {
       chmodSync(this.path, TEMPFS_CONFIG.fileMode);
@@ -252,12 +278,12 @@ export class SecureTempFile {
    */
   read(): Buffer {
     const data = readFileSync(this.path);
-    
+
     // 如果启用加密，解密数据
     if (this.options.encrypted && this.encryptionKey && this.encryptionSalt) {
       return this.decrypt(data);
     }
-    
+
     return data;
   }
 
@@ -269,12 +295,12 @@ export class SecureTempFile {
       if (existsSync(this.path)) {
         // 获取文件大小
         const data = readFileSync(this.path);
-        
+
         // 覆写 3 次：随机数据 → 0x00 → 随机数据
         writeFileSync(this.path, randomBytes(data.length));
         writeFileSync(this.path, Buffer.alloc(data.length, 0));
         writeFileSync(this.path, randomBytes(data.length));
-        
+
         // 删除
         unlinkSync(this.path);
         log.debug(`Securely deleted: ${this.path}`);
@@ -324,36 +350,43 @@ export class SecureTempFile {
 
   private encrypt(plaintext: Buffer): Buffer {
     if (!this.encryptionKey) return plaintext;
-    
+
     const iv = randomBytes(TEMPFS_CONFIG.keyDerivation.ivLength);
     const cipher = createCipheriv("aes-256-gcm", this.encryptionKey, iv);
-    
+
     const encrypted = Buffer.concat([cipher.update(plaintext), cipher.final()]);
     const tag = cipher.getAuthTag();
-    
+
     // 格式: salt(32) + iv(16) + tag(16) + encrypted
     return Buffer.concat([this.encryptionSalt!, iv, tag, encrypted]);
   }
 
   private decrypt(ciphertext: Buffer): Buffer {
     if (!this.encryptionKey) return ciphertext;
-    
+
     const saltLength = TEMPFS_CONFIG.keyDerivation.saltLength;
     const ivLength = TEMPFS_CONFIG.keyDerivation.ivLength;
     const tagLength = TEMPFS_CONFIG.keyDerivation.tagLength;
-    
+
     const salt = ciphertext.slice(0, saltLength);
     const iv = ciphertext.slice(saltLength, saltLength + ivLength);
-    const tag = ciphertext.slice(saltLength + ivLength, saltLength + ivLength + tagLength);
+    const tag = ciphertext.slice(
+      saltLength + ivLength,
+      saltLength + ivLength + tagLength,
+    );
     const encrypted = ciphertext.slice(saltLength + ivLength + tagLength);
-    
+
     // 重新派生密钥
     const keyMaterial = `${process.pid}-${process.env.OPENOXYGEN_SECRET || "default"}`;
-    const key = scryptSync(keyMaterial, salt, TEMPFS_CONFIG.keyDerivation.keyLength);
-    
+    const key = scryptSync(
+      keyMaterial,
+      salt,
+      TEMPFS_CONFIG.keyDerivation.keyLength,
+    );
+
     const decipher = createDecipheriv("aes-256-gcm", key, iv);
     decipher.setAuthTag(tag);
-    
+
     return Buffer.concat([decipher.update(encrypted), decipher.final()]);
   }
 }

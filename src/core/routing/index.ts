@@ -6,7 +6,11 @@
  */
 
 import { createSubsystemLogger } from "../../logging/index.js";
-import type { OxygenConfig, ResolvedRoute, RouteMatch } from "../../types/index.js";
+import type {
+  OxygenConfig,
+  ResolvedRoute,
+  RouteMatch,
+} from "../../types/index.js";
 import {
   buildMainSessionKey,
   buildPeerSessionKey,
@@ -130,7 +134,12 @@ export function resolveRoute(input: ResolveRouteInput): ResolvedRoute {
 
 function findBindingMatch(
   config: OxygenConfig,
-  criteria: { channel?: string; accountId?: string; peerId?: string; peerKind?: string },
+  criteria: {
+    channel?: string;
+    accountId?: string;
+    peerId?: string;
+    peerKind?: string;
+  },
 ): RouteBinding | null {
   const bindings = listBindings(config);
 
@@ -145,7 +154,12 @@ function findBindingMatch(
         return binding;
       }
     }
-    if (criteria.channel && binding.channel === criteria.channel && !binding.peerId && !binding.accountId) {
+    if (
+      criteria.channel &&
+      binding.channel === criteria.channel &&
+      !binding.peerId &&
+      !binding.accountId
+    ) {
       return binding;
     }
   }

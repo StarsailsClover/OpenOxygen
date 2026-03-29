@@ -9,7 +9,9 @@ import type { ModelConfig } from "../types/index.js";
 
 const log = createSubsystemLogger("health");
 
-export async function checkModelHealth(config: ModelConfig): Promise<{ healthy: boolean; error?: string }> {
+export async function checkModelHealth(
+  config: ModelConfig,
+): Promise<{ healthy: boolean; error?: string }> {
   try {
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 3000);
@@ -23,9 +25,11 @@ export async function checkModelHealth(config: ModelConfig): Promise<{ healthy: 
       return { healthy: false, error: `HTTP ${response.status}` };
     }
 
-    const data = await response.json() as { data?: Array<{ id?: string }> };
+    const data = (await response.json()) as { data?: Array<{ id?: string }> };
     const models = data.data ?? [];
-    const modelFound = models.some((m) => m.id?.includes(config.model) ?? false);
+    const modelFound = models.some(
+      (m) => m.id?.includes(config.model) ?? false,
+    );
 
     if (!modelFound) {
       return { healthy: false, error: `Model ${config.model} not found` };
@@ -38,7 +42,12 @@ export async function checkModelHealth(config: ModelConfig): Promise<{ healthy: 
   }
 }
 
-export async function filterHealthyModels(models: ModelConfig[]): Promise<{ healthy: ModelConfig[]; unhealthy: { config: ModelConfig; error: string }[] }> {
+export async function filterHealthyModels(
+  models: ModelConfig[],
+): Promise<{
+  healthy: ModelConfig[];
+  unhealthy: { config: ModelConfig; error: string }[];
+}> {
   const results = await Promise.all(
     models.map(async (config) => ({
       config,
@@ -52,7 +61,10 @@ export async function filterHealthyModels(models: ModelConfig[]): Promise<{ heal
     .map((r) => ({ config: r.config, error: r.health.error ?? "unknown" }));
 
   if (unhealthy.length > 0) {
-    log.warn(`${unhealthy.length} models unhealthy:`, unhealthy.map((u) => `${u.config.model}: ${u.error}`));
+    log.warn(
+      `${unhealthy.length} models unhealthy:`,
+      unhealthy.map((u) => `${u.config.model}: ${u.error}`),
+    );
   }
 
   return { healthy, unhealthy };

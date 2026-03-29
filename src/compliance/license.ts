@@ -29,7 +29,10 @@ export type LicenseType =
   | "Unknown";
 
 // License compatibility
-export type LicenseCompatibility = "compatible" | "incompatible" | "requires-attention";
+export type LicenseCompatibility =
+  | "compatible"
+  | "incompatible"
+  | "requires-attention";
 
 // License info
 export interface LicenseInfo {
@@ -86,7 +89,12 @@ const LICENSE_DATABASE: Record<LicenseType, LicenseInfo> = {
     type: "MIT",
     spdxId: "MIT",
     url: "https://opensource.org/licenses/MIT",
-    permissions: ["commercial-use", "modification", "distribution", "private-use"],
+    permissions: [
+      "commercial-use",
+      "modification",
+      "distribution",
+      "private-use",
+    ],
     limitations: ["liability", "warranty"],
     conditions: ["include-copyright"],
   },
@@ -95,7 +103,13 @@ const LICENSE_DATABASE: Record<LicenseType, LicenseInfo> = {
     type: "Apache-2.0",
     spdxId: "Apache-2.0",
     url: "https://opensource.org/licenses/Apache-2.0",
-    permissions: ["commercial-use", "modification", "distribution", "patent-use", "private-use"],
+    permissions: [
+      "commercial-use",
+      "modification",
+      "distribution",
+      "patent-use",
+      "private-use",
+    ],
     limitations: ["liability", "warranty", "trademark-use"],
     conditions: ["include-copyright", "include-license", "state-changes"],
   },
@@ -104,7 +118,12 @@ const LICENSE_DATABASE: Record<LicenseType, LicenseInfo> = {
     type: "BSD-3-Clause",
     spdxId: "BSD-3-Clause",
     url: "https://opensource.org/licenses/BSD-3-Clause",
-    permissions: ["commercial-use", "modification", "distribution", "private-use"],
+    permissions: [
+      "commercial-use",
+      "modification",
+      "distribution",
+      "private-use",
+    ],
     limitations: ["liability", "warranty"],
     conditions: ["include-copyright"],
   },
@@ -113,34 +132,75 @@ const LICENSE_DATABASE: Record<LicenseType, LicenseInfo> = {
     type: "GPL-3.0",
     spdxId: "GPL-3.0",
     url: "https://opensource.org/licenses/GPL-3.0",
-    permissions: ["commercial-use", "modification", "distribution", "patent-use", "private-use"],
+    permissions: [
+      "commercial-use",
+      "modification",
+      "distribution",
+      "patent-use",
+      "private-use",
+    ],
     limitations: ["liability", "warranty"],
-    conditions: ["include-copyright", "include-license", "state-changes", "disclose-source", "same-license"],
+    conditions: [
+      "include-copyright",
+      "include-license",
+      "state-changes",
+      "disclose-source",
+      "same-license",
+    ],
   },
   "LGPL-3.0": {
     name: "GNU Lesser General Public License v3.0",
     type: "LGPL-3.0",
     spdxId: "LGPL-3.0",
     url: "https://opensource.org/licenses/LGPL-3.0",
-    permissions: ["commercial-use", "modification", "distribution", "patent-use", "private-use"],
+    permissions: [
+      "commercial-use",
+      "modification",
+      "distribution",
+      "patent-use",
+      "private-use",
+    ],
     limitations: ["liability", "warranty"],
-    conditions: ["include-copyright", "include-license", "state-changes", "disclose-source", "same-license"],
+    conditions: [
+      "include-copyright",
+      "include-license",
+      "state-changes",
+      "disclose-source",
+      "same-license",
+    ],
   },
   "MPL-2.0": {
     name: "Mozilla Public License 2.0",
     type: "MPL-2.0",
     spdxId: "MPL-2.0",
     url: "https://opensource.org/licenses/MPL-2.0",
-    permissions: ["commercial-use", "modification", "distribution", "patent-use", "private-use"],
+    permissions: [
+      "commercial-use",
+      "modification",
+      "distribution",
+      "patent-use",
+      "private-use",
+    ],
     limitations: ["liability", "warranty", "trademark-use"],
-    conditions: ["include-copyright", "include-license", "state-changes", "disclose-source", "same-license"],
+    conditions: [
+      "include-copyright",
+      "include-license",
+      "state-changes",
+      "disclose-source",
+      "same-license",
+    ],
   },
   ISC: {
     name: "ISC License",
     type: "ISC",
     spdxId: "ISC",
     url: "https://opensource.org/licenses/ISC",
-    permissions: ["commercial-use", "modification", "distribution", "private-use"],
+    permissions: [
+      "commercial-use",
+      "modification",
+      "distribution",
+      "private-use",
+    ],
     limitations: ["liability", "warranty"],
     conditions: ["include-copyright"],
   },
@@ -149,7 +209,12 @@ const LICENSE_DATABASE: Record<LicenseType, LicenseInfo> = {
     type: "Unlicense",
     spdxId: "Unlicense",
     url: "https://unlicense.org/",
-    permissions: ["commercial-use", "modification", "distribution", "private-use"],
+    permissions: [
+      "commercial-use",
+      "modification",
+      "distribution",
+      "private-use",
+    ],
     limitations: ["liability", "warranty"],
     conditions: [],
   },
@@ -230,7 +295,10 @@ export class LicenseComplianceManager {
       };
 
       for (const [name, version] of Object.entries(allDeps)) {
-        const depLicense = await this.getDependencyLicense(name, version as string);
+        const depLicense = await this.getDependencyLicense(
+          name,
+          version as string,
+        );
         this.dependencies.push(depLicense);
       }
     } catch (error: any) {
@@ -241,7 +309,10 @@ export class LicenseComplianceManager {
   /**
    * Get license info for a dependency
    */
-  private async getDependencyLicense(name: string, version: string): Promise<DependencyLicense> {
+  private async getDependencyLicense(
+    name: string,
+    version: string,
+  ): Promise<DependencyLicense> {
     const nodeModulesPath = path.join(this.projectPath, "node_modules", name);
     const packageJsonPath = path.join(nodeModulesPath, "package.json");
 
@@ -263,7 +334,13 @@ export class LicenseComplianceManager {
     }
 
     // Look for license file
-    const licenseFiles = ["LICENSE", "LICENSE.md", "LICENSE.txt", "license", "license.md"];
+    const licenseFiles = [
+      "LICENSE",
+      "LICENSE.md",
+      "LICENSE.txt",
+      "license",
+      "license.md",
+    ];
     for (const file of licenseFiles) {
       const filePath = path.join(nodeModulesPath, file);
       if (fs.existsSync(filePath)) {
@@ -295,7 +372,9 @@ export class LicenseComplianceManager {
   /**
    * Parse license field from package.json
    */
-  private parseLicense(license: string | { type: string } | undefined): LicenseType {
+  private parseLicense(
+    license: string | { type: string } | undefined,
+  ): LicenseType {
     if (!license) return "Unknown";
 
     const licenseStr = typeof license === "string" ? license : license.type;
@@ -308,8 +387,10 @@ export class LicenseComplianceManager {
 
     // Check against known licenses
     for (const [key, info] of Object.entries(LICENSE_DATABASE)) {
-      if (normalized.includes(info.spdxId.toLowerCase()) ||
-          normalized.includes(info.name.toLowerCase().replace(/\s+/g, "-"))) {
+      if (
+        normalized.includes(info.spdxId.toLowerCase()) ||
+        normalized.includes(info.name.toLowerCase().replace(/\s+/g, "-"))
+      ) {
         return key as LicenseType;
       }
     }
@@ -327,7 +408,8 @@ export class LicenseComplianceManager {
     if (lowerText.includes("apache license")) return "Apache-2.0";
     if (lowerText.includes("bsd 3-clause")) return "BSD-3-Clause";
     if (lowerText.includes("gnu general public license")) return "GPL-3.0";
-    if (lowerText.includes("gnu lesser general public license")) return "LGPL-3.0";
+    if (lowerText.includes("gnu lesser general public license"))
+      return "LGPL-3.0";
     if (lowerText.includes("mozilla public license")) return "MPL-2.0";
     if (lowerText.includes("isc license")) return "ISC";
     if (lowerText.includes("unlicense")) return "Unlicense";
@@ -340,7 +422,13 @@ export class LicenseComplianceManager {
    */
   private determineCompatibility(license: LicenseType): LicenseCompatibility {
     // For MIT/Apache-2.0/BSD-3-Clause/ISC/Unlicense: compatible
-    const compatible = ["MIT", "Apache-2.0", "BSD-3-Clause", "ISC", "Unlicense"];
+    const compatible = [
+      "MIT",
+      "Apache-2.0",
+      "BSD-3-Clause",
+      "ISC",
+      "Unlicense",
+    ];
     if (compatible.includes(license)) {
       return "compatible";
     }
@@ -407,7 +495,12 @@ export class LicenseComplianceManager {
   /**
    * Generate attribution text
    */
-  private generateAttribution(name: string, version: string, license: LicenseType, author?: string): string {
+  private generateAttribution(
+    name: string,
+    version: string,
+    license: LicenseType,
+    author?: string,
+  ): string {
     const licenseInfo = LICENSE_DATABASE[license];
     let attribution = `${name} v${version}`;
 
@@ -425,10 +518,18 @@ export class LicenseComplianceManager {
    * Generate compliance report
    */
   private generateReport(): ComplianceReport {
-    const compatible = this.dependencies.filter(d => d.compatibility === "compatible").length;
-    const incompatible = this.dependencies.filter(d => d.compatibility === "incompatible").length;
-    const requiresAttention = this.dependencies.filter(d => d.compatibility === "requires-attention").length;
-    const unknown = this.dependencies.filter(d => d.license === "Unknown").length;
+    const compatible = this.dependencies.filter(
+      (d) => d.compatibility === "compatible",
+    ).length;
+    const incompatible = this.dependencies.filter(
+      (d) => d.compatibility === "incompatible",
+    ).length;
+    const requiresAttention = this.dependencies.filter(
+      (d) => d.compatibility === "requires-attention",
+    ).length;
+    const unknown = this.dependencies.filter(
+      (d) => d.license === "Unknown",
+    ).length;
 
     const recommendations: string[] = [];
 
@@ -436,10 +537,14 @@ export class LicenseComplianceManager {
       recommendations.push(`Review ${incompatible} incompatible dependencies`);
     }
     if (requiresAttention > 0) {
-      recommendations.push(`Ensure compliance for ${requiresAttention} dependencies requiring attention`);
+      recommendations.push(
+        `Ensure compliance for ${requiresAttention} dependencies requiring attention`,
+      );
     }
     if (unknown > 0) {
-      recommendations.push(`Investigate ${unknown} dependencies with unknown licenses`);
+      recommendations.push(
+        `Investigate ${unknown} dependencies with unknown licenses`,
+      );
     }
 
     return {
@@ -462,10 +567,12 @@ export class LicenseComplianceManager {
    * Generate THIRD-PARTY-NOTICES file
    */
   generateThirdPartyNotices(outputPath?: string): string {
-    const noticesPath = outputPath || path.join(this.projectPath, "THIRD-PARTY-NOTICES.md");
+    const noticesPath =
+      outputPath || path.join(this.projectPath, "THIRD-PARTY-NOTICES.md");
 
     let content = "# Third-Party Notices\n\n";
-    content += "This project incorporates components from the following projects:\n\n";
+    content +=
+      "This project incorporates components from the following projects:\n\n";
 
     for (const dep of this.dependencies) {
       content += `## ${dep.name} v${dep.version}\n\n`;

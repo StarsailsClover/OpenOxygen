@@ -20,7 +20,15 @@ const log = createSubsystemLogger("input/signed");
 // Types
 // ═══════════════════════════════════════════════════════════════════════════
 
-export type InputActionType = "click" | "move" | "type" | "hotkey" | "scroll" | "wait" | "smooth_move" | "smooth_click";
+export type InputActionType =
+  | "click"
+  | "move"
+  | "type"
+  | "hotkey"
+  | "scroll"
+  | "wait"
+  | "smooth_move"
+  | "smooth_click";
 
 export interface InputAction {
   type: InputActionType;
@@ -42,8 +50,8 @@ export interface SignedInputSequence {
 export interface SignedInputConfig {
   secretKey: string;
   maxSequenceLength: number;
-  maxAgeSec: number;              // 签名有效期
-  replayWindowSec: number;        // 重放检测窗口
+  maxAgeSec: number; // 签名有效期
+  replayWindowSec: number; // 重放检测窗口
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -86,7 +94,12 @@ class NonceRegistry {
 export class SignedInputManager {
   private config: SignedInputConfig;
   private nonceRegistry: NonceRegistry;
-  private executionLog: Array<{ sequenceId: string; action: InputAction; result: boolean; timestamp: number }> = [];
+  private executionLog: Array<{
+    sequenceId: string;
+    action: InputAction;
+    result: boolean;
+    timestamp: number;
+  }> = [];
 
   constructor(config?: Partial<SignedInputConfig>) {
     this.config = {
@@ -101,9 +114,13 @@ export class SignedInputManager {
   /**
    * 创建签名输入序列
    */
-  createSequence(actions: Array<Omit<InputAction, "timestamp">>): SignedInputSequence {
+  createSequence(
+    actions: Array<Omit<InputAction, "timestamp">>,
+  ): SignedInputSequence {
     if (actions.length > this.config.maxSequenceLength) {
-      throw new Error(`Sequence too long: ${actions.length} > ${this.config.maxSequenceLength}`);
+      throw new Error(
+        `Sequence too long: ${actions.length} > ${this.config.maxSequenceLength}`,
+      );
     }
 
     const now = nowMs();
@@ -126,7 +143,9 @@ export class SignedInputManager {
     // 计算签名
     sequence.signature = this.sign(sequence);
 
-    log.info(`Signed sequence ${sequence.id}: ${actions.length} actions, expires in ${this.config.maxAgeSec}s`);
+    log.info(
+      `Signed sequence ${sequence.id}: ${actions.length} actions, expires in ${this.config.maxAgeSec}s`,
+    );
     return sequence;
   }
 
@@ -136,7 +155,10 @@ export class SignedInputManager {
   verify(sequence: SignedInputSequence): { valid: boolean; reason?: string } {
     // 1. 版本检查
     if (sequence.version !== 1) {
-      return { valid: false, reason: `Unsupported version: ${sequence.version}` };
+      return {
+        valid: false,
+        reason: `Unsupported version: ${sequence.version}`,
+      };
     }
 
     // 2. 过期检查
@@ -179,7 +201,12 @@ export class SignedInputManager {
     const verification = this.verify(sequence);
     if (!verification.valid) {
       log.error(`Sequence ${sequence.id} rejected: ${verification.reason}`);
-      return { success: false, executed: 0, failed: 0, error: verification.reason };
+      return {
+        success: false,
+        executed: 0,
+        failed: 0,
+        error: verification.reason,
+      };
     }
 
     // 执行
@@ -206,7 +233,9 @@ export class SignedInputManager {
       }
     }
 
-    log.info(`Sequence ${sequence.id}: ${executed} executed, ${failedCount} failed`);
+    log.info(
+      `Sequence ${sequence.id}: ${executed} executed, ${failedCount} failed`,
+    );
     return { success: failedCount === 0, executed, failed: failedCount };
   }
 
@@ -215,7 +244,7 @@ export class SignedInputManager {
    */
   getExecutionLog(sequenceId?: string): typeof this.executionLog {
     if (sequenceId) {
-      return this.executionLog.filter(l => l.sequenceId === sequenceId);
+      return this.executionLog.filter((l) => l.sequenceId === sequenceId);
     }
     return [...this.executionLog];
   }

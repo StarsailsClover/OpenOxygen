@@ -9,12 +9,15 @@
 
 import { createSubsystemLogger } from "../logging/index.js";
 import { generateId, nowMs, sleep } from "../utils/index.js";
-import type { InferenceEngine, ChatMessage } from "../inference/engine/index.js";
+import type {
+  InferenceEngine,
+  ChatMessage,
+} from "../inference/engine/index.js";
 
 const log = createSubsystemLogger("vision/ui-tars");
 
 // UI-TARS action types
-export type UITarsAction = 
+export type UITarsAction =
   | { type: "click"; x: number; y: number }
   | { type: "double_click"; x: number; y: number }
   | { type: "right_click"; x: number; y: number }
@@ -75,7 +78,7 @@ export class UITarsController {
 
   constructor(
     inferenceEngine: InferenceEngine,
-    config: Partial<UITarsConfig> = {}
+    config: Partial<UITarsConfig> = {},
   ) {
     this.inferenceEngine = inferenceEngine;
     this.config = { ...defaultConfig, ...config };
@@ -89,11 +92,20 @@ export class UITarsController {
     options: {
       initialScreenshot?: string;
       onStep?: (step: ActionHistory) => void;
-      onComplete?: (result: { success: boolean; answer?: string; steps: number }) => void;
-    } = {}
-  ): Promise<{ success: boolean; answer?: string; steps: number; history: ActionHistory[] }> {
+      onComplete?: (result: {
+        success: boolean;
+        answer?: string;
+        steps: number;
+      }) => void;
+    } = {},
+  ): Promise<{
+    success: boolean;
+    answer?: string;
+    steps: number;
+    history: ActionHistory[];
+  }> {
     log.info(`Starting UI-TARS task: ${instruction}`);
-    
+
     this.startTime = nowMs();
     this.stepCount = 0;
     this.history = [];
@@ -103,7 +115,11 @@ export class UITarsController {
         // Check timeout
         if (nowMs() - this.startTime > this.config.timeoutMs) {
           log.warn("UI-TARS task timeout");
-          return { success: false, steps: this.stepCount, history: this.history };
+          return {
+            success: false,
+            steps: this.stepCount,
+            history: this.history,
+          };
         }
 
         this.stepCount++;
@@ -113,7 +129,7 @@ export class UITarsController {
 
         // Get prediction from UI-TARS
         const prediction = await this.getPrediction(instruction, screenshot);
-        
+
         // Record action
         const actionRecord: ActionHistory = {
           step: this.stepCount,
@@ -129,13 +145,13 @@ export class UITarsController {
 
         // Execute action
         const shouldContinue = await this.executeAction(prediction.action);
-        
+
         if (!shouldContinue) {
-          const result = { 
-            success: true, 
+          const result = {
+            success: true,
             answer: (prediction.action as any).answer,
-            steps: this.stepCount, 
-            history: this.history 
+            steps: this.stepCount,
+            history: this.history,
           };
           options.onComplete?.(result);
           return result;
@@ -147,7 +163,6 @@ export class UITarsController {
 
       log.warn("UI-TARS reached max steps");
       return { success: false, steps: this.stepCount, history: this.history };
-
     } catch (error: any) {
       log.error(`UI-TARS task failed: ${error.message}`);
       return { success: false, steps: this.stepCount, history: this.history };
@@ -168,7 +183,7 @@ export class UITarsController {
    */
   private async getPrediction(
     instruction: string,
-    screenshot: string
+    screenshot: string,
   ): Promise<UITarsPrediction> {
     const messages: ChatMessage[] = [
       {
@@ -253,11 +268,15 @@ What is the next action?`,
         break;
 
       case "drag":
-        log.debug(`Drag from (${action.startX}, ${action.startY}) to (${action.endX}, ${action.endY})`);
+        log.debug(
+          `Drag from (${action.startX}, ${action.startY}) to (${action.endX}, ${action.endY})`,
+        );
         break;
 
       case "scroll":
-        log.debug(`Scroll at (${action.x}, ${action.y}) with delta ${action.delta}`);
+        log.debug(
+          `Scroll at (${action.x}, ${action.y}) with delta ${action.delta}`,
+        );
         break;
 
       case "type":

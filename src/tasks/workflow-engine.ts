@@ -1,6 +1,6 @@
 /**
  * OpenOxygen - Workflow Engine
- * 
+ *
  * Enhanced workflow engine with DAG execution, parallel processing,
  * conditional branching, loops, retry mechanism, caching, and timeout control
  */
@@ -11,7 +11,14 @@ import { EventEmitter } from "events";
 
 const log = createSubsystemLogger("tasks/workflow");
 
-export type WorkflowStepType = "terminal" | "browser" | "gui" | "delay" | "condition" | "loop" | "parallel";
+export type WorkflowStepType =
+  | "terminal"
+  | "browser"
+  | "gui"
+  | "delay"
+  | "condition"
+  | "loop"
+  | "parallel";
 
 export type WorkflowStep = {
   id: string;
@@ -20,12 +27,12 @@ export type WorkflowStep = {
   instruction: string;
   timeout?: number;
   retryCount?: number;
-  condition?: string;  // For condition steps
-  loopCondition?: string;  // For loop steps
-  maxIterations?: number;  // For loop steps
-  parallelSteps?: WorkflowStep[];  // For parallel steps
-  dependsOn?: string[];  // For DAG execution
-  cacheKey?: string;  // For caching
+  condition?: string; // For condition steps
+  loopCondition?: string; // For loop steps
+  maxIterations?: number; // For loop steps
+  parallelSteps?: WorkflowStep[]; // For parallel steps
+  dependsOn?: string[]; // For DAG execution
+  cacheKey?: string; // For caching
 };
 
 export type Workflow = {
@@ -77,7 +84,9 @@ class DAGExecutor extends EventEmitter {
     const ready: WorkflowStep[] = [];
     for (const [stepId, deps] of this.dependencies) {
       if (!this.completed.has(stepId)) {
-        const allDepsCompleted = Array.from(deps).every(d => this.completed.has(d));
+        const allDepsCompleted = Array.from(deps).every((d) =>
+          this.completed.has(d),
+        );
         if (allDepsCompleted) {
           ready.push(this.steps.get(stepId)!);
         }
@@ -103,7 +112,7 @@ class DAGExecutor extends EventEmitter {
 
 async function executeStep(
   step: WorkflowStep,
-  variables: Record<string, unknown>
+  variables: Record<string, unknown>,
 ): Promise<StepResult> {
   const startTime = nowMs();
   const timeout = step.timeout || 30000;
@@ -119,35 +128,35 @@ async function executeStep(
         success: true,
         output: cached.result,
         durationMs: 0,
-        cached: true
+        cached: true,
       };
     }
   }
 
   let lastError: string | undefined;
-  
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const result = await executeStepWithTimeout(step, variables, timeout);
-      
+
       // Cache result if successful
       if (step.cacheKey && result.success) {
         cache.set(step.cacheKey, {
           result: result.output,
-          timestamp: nowMs()
+          timestamp: nowMs(),
         });
       }
-      
+
       return {
         ...result,
         retryCount: attempt,
         durationMs: 0,
-        cached: false
+        cached: false,
       };
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
       log.warn(`Step ${step.name} attempt ${attempt + 1} failed: ${lastError}`);
-      
+
       if (attempt < maxRetries) {
         await sleep(1000 * (attempt + 1)); // Exponential backoff
       }
@@ -159,14 +168,14 @@ async function executeStep(
     success: false,
     error: lastError || "Max retries exceeded",
     durationMs: nowMs() - startTime,
-    retryCount: maxRetries
+    retryCount: maxRetries,
   };
 }
 
 async function executeStepWithTimeout(
   step: WorkflowStep,
   variables: Record<string, unknown>,
-  timeout: number
+  timeout: number,
 ): Promise<Omit<StepResult, "durationMs" | "retryCount" | "cached">> {
   return new Promise(async (resolve, reject) => {
     const timer = setTimeout(() => {
@@ -186,7 +195,7 @@ async function executeStepWithTimeout(
 
 async function executeStepLogic(
   step: WorkflowStep,
-  variables: Record<string, unknown>
+  variables: Record<string, unknown>,
 ): Promise<Omit<StepResult, "durationMs" | "retryCount" | "cached">> {
   log.info(`Executing step: ${step.name} (${step.type})`);
 
@@ -197,38 +206,41 @@ async function executeStepLogic(
       return {
         stepId: step.id,
         success: true,
-        output: { delayed: delayMs }
+        output: { delayed: delayMs },
       };
 
     case "condition":
       // Evaluate condition
-      const conditionResult = evaluateCondition(step.condition || "", variables);
+      const conditionResult = evaluateCondition(
+        step.condition || "",
+        variables,
+      );
       return {
         stepId: step.id,
         success: true,
-        output: { condition: step.condition, result: conditionResult }
+        output: { condition: step.condition, result: conditionResult },
       };
 
     case "loop":
       const iterations = step.maxIterations || 10;
       const loopResults: unknown[] = [];
-      
+
       for (let i = 0; i < iterations; i++) {
         const shouldContinue = evaluateCondition(step.loopCondition || "", {
           ...variables,
-          iteration: i
+          iteration: i,
         });
-        
+
         if (!shouldContinue) break;
-        
+
         // Execute loop body (simplified)
         loopResults.push({ iteration: i, status: "completed" });
       }
-      
+
       return {
         stepId: step.id,
         success: true,
-        output: { iterations: loopResults.length, results: loopResults }
+        output: { iterations: loopResults.length, results: loopResults },
       };
 
     case "parallel":
@@ -236,20 +248,20 @@ async function executeStepLogic(
         return {
           stepId: step.id,
           success: true,
-          output: { message: "No parallel steps defined" }
+          output: { message: "No parallel steps defined" },
         };
       }
-      
+
       const parallelResults = await Promise.all(
-        step.parallelSteps.map(s => executeStep(s, variables))
+        step.parallelSteps.map((s) => executeStep(s, variables)),
       );
-      
-      const allSuccess = parallelResults.every(r => r.success);
+
+      const allSuccess = parallelResults.every((r) => r.success);
       return {
         stepId: step.id,
         success: allSuccess,
         output: { parallelResults },
-        error: allSuccess ? undefined : "Some parallel steps failed"
+        error: allSuccess ? undefined : "Some parallel steps failed",
       };
 
     case "terminal":
@@ -257,11 +269,11 @@ async function executeStepLogic(
       return {
         stepId: step.id,
         success: true,
-        output: { 
+        output: {
           type: "terminal",
           command: step.instruction,
-          status: "executed"
-        }
+          status: "executed",
+        },
       };
 
     case "browser":
@@ -272,8 +284,8 @@ async function executeStepLogic(
         output: {
           type: "browser",
           action: step.instruction,
-          status: "executed"
-        }
+          status: "executed",
+        },
       };
 
     case "gui":
@@ -284,20 +296,23 @@ async function executeStepLogic(
         output: {
           type: "gui",
           action: step.instruction,
-          status: "executed"
-        }
+          status: "executed",
+        },
       };
 
     default:
       return {
         stepId: step.id,
         success: false,
-        error: `Unknown step type: ${step.type}`
+        error: `Unknown step type: ${step.type}`,
       };
   }
 }
 
-function evaluateCondition(condition: string, variables: Record<string, unknown>): boolean {
+function evaluateCondition(
+  condition: string,
+  variables: Record<string, unknown>,
+): boolean {
   try {
     // Simple condition evaluation
     // In production, use a proper expression evaluator
@@ -305,7 +320,7 @@ function evaluateCondition(condition: string, variables: Record<string, unknown>
       const value = variables[key];
       return typeof value === "string" ? `"${value}"` : String(value);
     });
-    
+
     // WARNING: eval is dangerous, use a safe evaluator in production
     // This is simplified for demonstration
     return substituted ? eval(substituted) : true;
@@ -314,14 +329,17 @@ function evaluateCondition(condition: string, variables: Record<string, unknown>
   }
 }
 
-export function registerWorkflow(name: string, steps: WorkflowStep[]): Workflow {
+export function registerWorkflow(
+  name: string,
+  steps: WorkflowStep[],
+): Workflow {
   const workflow: Workflow = {
     id: generateId("workflow"),
     name,
     description: `Workflow: ${name}`,
     steps,
     createdAt: nowMs(),
-    variables: {}
+    variables: {},
   };
   workflows.set(workflow.id, workflow);
   log.info(`Workflow registered: ${name} (${steps.length} steps)`);
@@ -330,7 +348,7 @@ export function registerWorkflow(name: string, steps: WorkflowStep[]): Workflow 
 
 export async function executeWorkflow(
   workflowId: string,
-  variables: Record<string, unknown> = {}
+  variables: Record<string, unknown> = {},
 ): Promise<WorkflowResult> {
   const workflow = workflows.get(workflowId);
   if (!workflow) {
@@ -342,24 +360,28 @@ export async function executeWorkflow(
   const results: StepResult[] = [];
 
   // Check if workflow has dependencies (DAG)
-  const hasDependencies = workflow.steps.some(s => s.dependsOn && s.dependsOn.length > 0);
-  
+  const hasDependencies = workflow.steps.some(
+    (s) => s.dependsOn && s.dependsOn.length > 0,
+  );
+
   if (hasDependencies) {
     // DAG execution
     const dag = new DAGExecutor(workflow.steps);
-    
+
     while (!dag.isComplete()) {
       const readySteps = dag.getReadySteps();
-      
+
       if (readySteps.length === 0 && !dag.isComplete()) {
         throw new Error("Circular dependency detected or no ready steps");
       }
-      
+
       // Execute ready steps in parallel
       const stepResults = await Promise.all(
-        readySteps.map(step => executeStep(step, { ...workflow.variables, ...variables }))
+        readySteps.map((step) =>
+          executeStep(step, { ...workflow.variables, ...variables }),
+        ),
       );
-      
+
       for (const result of stepResults) {
         dag.markCompleted(result.stepId, result);
         results.push(result);
@@ -368,9 +390,12 @@ export async function executeWorkflow(
   } else {
     // Sequential execution
     for (const step of workflow.steps) {
-      const result = await executeStep(step, { ...workflow.variables, ...variables });
+      const result = await executeStep(step, {
+        ...workflow.variables,
+        ...variables,
+      });
       results.push(result);
-      
+
       // Stop on failure unless it's a condition step
       if (!result.success && step.type !== "condition") {
         log.error(`Step ${step.name} failed, stopping workflow`);
@@ -379,7 +404,7 @@ export async function executeWorkflow(
     }
   }
 
-  const success = results.every(r => r.success);
+  const success = results.every((r) => r.success);
   const durationMs = nowMs() - startTime;
 
   log.info(`Workflow ${workflow.name} completed in ${durationMs}ms`);
@@ -389,7 +414,7 @@ export async function executeWorkflow(
     success,
     results,
     durationMs,
-    completedAt: nowMs()
+    completedAt: nowMs(),
   };
 }
 
@@ -413,7 +438,7 @@ export function clearCache(): void {
 export function getCacheStats(): { size: number; keys: string[] } {
   return {
     size: cache.size,
-    keys: Array.from(cache.keys())
+    keys: Array.from(cache.keys()),
   };
 }
 
@@ -424,5 +449,5 @@ export default {
   getWorkflow,
   deleteWorkflow,
   clearCache,
-  getCacheStats
+  getCacheStats,
 };

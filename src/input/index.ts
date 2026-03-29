@@ -18,13 +18,13 @@ let hotkeyRegistered = false;
  */
 export function registerGlobalHotkey(
   keyCombination: string,
-  callback: () => void
+  callback: () => void,
 ): boolean {
   log.info(`Registering global hotkey: ${keyCombination}`);
-  
+
   try {
     const { execSync } = require("node:child_process");
-    
+
     // Use PowerShell to register global hotkey via Windows API
     // This is a simplified implementation - in production, use a native module
     const script = `
@@ -32,9 +32,9 @@ export function registerGlobalHotkey(
       # For now, we log the registration
       Write-Host "Global hotkey ${keyCombination} registered"
     `;
-    
+
     execSync(`powershell -Command "${script}"`, { encoding: "utf-8" });
-    
+
     hotkeyRegistered = true;
     log.info(`Global hotkey ${keyCombination} registered successfully`);
     return true;
@@ -59,7 +59,7 @@ export function unregisterGlobalHotkey(): boolean {
  */
 export function showSystemTrayInput(): void {
   log.info("Showing system tray quick input");
-  
+
   // This would integrate with a system tray application
   // For now, we just log it
   log.debug("System tray input would be shown here");
@@ -72,7 +72,7 @@ export function showSystemTrayInput(): void {
  */
 export async function voiceInput(durationMs: number = 5000): Promise<string> {
   log.info(`Starting voice input for ${durationMs}ms`);
-  
+
   try {
     // This would integrate with a speech-to-text service
     // For now, return a placeholder
@@ -89,11 +89,9 @@ export async function voiceInput(durationMs: number = 5000): Promise<string> {
  * Automatically detects clipboard changes and processes content
  * @param callback - Callback function when clipboard changes
  */
-export function startClipboardListener(
-  callback: (text: string) => void
-): void {
+export function startClipboardListener(callback: (text: string) => void): void {
   log.info("Starting clipboard listener");
-  
+
   // This would require a background process to monitor clipboard
   // For now, we provide a manual check function
   log.debug("Clipboard listener started (manual check mode)");
@@ -110,12 +108,12 @@ export function getClipboardText(): string {
       Add-Type -AssemblyName System.Windows.Forms
       [System.Windows.Forms.Clipboard]::GetText()
     `;
-    
-    const result = execSync(`powershell -Command "${script}"`, { 
+
+    const result = execSync(`powershell -Command "${script}"`, {
       encoding: "utf-8",
-      maxBuffer: 1024 * 1024 // 1MB buffer
+      maxBuffer: 1024 * 1024, // 1MB buffer
     });
-    
+
     return result.trim();
   } catch (error) {
     log.error(`Failed to get clipboard text: ${error.message}`);
@@ -130,17 +128,15 @@ export function getClipboardText(): string {
 export function setClipboardText(text: string): boolean {
   try {
     const { execSync } = require("node:child_process");
-    
+
     // Escape special characters
-    const escapedText = text
-      .replace(/"/g, '""')
-      .replace(/'/g, "''");
-    
+    const escapedText = text.replace(/"/g, '""').replace(/'/g, "''");
+
     const script = `
       Add-Type -AssemblyName System.Windows.Forms
       [System.Windows.Forms.Clipboard]::SetText("${escapedText}")
     `;
-    
+
     execSync(`powershell -Command "${script}"`, { encoding: "utf-8" });
     return true;
   } catch (error) {

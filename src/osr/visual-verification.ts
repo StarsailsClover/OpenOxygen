@@ -59,19 +59,21 @@ export class OSRVisualVerifier {
    */
   async captureReference(name: string): Promise<string> {
     log.info(`Capturing reference: ${name}`);
-    
+
     // Capture screenshot
     const screenshot = await this.captureScreenshot();
     this.referenceScreenshots.set(name, screenshot);
-    
+
     // Analyze and store elements
     const understanding = await this.ouv.understandScreen(screenshot, {
       includeScreenshot: false,
     });
-    
+
     this.referenceElements.set(name, understanding.elements);
-    
-    log.info(`Reference captured: ${name} (${understanding.elements.length} elements)`);
+
+    log.info(
+      `Reference captured: ${name} (${understanding.elements.length} elements)`,
+    );
     return screenshot;
   }
 
@@ -80,7 +82,7 @@ export class OSRVisualVerifier {
    */
   async verifyAgainstReference(
     referenceName: string,
-    options: VerificationOptions = {}
+    options: VerificationOptions = {},
   ): Promise<VerificationResult> {
     const opts = {
       tolerance: 0.9,
@@ -107,17 +109,21 @@ export class OSRVisualVerifier {
         referenceScreenshot,
         currentScreenshot,
         referenceElements,
-        opts
+        opts,
       );
 
       lastResult = result;
 
       if (result.success) {
-        log.info(`Verification passed: ${referenceName} (${result.matchScore.toFixed(2)})`);
+        log.info(
+          `Verification passed: ${referenceName} (${result.matchScore.toFixed(2)})`,
+        );
         return result;
       }
 
-      log.debug(`Verification failed, retrying... (${result.matchScore.toFixed(2)})`);
+      log.debug(
+        `Verification failed, retrying... (${result.matchScore.toFixed(2)})`,
+      );
       await sleep(opts.retryInterval);
     }
 
@@ -132,7 +138,7 @@ export class OSRVisualVerifier {
     reference: string,
     current: string,
     referenceElements: any[],
-    options: VerificationOptions
+    options: VerificationOptions,
   ): Promise<VerificationResult> {
     // Analyze current screenshot
     const currentUnderstanding = await this.ouv.understandScreen(current, {
@@ -145,7 +151,9 @@ export class OSRVisualVerifier {
     // Check for missing elements
     for (const refElement of referenceElements) {
       const found = currentUnderstanding.elements.find(
-        (e) => e.text === refElement.text || e.description === refElement.description
+        (e) =>
+          e.text === refElement.text ||
+          e.description === refElement.description,
       );
 
       if (!found) {
@@ -158,7 +166,10 @@ export class OSRVisualVerifier {
         matchScore -= 0.1;
       } else {
         // Check position change
-        const positionDiff = this.calculatePositionDiff(refElement.bounds, found.bounds);
+        const positionDiff = this.calculatePositionDiff(
+          refElement.bounds,
+          found.bounds,
+        );
         if (positionDiff > 10) {
           differences.push({
             type: "element_moved",
@@ -174,7 +185,9 @@ export class OSRVisualVerifier {
     // Check for new elements
     for (const currElement of currentUnderstanding.elements) {
       const found = referenceElements.find(
-        (e) => e.text === currElement.text || e.description === currElement.description
+        (e) =>
+          e.text === currElement.text ||
+          e.description === currElement.description,
       );
 
       if (!found) {
@@ -214,7 +227,7 @@ export class OSRVisualVerifier {
   async waitForVisualState(
     predicate: (elements: any[]) => boolean,
     timeout: number = 10000,
-    interval: number = 500
+    interval: number = 500,
   ): Promise<boolean> {
     const startTime = nowMs();
 
@@ -239,16 +252,16 @@ export class OSRVisualVerifier {
    */
   async verifyElementExists(
     elementDescription: string,
-    timeout: number = 5000
+    timeout: number = 5000,
   ): Promise<boolean> {
     return this.waitForVisualState(
       (elements) =>
         elements.some(
           (e) =>
             e.text?.includes(elementDescription) ||
-            e.description?.includes(elementDescription)
+            e.description?.includes(elementDescription),
         ),
-      timeout
+      timeout,
     );
   }
 
@@ -258,7 +271,7 @@ export class OSRVisualVerifier {
   async verifyElementAtPosition(
     x: number,
     y: number,
-    tolerance: number = 10
+    tolerance: number = 10,
   ): Promise<any | null> {
     const screenshot = await this.captureScreenshot();
     const understanding = await this.ouv.understandScreen(screenshot, {

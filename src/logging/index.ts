@@ -42,7 +42,11 @@ function formatTimestamp(): string {
   return new Date().toISOString();
 }
 
-function formatMessage(subsystem: string, level: LogLevel, args: unknown[]): string {
+function formatMessage(
+  subsystem: string,
+  level: LogLevel,
+  args: unknown[],
+): string {
   const ts = formatTimestamp();
   const lvl = level.toUpperCase().padEnd(5);
   const prefix = `[${ts}] [${lvl}] [${subsystem}]`;
@@ -125,7 +129,9 @@ export function disableConsoleCapture(): void {
 /**
  * Initialize log level from environment variable.
  */
-export function initLogLevelFromEnv(env: NodeJS.ProcessEnv = process.env): void {
+export function initLogLevelFromEnv(
+  env: NodeJS.ProcessEnv = process.env,
+): void {
   const raw = env["OPENOXYGEN_LOG_LEVEL"];
   if (raw && raw in LOG_LEVEL_PRIORITY) {
     setLogLevel(raw as LogLevel);

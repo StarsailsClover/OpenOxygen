@@ -9,7 +9,10 @@
 
 import { createSubsystemLogger } from "../logging/index.js";
 import { generateId, nowMs } from "../utils/index.js";
-import type { InferenceEngine, ChatMessage } from "../inference/engine/index.js";
+import type {
+  InferenceEngine,
+  ChatMessage,
+} from "../inference/engine/index.js";
 
 const log = createSubsystemLogger("phase2/reasoning");
 
@@ -81,7 +84,7 @@ export class AdvancedReasoningController {
     options: {
       maxSteps?: number;
       minConfidence?: number;
-    } = {}
+    } = {},
   ): Promise<ReasoningChain> {
     const chainId = generateId("cot");
     const startTime = nowMs();
@@ -100,7 +103,7 @@ export class AdvancedReasoningController {
         const thoughtPrompt = `Query: ${currentQuery}
 
 Previous steps:
-${steps.map(s => `Step ${s.step}: ${s.thought}`).join("\n")}
+${steps.map((s) => `Step ${s.step}: ${s.thought}`).join("\n")}
 
 Think step by step. What should we do next?`;
 
@@ -153,7 +156,7 @@ What action should we take? Respond with a single action description.`;
 
       // Generate conclusion
       const conclusionPrompt = `Based on these reasoning steps:
-${steps.map(s => `${s.step}. Thought: ${s.thought}\n   Action: ${s.action}\n   Observation: ${s.observation}`).join("\n")}
+${steps.map((s) => `${s.step}. Thought: ${s.thought}\n   Action: ${s.action}\n   Observation: ${s.observation}`).join("\n")}
 
 What is the final conclusion?`;
 
@@ -178,7 +181,9 @@ What is the final conclusion?`;
       };
 
       this.reasoningHistory.push(chain);
-      log.info(`[${chainId}] Chain of Thought completed in ${chain.durationMs}ms`);
+      log.info(
+        `[${chainId}] Chain of Thought completed in ${chain.durationMs}ms`,
+      );
 
       return chain;
     } catch (error: any) {
@@ -192,7 +197,7 @@ What is the final conclusion?`;
    */
   async reflect(
     originalOutput: string,
-    context: string
+    context: string,
   ): Promise<ReflectionResult> {
     log.info("Starting self-reflection");
 
@@ -222,7 +227,9 @@ List specific improvements that should be made. Respond as a JSON array.`;
     try {
       improvements = JSON.parse(improvementsResponse.content);
     } catch {
-      improvements = improvementsResponse.content.split("\n").filter(line => line.trim());
+      improvements = improvementsResponse.content
+        .split("\n")
+        .filter((line) => line.trim());
     }
 
     // Generate revised output
@@ -249,7 +256,9 @@ Provide a revised version addressing these improvements.`;
   /**
    * Add knowledge entry
    */
-  addKnowledge(entry: Omit<KnowledgeEntry, "id" | "usageCount" | "lastUsed" | "createdAt">): KnowledgeEntry {
+  addKnowledge(
+    entry: Omit<KnowledgeEntry, "id" | "usageCount" | "lastUsed" | "createdAt">,
+  ): KnowledgeEntry {
     const id = generateId("know");
     const knowledgeEntry: KnowledgeEntry = {
       ...entry,
@@ -267,13 +276,16 @@ Provide a revised version addressing these improvements.`;
   /**
    * Retrieve relevant knowledge
    */
-  async retrieveKnowledge(query: string, topK: number = 5): Promise<KnowledgeEntry[]> {
+  async retrieveKnowledge(
+    query: string,
+    topK: number = 5,
+  ): Promise<KnowledgeEntry[]> {
     // Simple keyword matching (in production, use embeddings)
     const entries = Array.from(this.knowledgeBase.values());
     const queryLower = query.toLowerCase();
 
-    const scored = entries.map(entry => {
-      const score = 
+    const scored = entries.map((entry) => {
+      const score =
         (entry.topic.toLowerCase().includes(queryLower) ? 2 : 0) +
         (entry.content.toLowerCase().includes(queryLower) ? 1 : 0);
       return { entry, score };
@@ -281,8 +293,8 @@ Provide a revised version addressing these improvements.`;
 
     scored.sort((a, b) => b.score - a.score);
 
-    const results = scored.slice(0, topK).map(s => s.entry);
-    
+    const results = scored.slice(0, topK).map((s) => s.entry);
+
     // Update usage
     for (const entry of results) {
       entry.usageCount++;

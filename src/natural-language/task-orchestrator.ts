@@ -10,12 +10,15 @@
 
 import { createSubsystemLogger } from "../logging/index.js";
 import { generateId, nowMs } from "../utils/index.js";
-import type { InferenceEngine, ChatMessage } from "../inference/engine/index.js";
+import type {
+  InferenceEngine,
+  ChatMessage,
+} from "../inference/engine/index.js";
 
 const log = createSubsystemLogger("natural-language/orchestrator");
 
 // Task types
-export type TaskType = 
+export type TaskType =
   | "browser_automation"
   | "gui_automation"
   | "file_operation"
@@ -198,7 +201,7 @@ export class NaturalLanguageOrchestrator {
 
   constructor(inferenceEngine: InferenceEngine) {
     this.inferenceEngine = inferenceEngine;
-    this.componentLibrary = new Map(COMPONENT_LIBRARY.map(c => [c.id, c]));
+    this.componentLibrary = new Map(COMPONENT_LIBRARY.map((c) => [c.id, c]));
     log.info("Natural Language Orchestrator initialized");
   }
 
@@ -207,7 +210,7 @@ export class NaturalLanguageOrchestrator {
    */
   async processTask(
     naturalLanguageInput: string,
-    context: Record<string, any> = {}
+    context: Record<string, any> = {},
   ): Promise<GeneratedWorkflow> {
     log.info(`Processing task: ${naturalLanguageInput}`);
 
@@ -223,13 +226,15 @@ export class NaturalLanguageOrchestrator {
     const workflow = await this.generateWorkflow(
       naturalLanguageInput,
       intent,
-      selectedComponents
+      selectedComponents,
     );
 
     // Step 4: Store in history
     this.workflowHistory.push(workflow);
 
-    log.info(`Workflow generated: ${workflow.id} (${workflow.steps.length} steps)`);
+    log.info(
+      `Workflow generated: ${workflow.id} (${workflow.steps.length} steps)`,
+    );
     return workflow;
   }
 
@@ -238,7 +243,7 @@ export class NaturalLanguageOrchestrator {
    */
   private async analyzeIntent(
     input: string,
-    context: Record<string, any>
+    context: Record<string, any>,
   ): Promise<TaskIntent> {
     const prompt = `Analyze the following natural language task and extract intent:
 
@@ -294,14 +299,16 @@ Respond in JSON format:
   /**
    * Select appropriate components based on intent
    */
-  private async selectComponents(intent: TaskIntent): Promise<ScriptComponent[]> {
+  private async selectComponents(
+    intent: TaskIntent,
+  ): Promise<ScriptComponent[]> {
     const prompt = `Given the task intent, select the most appropriate components from the library:
 
 Intent: ${intent.type} - ${intent.description}
 Parameters: ${JSON.stringify(intent.parameters)}
 
 Available components:
-${COMPONENT_LIBRARY.map(c => `- ${c.id}: ${c.description} (type: ${c.type})`).join("\n")}
+${COMPONENT_LIBRARY.map((c) => `- ${c.id}: ${c.description} (type: ${c.type})`).join("\n")}
 
 Select components in order of execution. Respond as JSON array of component IDs:
 ["component_id_1", "component_id_2", ...]`;
@@ -339,7 +346,7 @@ Select components in order of execution. Respond as JSON array of component IDs:
 
     const ids = defaults[type] || defaults.multi_step;
     return ids
-      .map(id => this.componentLibrary.get(id))
+      .map((id) => this.componentLibrary.get(id))
       .filter((c): c is ScriptComponent => c !== undefined);
   }
 
@@ -349,7 +356,7 @@ Select components in order of execution. Respond as JSON array of component IDs:
   private async generateWorkflow(
     originalInput: string,
     intent: TaskIntent,
-    components: ScriptComponent[]
+    components: ScriptComponent[],
   ): Promise<GeneratedWorkflow> {
     // Generate parameters for each component
     const steps: WorkflowStep[] = [];
@@ -360,7 +367,7 @@ Select components in order of execution. Respond as JSON array of component IDs:
         component,
         intent,
         originalInput,
-        i
+        i,
       );
 
       steps.push({
@@ -391,7 +398,7 @@ Select components in order of execution. Respond as JSON array of component IDs:
     component: ScriptComponent,
     intent: TaskIntent,
     originalInput: string,
-    stepIndex: number
+    stepIndex: number,
   ): Promise<Record<string, any>> {
     const prompt = `Generate parameters for component "${component.name}" (step ${stepIndex + 1}):
 
@@ -413,7 +420,9 @@ Respond as JSON object with parameter values:
     try {
       return JSON.parse(response.content);
     } catch (error) {
-      log.warn(`Failed to generate parameters for ${component.id}, using defaults`);
+      log.warn(
+        `Failed to generate parameters for ${component.id}, using defaults`,
+      );
       return this.getDefaultParameters(component);
     }
   }
@@ -421,7 +430,9 @@ Respond as JSON object with parameter values:
   /**
    * Get default parameters for component
    */
-  private getDefaultParameters(component: ScriptComponent): Record<string, any> {
+  private getDefaultParameters(
+    component: ScriptComponent,
+  ): Record<string, any> {
     const defaults: Record<string, any> = {
       url: "https://www.google.com",
       selector: "body",
@@ -482,10 +493,12 @@ Respond as JSON object with parameter values:
       }
     }
 
-    const allSuccess = stepResults.every(r => r.success);
+    const allSuccess = stepResults.every((r) => r.success);
     const duration = nowMs() - startTime;
 
-    log.info(`Workflow execution completed: ${allSuccess ? "success" : "failed"} (${duration}ms)`);
+    log.info(
+      `Workflow execution completed: ${allSuccess ? "success" : "failed"} (${duration}ms)`,
+    );
 
     return {
       success: allSuccess,
@@ -500,7 +513,7 @@ Respond as JSON object with parameter values:
    */
   private async executeStep(
     step: WorkflowStep,
-    variables: Record<string, any>
+    variables: Record<string, any>,
   ): Promise<void> {
     // Replace template variables in code
     let code = step.component.code;
@@ -513,7 +526,7 @@ Respond as JSON object with parameter values:
     log.debug(`Executing code: ${code}`);
 
     // Simulate execution time
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
   /**

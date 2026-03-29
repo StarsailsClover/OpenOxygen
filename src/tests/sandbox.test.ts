@@ -1,6 +1,6 @@
 /**
  * Sandbox Tests
- * 
+ *
  * Test suite for secure code execution
  */
 
@@ -114,7 +114,11 @@ describe("Sandbox", () => {
         const { x, y } = context;
         return x + y;
       `;
-      const result = await executeSandboxed(code, createDefaultSandboxConfig(), { x: 10, y: 20 });
+      const result = await executeSandboxed(
+        code,
+        createDefaultSandboxConfig(),
+        { x: 10, y: 20 },
+      );
       expect(result.success).toBe(true);
       expect(result.data).toBe(30);
     });
@@ -124,9 +128,13 @@ describe("Sandbox", () => {
         const { data } = context;
         return data.filter(x => x > 5).length;
       `;
-      const result = await executeSandboxed(code, createDefaultSandboxConfig(), {
-        data: [1, 6, 2, 8, 3, 9],
-      });
+      const result = await executeSandboxed(
+        code,
+        createDefaultSandboxConfig(),
+        {
+          data: [1, 6, 2, 8, 3, 9],
+        },
+      );
       expect(result.success).toBe(true);
       expect(result.data).toBe(3);
     });
@@ -159,7 +167,11 @@ describe("Sandbox", () => {
     });
 
     test("should evaluate with variables", async () => {
-      const result = await evaluateExpression("x * y + z", { x: 2, y: 3, z: 4 });
+      const result = await evaluateExpression("x * y + z", {
+        x: 2,
+        y: 3,
+        z: 4,
+      });
       expect(result.success).toBe(true);
       expect(result.data).toBe(10);
     });

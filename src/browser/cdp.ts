@@ -26,31 +26,31 @@ let cdpSession: CDPClient | null = null;
  */
 export async function connectCDP(port: number = 9222): Promise<CDPClient> {
   log.info(`Connecting to CDP on port ${port}`);
-  
+
   try {
     // Fetch WebSocket URL from http://localhost:9222/json/version
     const response = await fetch(`http://localhost:${port}/json/version`);
     const version = await response.json();
-    
+
     log.debug(`Browser version: ${version.Browser}`);
-    
+
     // Fetch available targets
     const targetsResponse = await fetch(`http://localhost:${port}/json/list`);
     const targets = await targetsResponse.json();
-    
+
     // Find page target
     const pageTarget = targets.find((t: any) => t.type === "page");
     if (!pageTarget) {
       throw new Error("No page target found");
     }
-    
+
     // Connect to WebSocket
     const wsUrl = pageTarget.webSocketDebuggerUrl;
     log.debug(`Connecting to: ${wsUrl}`);
-    
+
     // Create CDP client
     cdpSession = createCDPClient(wsUrl);
-    
+
     log.info("CDP connected successfully");
     return cdpSession;
   } catch (error) {
@@ -65,18 +65,21 @@ export async function connectCDP(port: number = 9222): Promise<CDPClient> {
 function createCDPClient(wsUrl: string): CDPClient {
   const WebSocket = require("ws");
   const ws = new WebSocket(wsUrl);
-  
+
   let messageId = 0;
-  const pendingMessages = new Map<number, { resolve: Function; reject: Function }>();
+  const pendingMessages = new Map<
+    number,
+    { resolve: Function; reject: Function }
+  >();
   const eventHandlers = new Map<string, Function[]>();
-  
+
   ws.on("open", () => {
     log.debug("CDP WebSocket connected");
   });
-  
+
   ws.on("message", (data: string) => {
     const message = JSON.parse(data);
-    
+
     if (message.id !== undefined) {
       // Response to a command
       const pending = pendingMessages.get(message.id);
@@ -96,33 +99,33 @@ function createCDPClient(wsUrl: string): CDPClient {
       }
     }
   });
-  
+
   ws.on("error", (error: Error) => {
     log.error(`CDP WebSocket error: ${error.message}`);
   });
-  
+
   ws.on("close", () => {
     log.debug("CDP WebSocket closed");
     cdpSession = null;
   });
-  
+
   return {
     send: async (method: string, params?: any) => {
       const id = ++messageId;
       const message = { id, method, params };
-      
+
       return new Promise((resolve, reject) => {
         pendingMessages.set(id, { resolve, reject });
         ws.send(JSON.stringify(message));
       });
     },
-    
+
     on: (event: string, callback: (params: any) => void) => {
       const handlers = eventHandlers.get(event) || [];
       handlers.push(callback);
       eventHandlers.set(event, handlers);
     },
-    
+
     close: () => {
       ws.close();
     },
@@ -135,12 +138,12 @@ function createCDPClient(wsUrl: string): CDPClient {
  */
 export async function enableDomains(client: CDPClient): Promise<void> {
   log.debug("Enabling CDP domains");
-  
+
   await client.send("Page.enable");
   await client.send("Runtime.enable");
   await client.send("DOM.enable");
   await client.send("Network.enable");
-  
+
   log.debug("CDP domains enabled");
 }
 
@@ -149,18 +152,21 @@ export async function enableDomains(client: CDPClient): Promise<void> {
  * @param client - CDP client
  * @param url - URL to navigate
  */
-export async function navigateCDP(client: CDPClient, url: string): Promise<void> {
+export async function navigateCDP(
+  client: CDPClient,
+  url: string,
+): Promise<void> {
   log.debug(`Navigating via CDP: ${url}`);
-  
+
   await client.send("Page.navigate", { url });
-  
+
   // Wait for load event
   await new Promise<void>((resolve) => {
     client.on("Page.loadEventFired", () => {
       resolve();
     });
   });
-  
+
   log.debug("Navigation complete");
 }
 
@@ -171,19 +177,21 @@ export async function navigateCDP(client: CDPClient, url: string): Promise<void>
  */
 export async function executeScriptCDP(
   client: CDPClient,
-  script: string
+  script: string,
 ): Promise<any> {
   log.debug("Executing script via CDP");
-  
+
   const result = await client.send("Runtime.evaluate", {
     expression: script,
     returnByValue: true,
   });
-  
+
   if (result.exceptionDetails) {
-    throw new Error(result.exceptionDetails.exception?.description || "Script error");
+    throw new Error(
+      result.exceptionDetails.exception?.description || "Script error",
+    );
   }
-  
+
   return result.result?.value;
 }
 
@@ -194,20 +202,20 @@ export async function executeScriptCDP(
  */
 export async function queryElementCDP(
   client: CDPClient,
-  selector: string
+  selector: string,
 ): Promise<any> {
   log.debug(`Querying element: ${selector}`);
-  
+
   // Get document root
   const document = await client.send("DOM.getDocument");
   const rootNodeId = document.root.nodeId;
-  
+
   // Query selector
   const result = await client.send("DOM.querySelector", {
     nodeId: rootNodeId,
     selector,
   });
-  
+
   return result.nodeId;
 }
 
@@ -218,10 +226,10 @@ export async function queryElementCDP(
  */
 export async function clickElementCDP(
   client: CDPClient,
-  selector: string
+  selector: string,
 ): Promise<void> {
   log.debug(`Clicking element via CDP: ${selector}`);
-  
+
   // Get element position
   const box = await executeScriptCDP(
     client,
@@ -232,13 +240,13 @@ export async function clickElementCDP(
       return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
     }
     return null;
-  `
+  `,
   );
-  
+
   if (!box) {
     throw new Error(`Element not found: ${selector}`);
   }
-  
+
   // Dispatch click event
   await executeScriptCDP(
     client,
@@ -247,7 +255,7 @@ export async function clickElementCDP(
     if (element) {
       element.click();
     }
-  `
+  `,
   );
 }
 
@@ -257,12 +265,12 @@ export async function clickElementCDP(
  */
 export async function takeScreenshotCDP(client: CDPClient): Promise<string> {
   log.debug("Taking screenshot via CDP");
-  
+
   const result = await client.send("Page.captureScreenshot", {
     format: "png",
     fullPage: false,
   });
-  
+
   return result.data; // Base64 encoded
 }
 
@@ -272,7 +280,7 @@ export async function takeScreenshotCDP(client: CDPClient): Promise<string> {
  */
 export async function getMetricsCDP(client: CDPClient): Promise<any> {
   log.debug("Getting page metrics");
-  
+
   const metrics = await client.send("Performance.getMetrics");
   return metrics.metrics;
 }

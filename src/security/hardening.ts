@@ -25,7 +25,10 @@ const log = createSubsystemLogger("security/hardening");
 
 const ALLOWED_GATEWAY_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
 
-export function validateGatewayBinding(host: string, port: number): {
+export function validateGatewayBinding(
+  host: string,
+  port: number,
+): {
   safe: boolean;
   reason?: string;
 } {
@@ -82,9 +85,9 @@ export type RateLimiterConfig = {
 };
 
 const DEFAULT_RATE_LIMIT: RateLimiterConfig = {
-  windowMs: 60_000,        // 1 分钟窗口
-  maxRequests: 60,         // 每分钟最多 60 请求
-  maxAuthFailures: 5,      // 5 次认证失败后封禁
+  windowMs: 60_000, // 1 分钟窗口
+  maxRequests: 60, // 每分钟最多 60 请求
+  maxAuthFailures: 5, // 5 次认证失败后封禁
   blockDurationMs: 300_000, // 封禁 5 分钟
 };
 
@@ -105,7 +108,11 @@ export class RateLimiter {
   /**
    * 检查请求是否被允许。返回 false 表示应拒绝。
    */
-  check(clientIp: string): { allowed: boolean; reason?: string; retryAfterMs?: number } {
+  check(clientIp: string): {
+    allowed: boolean;
+    reason?: string;
+    retryAfterMs?: number;
+  } {
     const now = Date.now();
     let record = this.clients.get(clientIp);
 
@@ -151,11 +158,15 @@ export class RateLimiter {
     }
 
     record.authFailures += 1;
-    log.warn(`Auth failure from ${clientIp} (${record.authFailures}/${this.config.maxAuthFailures})`);
+    log.warn(
+      `Auth failure from ${clientIp} (${record.authFailures}/${this.config.maxAuthFailures})`,
+    );
 
     if (record.authFailures >= this.config.maxAuthFailures) {
       record.blockedUntil = Date.now() + this.config.blockDurationMs;
-      log.error(`Client ${clientIp} blocked for ${this.config.blockDurationMs / 1000}s after ${record.authFailures} auth failures`);
+      log.error(
+        `Client ${clientIp} blocked for ${this.config.blockDurationMs / 1000}s after ${record.authFailures} auth failures`,
+      );
     }
   }
 
@@ -233,25 +244,57 @@ export function validateCommand(
   command: string,
   allowedCommands?: string[],
 ): { allowed: boolean; reason?: string } {
-  const basename = command.split(/[/\\]/).pop()?.toLowerCase().replace(/\.exe$/i, "") ?? "";
+  const basename =
+    command
+      .split(/[/\\]/)
+      .pop()
+      ?.toLowerCase()
+      .replace(/\.exe$/i, "") ?? "";
 
   // 绝对禁止的命令（无论配置如何）
   const ALWAYS_BLOCKED = new Set([
-    "format", "diskpart", "bcdedit", "shutdown", "restart",
-    "sfc", "dism", "cipher", "reg", "regedit",
-    "net", "netsh", "wmic", "powershell", "cmd",
-    "bash", "sh", "curl", "wget", "certutil",
-    "bitsadmin", "mshta", "wscript", "cscript",
-    "rundll32", "regsvr32", "msiexec",
+    "format",
+    "diskpart",
+    "bcdedit",
+    "shutdown",
+    "restart",
+    "sfc",
+    "dism",
+    "cipher",
+    "reg",
+    "regedit",
+    "net",
+    "netsh",
+    "wmic",
+    "powershell",
+    "cmd",
+    "bash",
+    "sh",
+    "curl",
+    "wget",
+    "certutil",
+    "bitsadmin",
+    "mshta",
+    "wscript",
+    "cscript",
+    "rundll32",
+    "regsvr32",
+    "msiexec",
   ]);
 
   if (ALWAYS_BLOCKED.has(basename)) {
-    return { allowed: false, reason: `Command "${basename}" is permanently blocked for security.` };
+    return {
+      allowed: false,
+      reason: `Command "${basename}" is permanently blocked for security.`,
+    };
   }
 
   if (allowedCommands && allowedCommands.length > 0) {
     if (!allowedCommands.includes(basename)) {
-      return { allowed: false, reason: `Command "${basename}" is not in the allowed list.` };
+      return {
+        allowed: false,
+        reason: `Command "${basename}" is not in the allowed list.`,
+      };
     }
   }
 
@@ -269,9 +312,15 @@ export function sanitizeEnvironment(
 
   // 移除可被利用的环境变量
   const DANGEROUS_VARS = [
-    "LD_PRELOAD", "LD_LIBRARY_PATH", "DYLD_INSERT_LIBRARIES",
-    "DYLD_LIBRARY_PATH", "NODE_OPTIONS", "ELECTRON_RUN_AS_NODE",
-    "PYTHONPATH", "RUBYLIB", "PERL5LIB",
+    "LD_PRELOAD",
+    "LD_LIBRARY_PATH",
+    "DYLD_INSERT_LIBRARIES",
+    "DYLD_LIBRARY_PATH",
+    "NODE_OPTIONS",
+    "ELECTRON_RUN_AS_NODE",
+    "PYTHONPATH",
+    "RUBYLIB",
+    "PERL5LIB",
   ];
 
   for (const v of DANGEROUS_VARS) {
@@ -401,7 +450,9 @@ export function verifyPluginIntegrity(
   const actual = computeFileHash(content);
   const match = actual === expectedHash.toLowerCase();
   if (!match) {
-    log.error(`Plugin integrity check failed: expected ${expectedHash}, got ${actual}`);
+    log.error(
+      `Plugin integrity check failed: expected ${expectedHash}, got ${actual}`,
+    );
   }
   return match;
 }
@@ -417,9 +468,7 @@ const DANGEROUS_PLUGIN_PERMISSIONS = new Set([
  * 审计插件权限声明。
  * 返回风险评估和建议。
  */
-export function auditPluginPermissions(
-  permissions: string[],
-): {
+export function auditPluginPermissions(permissions: string[]): {
   risk: "safe" | "caution" | "dangerous";
   warnings: string[];
 } {
@@ -433,7 +482,9 @@ export function auditPluginPermissions(
 
   // 权限数量过多也是风险信号
   if (permissions.length > 10) {
-    warnings.push(`Plugin requests ${permissions.length} permissions — unusually high`);
+    warnings.push(
+      `Plugin requests ${permissions.length} permissions — unusually high`,
+    );
   }
 
   const risk = warnings.some((w) => w.includes("dangerous"))
@@ -460,7 +511,10 @@ const RUNTIME_KEY = crypto.randomBytes(32);
 export function encryptSecret(plaintext: string): string {
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv("aes-256-gcm", RUNTIME_KEY, iv);
-  const encrypted = Buffer.concat([cipher.update(plaintext, "utf-8"), cipher.final()]);
+  const encrypted = Buffer.concat([
+    cipher.update(plaintext, "utf-8"),
+    cipher.final(),
+  ]);
   const tag = cipher.getAuthTag();
   return `${iv.toString("hex")}:${tag.toString("hex")}:${encrypted.toString("hex")}`;
 }
@@ -470,7 +524,8 @@ export function encryptSecret(plaintext: string): string {
  */
 export function decryptSecret(ciphertext: string): string {
   const [ivHex, tagHex, dataHex] = ciphertext.split(":");
-  if (!ivHex || !tagHex || !dataHex) throw new Error("Invalid encrypted format");
+  if (!ivHex || !tagHex || !dataHex)
+    throw new Error("Invalid encrypted format");
   const iv = Buffer.from(ivHex, "hex");
   const tag = Buffer.from(tagHex, "hex");
   const data = Buffer.from(dataHex, "hex");

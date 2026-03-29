@@ -1,6 +1,6 @@
 /**
  * Browser Automation Skills
- * 
+ *
  * High-frequency browser automation using CDP
  * Supports Chrome/Edge automation
  */
@@ -35,12 +35,14 @@ export interface ElementSelector {
 // Browser Management
 // ============================================================================
 
-export async function launchBrowser(config?: BrowserConfig): Promise<ToolResult> {
+export async function launchBrowser(
+  config?: BrowserConfig,
+): Promise<ToolResult> {
   log.info("Launching browser");
-  
+
   try {
     const browserId = `browser-${Date.now()}`;
-    
+
     return {
       success: true,
       data: {
@@ -59,7 +61,7 @@ export async function launchBrowser(config?: BrowserConfig): Promise<ToolResult>
 
 export async function closeBrowser(browserId: string): Promise<ToolResult> {
   log.info(`Closing browser: ${browserId}`);
-  
+
   try {
     return {
       success: true,
@@ -83,7 +85,7 @@ export async function navigateTo(
   options?: NavigationOptions,
 ): Promise<ToolResult> {
   log.info(`Navigating to: ${url}`);
-  
+
   try {
     return {
       success: true,
@@ -104,7 +106,7 @@ export async function navigateTo(
 
 export async function goBack(browserId: string): Promise<ToolResult> {
   log.info("Going back");
-  
+
   try {
     return {
       success: true,
@@ -120,7 +122,7 @@ export async function goBack(browserId: string): Promise<ToolResult> {
 
 export async function reloadPage(browserId: string): Promise<ToolResult> {
   log.info("Reloading page");
-  
+
   try {
     return {
       success: true,
@@ -143,7 +145,7 @@ export async function clickElement(
   selector: ElementSelector,
 ): Promise<ToolResult> {
   log.info(`Clicking element: ${selector.type}=${selector.value}`);
-  
+
   try {
     return {
       success: true,
@@ -167,7 +169,7 @@ export async function typeText(
   text: string,
 ): Promise<ToolResult> {
   log.info(`Typing text into element: ${selector.type}=${selector.value}`);
-  
+
   try {
     return {
       success: true,
@@ -191,7 +193,7 @@ export async function getElementText(
   selector: ElementSelector,
 ): Promise<ToolResult> {
   log.info(`Getting element text: ${selector.type}=${selector.value}`);
-  
+
   try {
     return {
       success: true,
@@ -215,7 +217,7 @@ export async function waitForElement(
   timeout?: number,
 ): Promise<ToolResult> {
   log.info(`Waiting for element: ${selector.type}=${selector.value}`);
-  
+
   try {
     return {
       success: true,
@@ -243,7 +245,7 @@ export async function fillForm(
   formData: Record<string, string>,
 ): Promise<ToolResult> {
   log.info(`Filling form with ${Object.keys(formData).length} fields`);
-  
+
   try {
     return {
       success: true,
@@ -261,9 +263,12 @@ export async function fillForm(
   }
 }
 
-export async function submitForm(browserId: string, selector?: ElementSelector): Promise<ToolResult> {
+export async function submitForm(
+  browserId: string,
+  selector?: ElementSelector,
+): Promise<ToolResult> {
   log.info("Submitting form");
-  
+
   try {
     return {
       success: true,
@@ -290,10 +295,10 @@ export async function takeScreenshot(
   options?: { fullPage?: boolean; selector?: ElementSelector },
 ): Promise<ToolResult> {
   log.info("Taking screenshot");
-  
+
   try {
     const screenshotPath = `screenshot-${Date.now()}.png`;
-    
+
     return {
       success: true,
       data: {
@@ -315,7 +320,7 @@ export async function generatePDF(
   outputPath: string,
 ): Promise<ToolResult> {
   log.info(`Generating PDF: ${outputPath}`);
-  
+
   try {
     return {
       success: true,
@@ -339,7 +344,7 @@ export async function generatePDF(
 
 export async function getCookies(browserId: string): Promise<ToolResult> {
   log.info("Getting cookies");
-  
+
   try {
     return {
       success: true,
@@ -362,7 +367,7 @@ export async function setCookie(
   value: string,
 ): Promise<ToolResult> {
   log.info(`Setting cookie: ${name}`);
-  
+
   try {
     return {
       success: true,
@@ -382,7 +387,7 @@ export async function setCookie(
 
 export async function clearCookies(browserId: string): Promise<ToolResult> {
   log.info("Clearing cookies");
-  
+
   try {
     return {
       success: true,
@@ -403,9 +408,12 @@ export async function clearCookies(browserId: string): Promise<ToolResult> {
 // Anti-Detection
 // ============================================================================
 
-export async function setUserAgent(browserId: string, userAgent: string): Promise<ToolResult> {
+export async function setUserAgent(
+  browserId: string,
+  userAgent: string,
+): Promise<ToolResult> {
   log.info(`Setting user agent: ${userAgent}`);
-  
+
   try {
     return {
       success: true,
@@ -427,14 +435,14 @@ export async function emulateDevice(
   device: "desktop" | "mobile" | "tablet",
 ): Promise<ToolResult> {
   log.info(`Emulating device: ${device}`);
-  
+
   try {
     const viewports = {
       desktop: { width: 1920, height: 1080 },
       mobile: { width: 375, height: 667 },
       tablet: { width: 768, height: 1024 },
     };
-    
+
     return {
       success: true,
       data: {
@@ -474,6 +482,6 @@ export function registerBrowserSkills(skillRegistry: any): void {
   skillRegistry.register("browser.clearCookies", clearCookies);
   skillRegistry.register("browser.setUserAgent", setUserAgent);
   skillRegistry.register("browser.emulateDevice", emulateDevice);
-  
+
   log.info("Browser automation skills registered");
 }

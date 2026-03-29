@@ -1,6 +1,6 @@
 /**
  * OpenOxygen - Gateway Server
- * 
+ *
  * HTTP Gateway server for OpenOxygen Agent framework
  * Implements REST API and WebSocket support
  */
@@ -27,7 +27,11 @@ export type GatewayServer = {
   readonly isRunning: boolean;
 };
 
-type RouteHandler = (req: IncomingMessage, res: ServerResponse, params: Record<string, string>) => Promise<void>;
+type RouteHandler = (
+  req: IncomingMessage,
+  res: ServerResponse,
+  params: Record<string, string>,
+) => Promise<void>;
 
 interface Route {
   method: string;
@@ -37,7 +41,7 @@ interface Route {
 
 class Router {
   private routes: Route[] = [];
-  
+
   options(path: string, handler: RouteHandler): void {
     this.addRoute("OPTIONS", path, handler);
   }
@@ -60,7 +64,7 @@ class Router {
 
   private addRoute(method: string, path: string, handler: RouteHandler): void {
     const pattern = new RegExp(
-      "^" + path.replace(/:([^/]+)/g, "([^/]+)") + "$"
+      "^" + path.replace(/:([^/]+)/g, "([^/]+)") + "$",
     );
     this.routes.push({ method, pattern, handler });
   }
@@ -73,13 +77,16 @@ class Router {
 
     for (const route of this.routes) {
       if (route.method !== method) continue;
-      
+
       const match = requestPath.match(route.pattern);
       if (match) {
         const params: Record<string, string> = {};
-        const paramNames = route.pattern.toString()
-          .match(/\(.*?\)/g)?.slice(1) || [];
-        
+        const paramNames =
+          route.pattern
+            .toString()
+            .match(/\(.*?\)/g)
+            ?.slice(1) || [];
+
         for (let i = 1; i < match.length; i++) {
           const matchValue = match[i];
           if (matchValue !== undefined) {
@@ -100,7 +107,11 @@ class Router {
     return false;
   }
 
-  private sendError(res: ServerResponse, status: number, message: string): void {
+  private sendError(
+    res: ServerResponse,
+    status: number,
+    message: string,
+  ): void {
     res.writeHead(status, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ error: message, status }));
   }
@@ -109,7 +120,7 @@ class Router {
 async function parseBody(req: IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
     let body = "";
-    req.on("data", chunk => body += chunk);
+    req.on("data", (chunk) => (body += chunk));
     req.on("end", () => {
       try {
         resolve(body ? JSON.parse(body) : {});
@@ -122,9 +133,9 @@ async function parseBody(req: IncomingMessage): Promise<unknown> {
 }
 
 function sendJson(res: ServerResponse, status: number, data: unknown): void {
-  res.writeHead(status, { 
+  res.writeHead(status, {
     "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*"
+    "Access-Control-Allow-Origin": "*",
   });
   res.end(JSON.stringify(data));
 }
@@ -143,7 +154,7 @@ export function createGateway(options: GatewayOptions): GatewayServer {
       status: "healthy",
       version: "26w15aD",
       timestamp: nowMs(),
-      uptime: process.uptime()
+      uptime: process.uptime(),
     });
   });
 
@@ -157,32 +168,35 @@ export function createGateway(options: GatewayOptions): GatewayServer {
         "task_execution",
         "browser_automation",
         "vision_analysis",
-        "multi_agent"
-      ]
+        "multi_agent",
+      ],
     });
   });
 
   // Task execution endpoint
   router.post("/api/v1/tasks", async (req, res) => {
     try {
-      const body = await parseBody(req) as { instruction?: string; mode?: string };
-      
+      const body = (await parseBody(req)) as {
+        instruction?: string;
+        mode?: string;
+      };
+
       if (!body.instruction) {
         sendJson(res, 400, {
           error: "Missing required field: instruction",
-          code: ErrorCode.GATEWAY_INVALID_JSON
+          code: ErrorCode.GATEWAY_INVALID_JSON,
         });
         return;
       }
 
       const taskId = generateId("task");
-      
+
       sendJson(res, 202, {
         taskId,
         status: "accepted",
         instruction: body.instruction,
         mode: body.mode || "auto",
-        createdAt: nowMs()
+        createdAt: nowMs(),
       });
 
       // TODO: Actually execute the task
@@ -190,7 +204,7 @@ export function createGateway(options: GatewayOptions): GatewayServer {
     } catch (error) {
       sendJson(res, 400, {
         error: "Invalid request body",
-        code: ErrorCode.GATEWAY_INVALID_JSON
+        code: ErrorCode.GATEWAY_INVALID_JSON,
       });
     }
   });
@@ -198,23 +212,23 @@ export function createGateway(options: GatewayOptions): GatewayServer {
   // Get task status
   router.get("/api/v1/tasks/:id", async (req, res, params) => {
     const taskId = params.param1;
-    
+
     sendJson(res, 200, {
       taskId,
       status: "pending",
       progress: 0,
-      message: "Task is being processed"
+      message: "Task is being processed",
     });
   });
 
   // Cancel task
   router.delete("/api/v1/tasks/:id", async (req, res, params) => {
     const taskId = params.param1;
-    
+
     sendJson(res, 200, {
       taskId,
       status: "cancelled",
-      message: "Task cancelled successfully"
+      message: "Task cancelled successfully",
     });
   });
 
@@ -224,21 +238,21 @@ export function createGateway(options: GatewayOptions): GatewayServer {
       agents: [
         { id: "default", name: "Default Agent", status: "idle" },
         { id: "browser", name: "Browser Agent", status: "idle" },
-        { id: "vision", name: "Vision Agent", status: "idle" }
-      ]
+        { id: "vision", name: "Vision Agent", status: "idle" },
+      ],
     });
   });
 
   // Execute browser action
   router.post("/api/v1/browser/execute", async (req, res) => {
     try {
-      const body = await parseBody(req) as { action?: string; url?: string };
-      
+      const body = (await parseBody(req)) as { action?: string; url?: string };
+
       sendJson(res, 200, {
         success: true,
         action: body.action,
         url: body.url,
-        result: "Browser action executed"
+        result: "Browser action executed",
       });
     } catch (error) {
       sendJson(res, 400, { error: "Invalid request" });
@@ -250,7 +264,7 @@ export function createGateway(options: GatewayOptions): GatewayServer {
     res.writeHead(204, {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization"
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
     });
     res.end();
   });
@@ -268,12 +282,12 @@ export function createGateway(options: GatewayOptions): GatewayServer {
         log.debug(`${req.method} ${req.url}`);
 
         const handled = await router.handle(req, res);
-        
+
         if (!handled) {
           sendJson(res, 404, {
             error: "Not Found",
             path: req.url,
-            code: ErrorCode.GATEWAY_ROUTE_NOT_FOUND
+            code: ErrorCode.GATEWAY_ROUTE_NOT_FOUND,
           });
         }
       });
@@ -307,9 +321,15 @@ export function createGateway(options: GatewayOptions): GatewayServer {
       });
     },
 
-    get port() { return port; },
-    get host() { return host; },
-    get isRunning() { return isRunning; }
+    get port() {
+      return port;
+    },
+    get host() {
+      return host;
+    },
+    get isRunning() {
+      return isRunning;
+    },
   };
 }
 

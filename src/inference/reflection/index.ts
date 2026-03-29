@@ -136,7 +136,9 @@ export class ReflectionEngine {
     // Store in history
     this.addToHistory(result);
 
-    log.info(`Reflection complete: ${insights.length} insights, ${recommendations.length} recommendations`);
+    log.info(
+      `Reflection complete: ${insights.length} insights, ${recommendations.length} recommendations`,
+    );
 
     return result;
   }
@@ -206,14 +208,18 @@ export class ReflectionEngine {
       id: "high-error-rate",
       name: "High Error Rate Detection",
       description: "Detects executions with high error rates",
-      matcher: (ctx) => ctx.metrics.errors > 3 || ctx.metrics.errors / ctx.metrics.totalSteps > 0.3,
+      matcher: (ctx) =>
+        ctx.metrics.errors > 3 ||
+        ctx.metrics.errors / ctx.metrics.totalSteps > 0.3,
       action: (ctx) => ({
         insights: [
           {
             type: "error",
             description: `High error rate detected: ${ctx.metrics.errors} errors in ${ctx.metrics.totalSteps} steps`,
             severity: "high",
-            evidence: ctx.steps.filter((s) => s.type === "error").map((s) => s.content),
+            evidence: ctx.steps
+              .filter((s) => s.type === "error")
+              .map((s) => s.content),
           },
         ],
         recommendations: [
@@ -249,7 +255,9 @@ export class ReflectionEngine {
             type: "bottleneck",
             description: `Slow execution detected: ${ctx.metrics.totalDurationMs}ms total`,
             severity: "medium",
-            evidence: [`Average step duration: ${ctx.metrics.totalDurationMs / ctx.metrics.totalSteps}ms`],
+            evidence: [
+              `Average step duration: ${ctx.metrics.totalDurationMs / ctx.metrics.totalSteps}ms`,
+            ],
           },
         ],
         recommendations: [
@@ -285,7 +293,9 @@ export class ReflectionEngine {
             type: "optimization",
             description: `High token usage: ${ctx.metrics.tokenUsage} tokens`,
             severity: "medium",
-            evidence: [`Average per step: ${ctx.metrics.tokenUsage / ctx.metrics.totalSteps} tokens`],
+            evidence: [
+              `Average per step: ${ctx.metrics.tokenUsage / ctx.metrics.totalSteps} tokens`,
+            ],
           },
         ],
         recommendations: [
@@ -314,7 +324,8 @@ export class ReflectionEngine {
       id: "success-pattern",
       name: "Success Pattern Recognition",
       description: "Identifies patterns in successful executions",
-      matcher: (ctx) => ctx.outcome === "success" && ctx.metrics.totalSteps < 10,
+      matcher: (ctx) =>
+        ctx.outcome === "success" && ctx.metrics.totalSteps < 10,
       action: (ctx) => ({
         insights: [
           {
@@ -385,7 +396,10 @@ export class ReflectionEngine {
     return recommendations;
   }
 
-  private calculateConfidence(insights: Insight[], context: ReflectionContext): number {
+  private calculateConfidence(
+    insights: Insight[],
+    context: ReflectionContext,
+  ): number {
     if (insights.length === 0) return 0.5;
 
     // Base confidence on data quality
@@ -398,7 +412,9 @@ export class ReflectionEngine {
     if (context.outcome === "success") confidence += 0.1;
 
     // High severity insights reduce confidence (uncertainty)
-    const highSeverityCount = insights.filter((i) => i.severity === "high").length;
+    const highSeverityCount = insights.filter(
+      (i) => i.severity === "high",
+    ).length;
     confidence -= highSeverityCount * 0.05;
 
     return Math.max(0, Math.min(1, confidence));
@@ -409,7 +425,9 @@ export class ReflectionEngine {
 
     // Trim history if too large
     if (this.reflectionHistory.length > this.maxHistorySize) {
-      this.reflectionHistory = this.reflectionHistory.slice(-this.maxHistorySize);
+      this.reflectionHistory = this.reflectionHistory.slice(
+        -this.maxHistorySize,
+      );
     }
   }
 }

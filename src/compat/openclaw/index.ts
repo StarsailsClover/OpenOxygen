@@ -1,6 +1,6 @@
 /**
  * OpenClaw Compatibility Layer
- * 
+ *
  * Seamless migration from OpenClaw to OpenOxygen
  * Provides API compatibility and automatic conversion
  */
@@ -188,7 +188,9 @@ export interface OpenOxygenConfig {
   settings: Record<string, unknown>;
 }
 
-export function convertOpenClawConfig(ocConfig: OpenClawConfig): OpenOxygenConfig {
+export function convertOpenClawConfig(
+  ocConfig: OpenClawConfig,
+): OpenOxygenConfig {
   log.info(`Converting OpenClaw config v${ocConfig.version}`);
 
   return {
@@ -255,7 +257,9 @@ export async function migrateFromOpenClaw(
     result.migratedSkills = ooConfig.skills.length;
     result.migratedPlugins = ooConfig.plugins.length;
 
-    log.info(`Migration completed: ${result.migratedSkills} skills, ${result.migratedPlugins} plugins`);
+    log.info(
+      `Migration completed: ${result.migratedSkills} skills, ${result.migratedPlugins} plugins`,
+    );
   } catch (error) {
     result.errors.push(`Migration failed: ${error}`);
     log.error(`Migration failed: ${error}`);
@@ -278,7 +282,9 @@ export interface CompatibilityReport {
   overallScore: number;
 }
 
-export function checkCompatibility(ocConfig: OpenClawConfig): CompatibilityReport {
+export function checkCompatibility(
+  ocConfig: OpenClawConfig,
+): CompatibilityReport {
   const report: CompatibilityReport = {
     compatible: true,
     skillCompatibility: [],
@@ -325,7 +331,10 @@ export const contextBridge = new OpenClawContextBridge();
 export const skillAdapter = new OpenClawSkillAdapter();
 
 // Convenience functions
-export function createOpenClawContext(sessionId: string, userId: string): OpenClawContext {
+export function createOpenClawContext(
+  sessionId: string,
+  userId: string,
+): OpenClawContext {
   return contextBridge.createContext(sessionId, userId);
 }
 

@@ -83,20 +83,25 @@ export class MultiEnvTestRunner {
 
   constructor() {
     this.env = getEnvironmentInfo();
-    log.info(`Test runner initialized on ${this.env.platform} (${this.env.arch})`);
+    log.info(
+      `Test runner initialized on ${this.env.platform} (${this.env.arch})`,
+    );
   }
 
   /**
    * Run a single test
    */
-  async runTest(name: string, testFn: () => Promise<void>): Promise<TestResult> {
+  async runTest(
+    name: string,
+    testFn: () => Promise<void>,
+  ): Promise<TestResult> {
     const startTime = nowMs();
     const id = generateId("test");
 
     try {
       log.info(`Running test: ${name}`);
       await testFn();
-      
+
       const result: TestResult = {
         id,
         name,
@@ -105,7 +110,7 @@ export class MultiEnvTestRunner {
         platform: this.env.platform,
         timestamp: nowMs(),
       };
-      
+
       this.results.push(result);
       log.info(`✓ Test passed: ${name} (${result.durationMs}ms)`);
       return result;
@@ -119,7 +124,7 @@ export class MultiEnvTestRunner {
         platform: this.env.platform,
         timestamp: nowMs(),
       };
-      
+
       this.results.push(result);
       log.error(`✗ Test failed: ${name} - ${error.message}`);
       return result;
@@ -158,8 +163,11 @@ export class MultiEnvTestRunner {
     durationMs: number;
     platform: Platform;
   } {
-    const passed = this.results.filter(r => r.passed).length;
-    const totalDuration = this.results.reduce((sum, r) => sum + r.durationMs, 0);
+    const passed = this.results.filter((r) => r.passed).length;
+    const totalDuration = this.results.reduce(
+      (sum, r) => sum + r.durationMs,
+      0,
+    );
 
     return {
       total: this.results.length,
@@ -234,7 +242,7 @@ export const PlatformTests = {
     const execAsync = promisify(exec);
 
     try {
-      await execAsync("powershell -Command \"Get-Host\"");
+      await execAsync('powershell -Command "Get-Host"');
     } catch {
       throw new Error("PowerShell not available");
     }

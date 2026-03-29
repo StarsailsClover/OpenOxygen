@@ -59,14 +59,16 @@ const messageHandlers: ((msg: ChatMessage) => void)[] = [];
  * Launch WinUI application
  * @param config - App configuration
  */
-export async function launchWinUI(config: WinUIAppConfig = {}): Promise<WinUIApp> {
+export async function launchWinUI(
+  config: WinUIAppConfig = {},
+): Promise<WinUIApp> {
   if (activeApp?.state === "running") {
     log.warn("WinUI app already running");
     return activeApp;
   }
-  
+
   log.info("Launching WinUI application");
-  
+
   const app: WinUIApp = {
     id: generateId("winui"),
     state: "opening",
@@ -80,19 +82,19 @@ export async function launchWinUI(config: WinUIAppConfig = {}): Promise<WinUIApp
     },
     messages: [],
   };
-  
+
   activeApp = app;
-  
+
   try {
     // Initialize WinUI window
     await initializeWinUIWindow(app);
-    
+
     app.state = "running";
     log.info(`WinUI app launched: ${app.id}`);
-    
+
     // Add welcome message
     addSystemMessage(app, "欢迎使用 OpenOxygen！输入指令开始操作。");
-    
+
     return app;
   } catch (error) {
     app.state = "error";
@@ -106,7 +108,7 @@ export async function launchWinUI(config: WinUIAppConfig = {}): Promise<WinUIApp
  */
 async function initializeWinUIWindow(app: WinUIApp): Promise<void> {
   log.debug("Initializing WinUI window");
-  
+
   // This would use WinUI 3 APIs
   // For now, create a placeholder
   app.window = {
@@ -116,7 +118,7 @@ async function initializeWinUIWindow(app: WinUIApp): Promise<void> {
     minimize: () => log.debug("Window minimized"),
     close: () => log.debug("Window closed"),
   };
-  
+
   // Simulate initialization
   await sleep(500);
 }
@@ -126,12 +128,12 @@ async function initializeWinUIWindow(app: WinUIApp): Promise<void> {
  */
 function addMessage(app: WinUIApp, message: ChatMessage): void {
   app.messages.push(message);
-  
+
   // Notify handlers
   for (const handler of messageHandlers) {
     handler(message);
   }
-  
+
   // Limit message history
   if (app.messages.length > 100) {
     app.messages = app.messages.slice(-100);
@@ -148,7 +150,7 @@ export function addUserMessage(app: WinUIApp, content: string): ChatMessage {
     content,
     timestamp: nowMs(),
   };
-  
+
   addMessage(app, message);
   return message;
 }
@@ -159,7 +161,7 @@ export function addUserMessage(app: WinUIApp, content: string): ChatMessage {
 export function addAssistantMessage(
   app: WinUIApp,
   content: string,
-  metadata?: ChatMessage["metadata"]
+  metadata?: ChatMessage["metadata"],
 ): ChatMessage {
   const message: ChatMessage = {
     id: generateId("msg"),
@@ -168,7 +170,7 @@ export function addAssistantMessage(
     timestamp: nowMs(),
     metadata,
   };
-  
+
   addMessage(app, message);
   return message;
 }
@@ -183,7 +185,7 @@ export function addSystemMessage(app: WinUIApp, content: string): ChatMessage {
     content,
     timestamp: nowMs(),
   };
-  
+
   addMessage(app, message);
   return message;
 }
@@ -235,10 +237,10 @@ export function closeWinUI(): void {
  */
 export function setWindowMode(mode: WindowMode): void {
   if (!activeApp) return;
-  
+
   activeApp.config.mode = mode;
   log.debug(`Window mode set to: ${mode}`);
-  
+
   // Apply mode changes
   switch (mode) {
     case "compact":
@@ -305,7 +307,7 @@ export function isAppRunning(): boolean {
 
 // Helper
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // Export

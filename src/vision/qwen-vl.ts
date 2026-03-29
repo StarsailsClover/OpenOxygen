@@ -10,7 +10,10 @@
 
 import { createSubsystemLogger } from "../logging/index.js";
 import { generateId, nowMs } from "../utils/index.js";
-import type { InferenceEngine, ChatMessage } from "../inference/engine/index.js";
+import type {
+  InferenceEngine,
+  ChatMessage,
+} from "../inference/engine/index.js";
 
 const log = createSubsystemLogger("vision/qwen-vl");
 
@@ -33,7 +36,14 @@ const defaultConfig: QwenVLConfig = {
 // Visual element detected by Qwen-VL
 export interface VisualElement {
   id: string;
-  type: "button" | "input" | "text" | "image" | "icon" | "container" | "unknown";
+  type:
+    | "button"
+    | "input"
+    | "text"
+    | "image"
+    | "icon"
+    | "container"
+    | "unknown";
   description: string;
   bounds?: {
     x: number;
@@ -62,7 +72,7 @@ export class QwenVLController {
 
   constructor(
     inferenceEngine: InferenceEngine,
-    config: Partial<QwenVLConfig> = {}
+    config: Partial<QwenVLConfig> = {},
   ) {
     this.inferenceEngine = inferenceEngine;
     this.config = { ...defaultConfig, ...config };
@@ -73,7 +83,7 @@ export class QwenVLController {
    */
   async analyzeImage(
     imageBase64: string,
-    prompt: string = "Describe what you see in this image."
+    prompt: string = "Describe what you see in this image.",
   ): Promise<string> {
     log.info("Analyzing image with Qwen-VL");
 
@@ -146,7 +156,7 @@ Respond in JSON format:
    */
   async visualQuestionAnswering(
     imageBase64: string,
-    question: string
+    question: string,
   ): Promise<string> {
     log.info(`Visual Q&A: ${question}`);
 
@@ -169,7 +179,7 @@ Respond in JSON format:
    */
   async compareImages(
     imageBase64A: string,
-    imageBase64B: string
+    imageBase64B: string,
   ): Promise<{ similar: boolean; differences: string[] }> {
     log.info("Comparing images with Qwen-VL");
 
@@ -213,16 +223,17 @@ Respond in JSON format:
    */
   async findElement(
     imageBase64: string,
-    description: string
+    description: string,
   ): Promise<VisualElement | null> {
     log.info(`Finding element: ${description}`);
 
     const elements = await this.detectUIElements(imageBase64);
-    
+
     // Find best matching element
-    const match = elements.find(el => 
-      el.description.toLowerCase().includes(description.toLowerCase()) ||
-      (el.text && el.text.toLowerCase().includes(description.toLowerCase()))
+    const match = elements.find(
+      (el) =>
+        el.description.toLowerCase().includes(description.toLowerCase()) ||
+        (el.text && el.text.toLowerCase().includes(description.toLowerCase())),
     );
 
     return match || null;

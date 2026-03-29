@@ -20,7 +20,12 @@ const log = createSubsystemLogger("phase1/visual-gui");
 export type VisualGUIAction =
   | { type: "click"; element: GUIElement; reason: string }
   | { type: "type"; element: GUIElement; text: string; reason: string }
-  | { type: "scroll"; direction: "up" | "down" | "left" | "right"; amount: number; reason: string }
+  | {
+      type: "scroll";
+      direction: "up" | "down" | "left" | "right";
+      amount: number;
+      reason: string;
+    }
   | { type: "wait"; durationMs: number; reason: string }
   | { type: "screenshot"; reason: string }
   | { type: "finish"; answer?: string }
@@ -70,7 +75,7 @@ export class VisualGUIController {
       timeoutMs?: number;
       onStep?: (step: number, action: VisualGUIAction) => void;
       onComplete?: (result: VisualGUITaskResult) => void;
-    } = {}
+    } = {},
   ): Promise<VisualGUITaskResult> {
     const taskId = generateId("vgt");
     const startTime = nowMs();
@@ -105,7 +110,9 @@ export class VisualGUIController {
 
         // Analyze with Qwen-VL
         const visualElements = await this.qwenVL.detectUIElements(screenshot);
-        log.debug(`[${taskId}] Detected ${visualElements.length} visual elements`);
+        log.debug(
+          `[${taskId}] Detected ${visualElements.length} visual elements`,
+        );
 
         // Get next action from UI-TARS
         const prediction = await this.uiTars.executeTask(instruction, {
@@ -176,7 +183,7 @@ export class VisualGUIController {
    */
   private async convertToAction(
     prediction: any,
-    elements: any[]
+    elements: any[],
   ): Promise<VisualGUIAction> {
     // Map UI-TARS action to VisualGUIAction
     const action = prediction.action;
@@ -185,14 +192,34 @@ export class VisualGUIController {
       case "click":
         return {
           type: "click",
-          element: elements[0] || { id: "unknown", type: "unknown", bounds: { x: action.x, y: action.y, width: 10, height: 10 }, center: { x: action.x, y: action.y }, confidence: 0.8, enabled: true, visible: true, focused: false, source: "vision" },
+          element: elements[0] || {
+            id: "unknown",
+            type: "unknown",
+            bounds: { x: action.x, y: action.y, width: 10, height: 10 },
+            center: { x: action.x, y: action.y },
+            confidence: 0.8,
+            enabled: true,
+            visible: true,
+            focused: false,
+            source: "vision",
+          },
           reason: prediction.thought,
         };
 
       case "type":
         return {
           type: "type",
-          element: elements[0] || { id: "unknown", type: "input", bounds: { x: 0, y: 0, width: 100, height: 30 }, center: { x: 50, y: 15 }, confidence: 0.8, enabled: true, visible: true, focused: false, source: "vision" },
+          element: elements[0] || {
+            id: "unknown",
+            type: "input",
+            bounds: { x: 0, y: 0, width: 100, height: 30 },
+            center: { x: 50, y: 15 },
+            confidence: 0.8,
+            enabled: true,
+            visible: true,
+            focused: false,
+            source: "vision",
+          },
           text: action.text,
           reason: prediction.thought,
         };
@@ -226,7 +253,9 @@ export class VisualGUIController {
 
     switch (action.type) {
       case "click":
-        log.debug(`Clicking element at (${action.element.center.x}, ${action.element.center.y})`);
+        log.debug(
+          `Clicking element at (${action.element.center.x}, ${action.element.center.y})`,
+        );
         // await mouseMove(action.element.center.x, action.element.center.y);
         // await mouseClick("left");
         break;

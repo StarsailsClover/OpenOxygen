@@ -1,6 +1,6 @@
 /**
  * Reflection Engine Tests
- * 
+ *
  * Test suite for self-improvement and execution analysis
  */
 
@@ -140,7 +140,9 @@ describe("Reflection Engine", () => {
       };
 
       const result = reflect(context);
-      const bottleneckInsight = result.insights.find((i) => i.type === "bottleneck");
+      const bottleneckInsight = result.insights.find(
+        (i) => i.type === "bottleneck",
+      );
       expect(bottleneckInsight).toBeDefined();
     });
   });
@@ -154,9 +156,27 @@ describe("Reflection Engine", () => {
         startTime: Date.now() - 3000,
         endTime: Date.now(),
         steps: [
-          { id: "s1", type: "thought", content: "Plan", timestamp: Date.now() - 2500, durationMs: 500 },
-          { id: "s2", type: "action", content: "Act", timestamp: Date.now() - 2000, durationMs: 1000 },
-          { id: "s3", type: "observation", content: "Observe", timestamp: Date.now() - 1000, durationMs: 500 },
+          {
+            id: "s1",
+            type: "thought",
+            content: "Plan",
+            timestamp: Date.now() - 2500,
+            durationMs: 500,
+          },
+          {
+            id: "s2",
+            type: "action",
+            content: "Act",
+            timestamp: Date.now() - 2000,
+            durationMs: 1000,
+          },
+          {
+            id: "s3",
+            type: "observation",
+            content: "Observe",
+            timestamp: Date.now() - 1000,
+            durationMs: 500,
+          },
         ],
         outcome: "success",
         metrics: {
@@ -214,7 +234,9 @@ describe("Reflection Engine", () => {
       };
 
       const result = reflect(context);
-      const optimizationInsight = result.insights.find((i) => i.type === "optimization");
+      const optimizationInsight = result.insights.find(
+        (i) => i.type === "optimization",
+      );
       expect(optimizationInsight).toBeDefined();
     });
   });
@@ -228,10 +250,34 @@ describe("Reflection Engine", () => {
         startTime: Date.now() - 10000,
         endTime: Date.now(),
         steps: [
-          { id: "s1", type: "error", content: "Critical error", timestamp: Date.now() - 8000, durationMs: 1000 },
-          { id: "s2", type: "error", content: "Another error", timestamp: Date.now() - 6000, durationMs: 1000 },
-          { id: "s3", type: "error", content: "Third error", timestamp: Date.now() - 4000, durationMs: 1000 },
-          { id: "s4", type: "error", content: "Fourth error", timestamp: Date.now() - 2000, durationMs: 1000 },
+          {
+            id: "s1",
+            type: "error",
+            content: "Critical error",
+            timestamp: Date.now() - 8000,
+            durationMs: 1000,
+          },
+          {
+            id: "s2",
+            type: "error",
+            content: "Another error",
+            timestamp: Date.now() - 6000,
+            durationMs: 1000,
+          },
+          {
+            id: "s3",
+            type: "error",
+            content: "Third error",
+            timestamp: Date.now() - 4000,
+            durationMs: 1000,
+          },
+          {
+            id: "s4",
+            type: "error",
+            content: "Fourth error",
+            timestamp: Date.now() - 2000,
+            durationMs: 1000,
+          },
         ],
         outcome: "failure",
         metrics: {

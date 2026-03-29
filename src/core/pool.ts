@@ -76,7 +76,9 @@ export function startMemoryMonitor(intervalMs = 60000): void {
   memoryMonitorInterval = setInterval(() => {
     const mem = getMemoryUsage();
     if (mem.heapPercent > 85) {
-      log.warn(`High memory usage: ${mem.heapUsedMB}MB / ${mem.heapTotalMB}MB (${mem.heapPercent}%)`);
+      log.warn(
+        `High memory usage: ${mem.heapUsedMB}MB / ${mem.heapTotalMB}MB (${mem.heapPercent}%)`,
+      );
       // 尝试触发 GC（需要 --expose-gc 标志）
       if (global.gc) {
         global.gc();

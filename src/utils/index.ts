@@ -1,7 +1,7 @@
 /**
  * OpenOxygen -Utility Functions
  *
- * Í¨ÓÃ¹¤¾ßº¯Êý¼¯£¬¹©È«ÏîÄ¿Ê¹ÓÃ?
+ * Í¨ï¿½Ã¹ï¿½ï¿½ßºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½Ä¿Ê¹ï¿½ï¿½?
  */
 
 import crypto from "node:crypto";
@@ -9,7 +9,7 @@ import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 
-// â”-â”-â”- ID Generation â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-
+// ï¿½-ï¿½-ï¿½- ID Generation ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-
 
 export function generateId(prefix?: string): string {
   const uuid = crypto.randomUUID();
@@ -22,12 +22,16 @@ export function generateShortId(length = 8): string {
 
 export function generateTimestampId(prefix: string): string {
   const now = new Date();
-  const ts = now.toISOString().replace(/[:.]/g, "-").replace("T", "_").replace("Z", "");
+  const ts = now
+    .toISOString()
+    .replace(/[:.]/g, "-")
+    .replace("T", "_")
+    .replace("Z", "");
   const suffix = generateShortId();
   return `${prefix}-${ts}-${suffix}`;
 }
 
-// â”-â”-â”- Path Utilities â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-
+// ï¿½-ï¿½-ï¿½- Path Utilities ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-
 
 export function resolveUserPath(input: string): string {
   if (input.startsWith("~")) {
@@ -53,7 +57,7 @@ export function sanitizePath(s: string): string {
   return s.replace(/\0/g, "");
 }
 
-// â”-â”-â”- Environment â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-
+// ï¿½-ï¿½-ï¿½- Environment ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-
 
 export function isTruthyEnv(value: string | undefined): boolean {
   if (!value) return false;
@@ -64,7 +68,7 @@ export function getEnvOrDefault(key: string, defaultValue: string): string {
   return process.env[key] ?? defaultValue;
 }
 
-// â”-â”-â”- Timing â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-
+// ï¿½-ï¿½-ï¿½- Timing ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-
 
 export function nowMs(): number {
   return Date.now();
@@ -78,18 +82,22 @@ export async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// â”-â”-â”- Data â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-
+// ï¿½-ï¿½-ï¿½- Data ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-
 
 export function deepClone<T>(obj: T): T {
   return structuredClone(obj);
 }
 
-export function truncateString(s: string, maxLen: number, suffix = "..."): string {
+export function truncateString(
+  s: string,
+  maxLen: number,
+  suffix = "...",
+): string {
   if (s.length <= maxLen) return s;
   return s.slice(0, maxLen - suffix.length) + suffix;
 }
 
-// â”-â”-â”- Platform â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-
+// ï¿½-ï¿½-ï¿½- Platform ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-
 
 export function isWindows(): boolean {
   return process.platform === "win32";
@@ -105,7 +113,7 @@ export function getMachineDisplayName(): string {
   return os.hostname();
 }
 
-// â”-â”-â”- Async â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-
+// ï¿½-ï¿½-ï¿½- Async ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-
 
 export async function withTimeout<T>(
   promise: Promise<T>,
@@ -114,7 +122,10 @@ export async function withTimeout<T>(
 ): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+    timer = setTimeout(
+      () => reject(new Error(`${label} timed out after ${timeoutMs}ms`)),
+      timeoutMs,
+    );
   });
   try {
     return await Promise.race([promise, timeout]);
@@ -123,14 +134,17 @@ export async function withTimeout<T>(
   }
 }
 
-// â”-â”-â”- Event Emitter (lightweight typed) â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-â”-
+// ï¿½-ï¿½-ï¿½- Event Emitter (lightweight typed) ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-ï¿½-
 
 type Listener<T> = (data: T) => void | Promise<void>;
 
 export class TypedEventBus<TEventMap extends Record<string, unknown>> {
   private listeners = new Map<keyof TEventMap, Set<Listener<unknown>>>();
 
-  on<K extends keyof TEventMap>(event: K, listener: Listener<TEventMap[K]>): () => void {
+  on<K extends keyof TEventMap>(
+    event: K,
+    listener: Listener<TEventMap[K]>,
+  ): () => void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
     }
@@ -139,7 +153,10 @@ export class TypedEventBus<TEventMap extends Record<string, unknown>> {
     return () => set.delete(listener as Listener<unknown>);
   }
 
-  async emit<K extends keyof TEventMap>(event: K, data: TEventMap[K]): Promise<void> {
+  async emit<K extends keyof TEventMap>(
+    event: K,
+    data: TEventMap[K],
+  ): Promise<void> {
     const set = this.listeners.get(event);
     if (!set) return;
     for (const listener of set) {

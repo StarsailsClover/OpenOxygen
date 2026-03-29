@@ -9,18 +9,25 @@ export type OxygenResult<T = void> = {
   ok: boolean;
   data?: T;
   error?: string;
-  code?: string;       // 错误码：OXY_001, OXY_002...
+  code?: string; // 错误码：OXY_001, OXY_002...
   durationMs?: number;
   metadata?: Record<string, unknown>;
 };
 
 // ─── Factory Functions ──────────────────────────────────────────────────────
 
-export function ok<T>(data?: T, meta?: Partial<OxygenResult<T>>): OxygenResult<T> {
+export function ok<T>(
+  data?: T,
+  meta?: Partial<OxygenResult<T>>,
+): OxygenResult<T> {
   return { ok: true, data, ...meta };
 }
 
-export function err<T = void>(error: string, code?: string, meta?: Partial<OxygenResult<T>>): OxygenResult<T> {
+export function err<T = void>(
+  error: string,
+  code?: string,
+  meta?: Partial<OxygenResult<T>>,
+): OxygenResult<T> {
   return { ok: false, error, code, ...meta };
 }
 
@@ -56,4 +63,4 @@ export const ErrorCodes = {
   CONFIG_NOT_FOUND: "OXY_C002",
 } as const;
 
-export type ErrorCode = typeof ErrorCodes[keyof typeof ErrorCodes];
+export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];

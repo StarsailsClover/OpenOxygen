@@ -14,11 +14,7 @@ import {
   mouseDrag,
   mouseScroll,
 } from "../native/mouse.js";
-import {
-  keyPress,
-  keyCombination,
-  typeText,
-} from "../native/keyboard.js";
+import { keyPress, keyCombination, typeText } from "../native/keyboard.js";
 import type { RecordedStep, RecordingSession, StepType } from "./recorder.js";
 
 const log = createSubsystemLogger("osr/player");
@@ -57,28 +53,30 @@ let abortController: AbortController | null = null;
  */
 export async function playRecording(
   recording: RecordingSession,
-  options: PlaybackOptions = {}
+  options: PlaybackOptions = {},
 ): Promise<boolean> {
   if (activePlayback?.state === "playing") {
     log.warn("Already playing a recording");
     return false;
   }
-  
-  log.info(`Starting playback: ${recording.name} (${recording.steps.length} steps)`);
-  
+
+  log.info(
+    `Starting playback: ${recording.name} (${recording.steps.length} steps)`,
+  );
+
   const speed = options.speed || 1;
   const startIndex = options.startIndex || 0;
   const endIndex = options.endIndex || recording.steps.length - 1;
-  
+
   activePlayback = {
     recording,
     state: "playing",
     currentIndex: startIndex,
     options,
   };
-  
+
   abortController = new AbortController();
-  
+
   try {
     for (let i = startIndex; i <= endIndex && i < recording.steps.length; i++) {
       // Check if aborted
@@ -86,41 +84,42 @@ export async function playRecording(
         log.info("Playback aborted");
         break;
       }
-      
+
       // Check if paused
       while (activePlayback.state === "paused") {
         await sleep(100);
         if (abortController.signal.aborted) break;
       }
-      
+
       if (abortController.signal.aborted) break;
-      
+
       const step = recording.steps[i];
       activePlayback.currentIndex = i;
-      
-      log.debug(`Playing step ${i + 1}/${recording.steps.length}: ${step.type}`);
-      
+
+      log.debug(
+        `Playing step ${i + 1}/${recording.steps.length}: ${step.type}`,
+      );
+
       // Execute step
       await executeStep(step, speed);
-      
+
       // Call step callback
       options.onStep?.(step, i);
-      
+
       // Calculate delay to next step
       if (i < endIndex && i < recording.steps.length - 1) {
         const nextStep = recording.steps[i + 1];
         const delay = (nextStep.timestamp - step.timestamp) / speed;
-        
+
         // Minimum delay of 50ms, maximum of 5000ms
         const actualDelay = Math.max(50, Math.min(delay, 5000));
-        
+
         await sleep(actualDelay);
       }
     }
-    
+
     log.info("Playback completed");
     options.onComplete?.();
-    
   } catch (error) {
     log.error(`Playback error: ${error.message}`);
     options.onError?.(error as Error);
@@ -128,7 +127,7 @@ export async function playRecording(
     activePlayback = null;
     abortController = null;
   }
-  
+
   return true;
 }
 
@@ -219,11 +218,11 @@ async function executeKeyCombination(data: { keys: string[] }): Promise<void> {
  */
 async function executeTypeText(
   data: { text: string },
-  speed: number
+  speed: number,
 ): Promise<void> {
   // Type text with speed adjustment
   const delay = Math.max(10, 50 / speed);
-  
+
   for (const char of data.text) {
     typeText(char);
     await sleep(delay);
@@ -237,7 +236,7 @@ export function pausePlayback(): boolean {
   if (!activePlayback || activePlayback.state !== "playing") {
     return false;
   }
-  
+
   activePlayback.state = "paused";
   log.info("Playback paused");
   return true;
@@ -250,7 +249,7 @@ export function resumePlayback(): boolean {
   if (!activePlayback || activePlayback.state !== "paused") {
     return false;
   }
-  
+
   activePlayback.state = "playing";
   log.info("Playback resumed");
   return true;
@@ -263,7 +262,7 @@ export function stopPlayback(): boolean {
   if (!activePlayback) {
     return false;
   }
-  
+
   abortController?.abort();
   activePlayback.state = "stopped";
   log.info("Playback stopped");
@@ -299,11 +298,11 @@ export function seekTo(index: number): boolean {
   if (!activePlayback) {
     return false;
   }
-  
+
   if (index < 0 || index >= activePlayback.recording.steps.length) {
     return false;
   }
-  
+
   activePlayback.currentIndex = index;
   log.info(`Seeked to step ${index}`);
   return true;
@@ -316,7 +315,7 @@ export function getStepAt(index: number): RecordedStep | null {
   if (!activePlayback) {
     return null;
   }
-  
+
   return activePlayback.recording.steps[index] || null;
 }
 

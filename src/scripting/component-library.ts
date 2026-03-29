@@ -93,8 +93,19 @@ export class ExtendedComponentLibrary {
       category: "ui-basic",
       version: "1.0.0",
       inputs: [
-        { name: "label", type: "string", description: "Button text", required: true },
-        { name: "disabled", type: "boolean", description: "Disable button", required: false, defaultValue: false },
+        {
+          name: "label",
+          type: "string",
+          description: "Button text",
+          required: true,
+        },
+        {
+          name: "disabled",
+          type: "boolean",
+          description: "Disable button",
+          required: false,
+          defaultValue: false,
+        },
       ],
       outputs: [
         { name: "clicked", type: "boolean", description: "Click event" },
@@ -111,12 +122,26 @@ export class ExtendedComponentLibrary {
       category: "ui-basic",
       version: "1.0.0",
       inputs: [
-        { name: "placeholder", type: "string", description: "Placeholder text", required: false },
-        { name: "value", type: "string", description: "Current value", required: false },
+        {
+          name: "placeholder",
+          type: "string",
+          description: "Placeholder text",
+          required: false,
+        },
+        {
+          name: "value",
+          type: "string",
+          description: "Current value",
+          required: false,
+        },
       ],
       outputs: [
         { name: "value", type: "string", description: "Input value" },
-        { name: "changed", type: "boolean", description: "Value changed event" },
+        {
+          name: "changed",
+          type: "boolean",
+          description: "Value changed event",
+        },
       ],
       code: `renderInput({ placeholder, value, onChange: (v) => { emit('value', v); emit('changed', true); } })`,
       createdAt: nowMs(),
@@ -130,8 +155,18 @@ export class ExtendedComponentLibrary {
       category: "ui-container",
       version: "1.0.0",
       inputs: [
-        { name: "fields", type: "array", description: "Form field definitions", required: true },
-        { name: "data", type: "object", description: "Form data", required: false },
+        {
+          name: "fields",
+          type: "array",
+          description: "Form field definitions",
+          required: true,
+        },
+        {
+          name: "data",
+          type: "object",
+          description: "Form data",
+          required: false,
+        },
       ],
       outputs: [
         { name: "data", type: "object", description: "Form data" },
@@ -150,9 +185,25 @@ export class ExtendedComponentLibrary {
       category: "ui-container",
       version: "1.0.0",
       inputs: [
-        { name: "title", type: "string", description: "Dialog title", required: true },
-        { name: "content", type: "string", description: "Dialog content", required: true },
-        { name: "visible", type: "boolean", description: "Show dialog", required: false, defaultValue: false },
+        {
+          name: "title",
+          type: "string",
+          description: "Dialog title",
+          required: true,
+        },
+        {
+          name: "content",
+          type: "string",
+          description: "Dialog content",
+          required: true,
+        },
+        {
+          name: "visible",
+          type: "boolean",
+          description: "Show dialog",
+          required: false,
+          defaultValue: false,
+        },
       ],
       outputs: [
         { name: "confirmed", type: "boolean", description: "User confirmed" },
@@ -172,8 +223,18 @@ export class ExtendedComponentLibrary {
       category: "data-display",
       version: "1.0.0",
       inputs: [
-        { name: "data", type: "array", description: "Table data", required: true },
-        { name: "columns", type: "array", description: "Column definitions", required: true },
+        {
+          name: "data",
+          type: "array",
+          description: "Table data",
+          required: true,
+        },
+        {
+          name: "columns",
+          type: "array",
+          description: "Column definitions",
+          required: true,
+        },
       ],
       outputs: [
         { name: "selected", type: "object", description: "Selected row" },
@@ -192,8 +253,18 @@ export class ExtendedComponentLibrary {
       category: "data-display",
       version: "1.0.0",
       inputs: [
-        { name: "items", type: "array", description: "List items", required: true },
-        { name: "renderItem", type: "any", description: "Item render function", required: false },
+        {
+          name: "items",
+          type: "array",
+          description: "List items",
+          required: true,
+        },
+        {
+          name: "renderItem",
+          type: "any",
+          description: "Item render function",
+          required: false,
+        },
       ],
       outputs: [
         { name: "selected", type: "any", description: "Selected item" },
@@ -211,9 +282,24 @@ export class ExtendedComponentLibrary {
       category: "data-display",
       version: "1.0.0",
       inputs: [
-        { name: "data", type: "array", description: "Chart data", required: true },
-        { name: "type", type: "string", description: "Chart type (line, bar, pie)", required: true },
-        { name: "options", type: "object", description: "Chart options", required: false },
+        {
+          name: "data",
+          type: "array",
+          description: "Chart data",
+          required: true,
+        },
+        {
+          name: "type",
+          type: "string",
+          description: "Chart type (line, bar, pie)",
+          required: true,
+        },
+        {
+          name: "options",
+          type: "object",
+          description: "Chart options",
+          required: false,
+        },
       ],
       outputs: [
         { name: "clicked", type: "object", description: "Clicked data point" },
@@ -232,8 +318,18 @@ export class ExtendedComponentLibrary {
       category: "action-flow",
       version: "1.0.0",
       inputs: [
-        { name: "event", type: "string", description: "Event name to listen", required: true },
-        { name: "condition", type: "any", description: "Trigger condition", required: false },
+        {
+          name: "event",
+          type: "string",
+          description: "Event name to listen",
+          required: true,
+        },
+        {
+          name: "condition",
+          type: "any",
+          description: "Trigger condition",
+          required: false,
+        },
       ],
       outputs: [
         { name: "triggered", type: "boolean", description: "Event triggered" },
@@ -252,8 +348,19 @@ export class ExtendedComponentLibrary {
       category: "action-flow",
       version: "1.0.0",
       inputs: [
-        { name: "interval", type: "number", description: "Interval in ms", required: true },
-        { name: "enabled", type: "boolean", description: "Enable scheduler", required: false, defaultValue: true },
+        {
+          name: "interval",
+          type: "number",
+          description: "Interval in ms",
+          required: true,
+        },
+        {
+          name: "enabled",
+          type: "boolean",
+          description: "Enable scheduler",
+          required: false,
+          defaultValue: true,
+        },
       ],
       outputs: [
         { name: "tick", type: "boolean", description: "Scheduler tick" },
@@ -272,7 +379,12 @@ export class ExtendedComponentLibrary {
       category: "action-flow",
       version: "1.0.0",
       inputs: [
-        { name: "duration", type: "number", description: "Delay duration in ms", required: true },
+        {
+          name: "duration",
+          type: "number",
+          description: "Delay duration in ms",
+          required: true,
+        },
       ],
       outputs: [
         { name: "completed", type: "boolean", description: "Delay completed" },
@@ -292,9 +404,25 @@ export class ExtendedComponentLibrary {
       version: "1.0.0",
       inputs: [
         { name: "url", type: "string", description: "API URL", required: true },
-        { name: "method", type: "string", description: "HTTP method", required: false, defaultValue: "GET" },
-        { name: "headers", type: "object", description: "Request headers", required: false },
-        { name: "body", type: "any", description: "Request body", required: false },
+        {
+          name: "method",
+          type: "string",
+          description: "HTTP method",
+          required: false,
+          defaultValue: "GET",
+        },
+        {
+          name: "headers",
+          type: "object",
+          description: "Request headers",
+          required: false,
+        },
+        {
+          name: "body",
+          type: "any",
+          description: "Request body",
+          required: false,
+        },
       ],
       outputs: [
         { name: "response", type: "object", description: "API response" },
@@ -313,9 +441,24 @@ export class ExtendedComponentLibrary {
       category: "integration-data",
       version: "1.0.0",
       inputs: [
-        { name: "connection", type: "string", description: "Connection string", required: true },
-        { name: "query", type: "string", description: "SQL query", required: true },
-        { name: "params", type: "array", description: "Query parameters", required: false },
+        {
+          name: "connection",
+          type: "string",
+          description: "Connection string",
+          required: true,
+        },
+        {
+          name: "query",
+          type: "string",
+          description: "SQL query",
+          required: true,
+        },
+        {
+          name: "params",
+          type: "array",
+          description: "Query parameters",
+          required: false,
+        },
       ],
       outputs: [
         { name: "results", type: "array", description: "Query results" },
@@ -335,9 +478,24 @@ export class ExtendedComponentLibrary {
       category: "logic-control",
       version: "1.0.0",
       inputs: [
-        { name: "condition", type: "boolean", description: "Condition to evaluate", required: true },
-        { name: "trueValue", type: "any", description: "Value if true", required: false },
-        { name: "falseValue", type: "any", description: "Value if false", required: false },
+        {
+          name: "condition",
+          type: "boolean",
+          description: "Condition to evaluate",
+          required: true,
+        },
+        {
+          name: "trueValue",
+          type: "any",
+          description: "Value if true",
+          required: false,
+        },
+        {
+          name: "falseValue",
+          type: "any",
+          description: "Value if false",
+          required: false,
+        },
       ],
       outputs: [
         { name: "result", type: "any", description: "Result value" },
@@ -356,8 +514,18 @@ export class ExtendedComponentLibrary {
       category: "logic-control",
       version: "1.0.0",
       inputs: [
-        { name: "value", type: "any", description: "Value to switch on", required: true },
-        { name: "cases", type: "object", description: "Case mappings", required: true },
+        {
+          name: "value",
+          type: "any",
+          description: "Value to switch on",
+          required: true,
+        },
+        {
+          name: "cases",
+          type: "object",
+          description: "Case mappings",
+          required: true,
+        },
       ],
       outputs: [
         { name: "result", type: "any", description: "Matched case result" },
@@ -376,12 +544,21 @@ export class ExtendedComponentLibrary {
       category: "logic-data",
       version: "1.0.0",
       inputs: [
-        { name: "inputs", type: "array", description: "Inputs to merge", required: true },
-        { name: "strategy", type: "string", description: "Merge strategy (concat, merge, override)", required: false, defaultValue: "merge" },
+        {
+          name: "inputs",
+          type: "array",
+          description: "Inputs to merge",
+          required: true,
+        },
+        {
+          name: "strategy",
+          type: "string",
+          description: "Merge strategy (concat, merge, override)",
+          required: false,
+          defaultValue: "merge",
+        },
       ],
-      outputs: [
-        { name: "result", type: "any", description: "Merged result" },
-      ],
+      outputs: [{ name: "result", type: "any", description: "Merged result" }],
       code: `const result = mergeInputs(inputs, strategy); emit('result', result)`,
       createdAt: nowMs(),
       updatedAt: nowMs(),
@@ -394,7 +571,7 @@ export class ExtendedComponentLibrary {
    * Register component
    */
   registerComponent(
-    component: Omit<ExtendedComponent, "id" | "createdAt" | "updatedAt">
+    component: Omit<ExtendedComponent, "id" | "createdAt" | "updatedAt">,
   ): ExtendedComponent {
     const fullComponent: ExtendedComponent = {
       ...component,
@@ -404,7 +581,9 @@ export class ExtendedComponentLibrary {
     };
 
     this.components.set(fullComponent.id, fullComponent);
-    log.info(`Registered component: ${fullComponent.name} (${fullComponent.id})`);
+    log.info(
+      `Registered component: ${fullComponent.name} (${fullComponent.id})`,
+    );
     return fullComponent;
   }
 
@@ -427,7 +606,7 @@ export class ExtendedComponentLibrary {
    */
   getComponentsByCategory(category: string): ExtendedComponent[] {
     return Array.from(this.components.values()).filter(
-      (c) => c.category === category
+      (c) => c.category === category,
     );
   }
 
@@ -453,7 +632,7 @@ export class ExtendedComponentLibrary {
   createInstance(
     componentId: string,
     name: string,
-    config: Record<string, any> = {}
+    config: Record<string, any> = {},
   ): ComponentInstance | null {
     const component = this.components.get(componentId);
     if (!component) return null;
@@ -485,7 +664,7 @@ export class ExtendedComponentLibrary {
     sourceId: string,
     sourceOutput: string,
     targetId: string,
-    targetInput: string
+    targetInput: string,
   ): boolean {
     const source = this.instances.get(sourceId);
     const target = this.instances.get(targetId);
@@ -501,7 +680,9 @@ export class ExtendedComponentLibrary {
     // Add input connection
     target.connections.inputs[targetInput] = `${sourceId}.${sourceOutput}`;
 
-    log.info(`Connected: ${sourceId}.${sourceOutput} -> ${targetId}.${targetInput}`);
+    log.info(
+      `Connected: ${sourceId}.${sourceOutput} -> ${targetId}.${targetInput}`,
+    );
     return true;
   }
 
@@ -514,7 +695,7 @@ export class ExtendedComponentLibrary {
       (c) =>
         c.name.toLowerCase().includes(lowerQuery) ||
         c.description.toLowerCase().includes(lowerQuery) ||
-        c.category.toLowerCase().includes(lowerQuery)
+        c.category.toLowerCase().includes(lowerQuery),
     );
   }
 }

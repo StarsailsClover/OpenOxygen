@@ -55,7 +55,11 @@ export type InferenceResponse = {
   id: string;
   content: string;
   toolCalls?: ToolCallRequest[];
-  usage?: { promptTokens: number; completionTokens: number; totalTokens: number };
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
   model: string;
   provider: string;
   durationMs: number;
@@ -130,7 +134,11 @@ async function callOpenAICompatible(
   if (tools && tools.length > 0) {
     requestBody["tools"] = tools.map((t) => ({
       type: "function",
-      function: { name: t.name, description: t.description, parameters: t.parameters },
+      function: {
+        name: t.name,
+        description: t.description,
+        parameters: t.parameters,
+      },
     }));
   }
 
@@ -145,15 +153,25 @@ async function callOpenAICompatible(
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`${providerName} API error (${response.status}): ${errorText}`);
+    throw new Error(
+      `${providerName} API error (${response.status}): ${errorText}`,
+    );
   }
 
   const data = (await response.json()) as {
     id: string;
     choices: Array<{
-      message: { content?: string; reasoning?: string; tool_calls?: ToolCallRequest[] };
+      message: {
+        content?: string;
+        reasoning?: string;
+        tool_calls?: ToolCallRequest[];
+      };
     }>;
-    usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
+    usage?: {
+      prompt_tokens: number;
+      completion_tokens: number;
+      total_tokens: number;
+    };
   };
 
   const choice = data.choices[0];
@@ -164,7 +182,9 @@ async function callOpenAICompatible(
   let finalContent = rawContent;
   if (!finalContent && reasoning) {
     // 尝试提取 reasoning 中最后一段作为答案
-    const lines = reasoning.split("\n").filter((l: string) => l.trim().length > 0);
+    const lines = reasoning
+      .split("\n")
+      .filter((l: string) => l.trim().length > 0);
     finalContent = lines[lines.length - 1] || reasoning.slice(0, 500);
   }
 
@@ -189,7 +209,8 @@ async function callOpenAICompatible(
 const providers: Record<string, ProviderAdapter> = {
   openai: {
     name: "openai",
-    chat: (msgs, cfg, tools) => callOpenAICompatible(msgs, cfg, tools, "openai"),
+    chat: (msgs, cfg, tools) =>
+      callOpenAICompatible(msgs, cfg, tools, "openai"),
   },
   anthropic: {
     name: "anthropic",
@@ -234,7 +255,9 @@ const providers: Record<string, ProviderAdapter> = {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Anthropic API error (${response.status}): ${errorText}`);
+        throw new Error(
+          `Anthropic API error (${response.status}): ${errorText}`,
+        );
       }
 
       const data = (await response.json()) as {
@@ -270,7 +293,12 @@ const providers: Record<string, ProviderAdapter> = {
     chat: (msgs, cfg, tools) =>
       callOpenAICompatible(
         msgs,
-        { ...cfg, baseUrl: cfg.baseUrl ?? "https://generativelanguage.googleapis.com/v1beta/openai" },
+        {
+          ...cfg,
+          baseUrl:
+            cfg.baseUrl ??
+            "https://generativelanguage.googleapis.com/v1beta/openai",
+        },
         tools,
         "gemini",
       ),
@@ -307,7 +335,8 @@ const providers: Record<string, ProviderAdapter> = {
   },
   custom: {
     name: "custom",
-    chat: (msgs, cfg, tools) => callOpenAICompatible(msgs, cfg, tools, "custom"),
+    chat: (msgs, cfg, tools) =>
+      callOpenAICompatible(msgs, cfg, tools, "custom"),
   },
 };
 
@@ -340,12 +369,16 @@ export class InferenceEngine {
     // Prepend system prompt if provided
     let messages = [...request.messages];
     if (request.systemPrompt) {
-      messages = [{ role: "system", content: request.systemPrompt }, ...messages];
+      messages = [
+        { role: "system", content: request.systemPrompt },
+        ...messages,
+      ];
     }
 
     log.info(`Inference [${mode}] via ${model.provider}/${model.model}`);
 
-    const timeoutMs = mode === "deep" ? 120_000 : mode === "balanced" ? 60_000 : 30_000;
+    const timeoutMs =
+      mode === "deep" ? 120_000 : mode === "balanced" ? 60_000 : 30_000;
 
     const response = await withTimeout(
       adapter.chat(messages, model, request.tools),
@@ -354,7 +387,9 @@ export class InferenceEngine {
     );
 
     response.mode = mode;
-    log.info(`Inference completed in ${response.durationMs}ms (${response.usage?.totalTokens ?? "?"} tokens)`);
+    log.info(
+      `Inference completed in ${response.durationMs}ms (${response.usage?.totalTokens ?? "?"} tokens)`,
+    );
     return response;
   }
 

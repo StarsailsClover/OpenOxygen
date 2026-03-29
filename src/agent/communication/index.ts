@@ -39,7 +39,7 @@ export type AgentInfo = {
 export type AgentMessage = {
   type: "register" | "heartbeat" | "delegate" | "result" | "broadcast" | "ack";
   from: string; // Agent ID
-  to?: string;  // Target Agent ID or "broadcast"
+  to?: string; // Target Agent ID or "broadcast"
   taskId?: string;
   payload: unknown;
   timestamp: number;
@@ -119,7 +119,7 @@ export function listAgents(): AgentInfo[] {
 
 export function listAvailableAgents(): AgentInfo[] {
   return listAgents().filter(
-    (a) => a.status === "idle" && nowMs() - a.lastHeartbeat < 30000
+    (a) => a.status === "idle" && nowMs() - a.lastHeartbeat < 30000,
   );
 }
 
@@ -162,7 +162,8 @@ export function delegateTask(
   },
 ): DelegatedTask {
   // Auto-select agent if "auto"
-  let targetAgentId: string = typeof toAgentId === "string" && toAgentId !== "auto" ? toAgentId : "";
+  let targetAgentId: string =
+    typeof toAgentId === "string" && toAgentId !== "auto" ? toAgentId : "";
   if (toAgentId === "auto") {
     const available = listAvailableAgents();
     if (available.length === 0) {
@@ -192,7 +193,9 @@ export function delegateTask(
     targetAgent.currentTask = task.id;
   }
 
-  log.info(`Task delegated: ${task.id} from ${fromAgentId} to ${targetAgentId}`);
+  log.info(
+    `Task delegated: ${task.id} from ${fromAgentId} to ${targetAgentId}`,
+  );
   return task;
 }
 
@@ -241,10 +244,13 @@ export async function executeDelegatedTask(taskId: string): Promise<void> {
 
   try {
     // Import dynamically to avoid circular dependency
-    const { executeWithStrategy } = await import("../../execution/unified/index.js");
-    const result = await executeWithStrategy(task.instruction, task.mode
-      ? { mode: task.mode, confidence: 1, reason: "Delegated task" }
-      : undefined,
+    const { executeWithStrategy } =
+      await import("../../execution/unified/index.js");
+    const result = await executeWithStrategy(
+      task.instruction,
+      task.mode
+        ? { mode: task.mode, confidence: 1, reason: "Delegated task" }
+        : undefined,
     );
 
     updateTaskStatus(taskId, result.success ? "completed" : "failed", result);
@@ -304,7 +310,9 @@ export function aggregateResults(taskIds: string[]): AggregatedResult {
 
 // ─── WebSocket Communication ────────────────────────────────────────────────
 
-export function initializeWebSocketServer(port: number = 4810): WebSocketServer {
+export function initializeWebSocketServer(
+  port: number = 4810,
+): WebSocketServer {
   const wss = new WebSocketServer({ port });
   registry.wss = wss;
 
@@ -355,11 +363,13 @@ function handleMessage(ws: WebSocket, msg: AgentMessage): void {
 }
 
 function sendAck(ws: WebSocket, ackId: string): void {
-  ws.send(JSON.stringify({
-    type: "ack",
-    ackId,
-    timestamp: nowMs(),
-  }));
+  ws.send(
+    JSON.stringify({
+      type: "ack",
+      ackId,
+      timestamp: nowMs(),
+    }),
+  );
 }
 
 function handleRegister(ws: WebSocket, msg: AgentMessage): void {
@@ -373,11 +383,13 @@ function handleRegister(ws: WebSocket, msg: AgentMessage): void {
   registerAgent(id, name, role, capabilities);
 
   // Send confirmation
-  ws.send(JSON.stringify({
-    type: "ack",
-    payload: { registered: true, agentId: id },
-    timestamp: nowMs(),
-  }));
+  ws.send(
+    JSON.stringify({
+      type: "ack",
+      payload: { registered: true, agentId: id },
+      timestamp: nowMs(),
+    }),
+  );
 }
 
 function handleHeartbeat(msg: AgentMessage): void {
@@ -398,18 +410,22 @@ function handleDelegate(ws: WebSocket, msg: AgentMessage): void {
     });
 
     // Send confirmation
-    ws.send(JSON.stringify({
-      type: "ack",
-      taskId: task.id,
-      assignedTo: task.toAgent,
-      timestamp: nowMs(),
-    }));
+    ws.send(
+      JSON.stringify({
+        type: "ack",
+        taskId: task.id,
+        assignedTo: task.toAgent,
+        timestamp: nowMs(),
+      }),
+    );
   } catch (e: any) {
-    ws.send(JSON.stringify({
-      type: "error",
-      error: e.message,
-      timestamp: nowMs(),
-    }));
+    ws.send(
+      JSON.stringify({
+        type: "error",
+        error: e.message,
+        timestamp: nowMs(),
+      }),
+    );
   }
 }
 
@@ -446,7 +462,10 @@ export class AgentClient {
   private ws: WebSocket | null = null;
   private agentId: string;
   private coordinatorUrl: string;
-  private pendingAcks = new Map<string, { resolve: () => void; reject: (e: Error) => void }>();
+  private pendingAcks = new Map<
+    string,
+    { resolve: () => void; reject: (e: Error) => void }
+  >();
 
   constructor(agentId: string, coordinatorUrl: string = "ws://127.0.0.1:4810") {
     this.agentId = agentId;
@@ -477,18 +496,24 @@ export class AgentClient {
     });
   }
 
-  async register(name: string, role: AgentRole, capabilities: string[]): Promise<void> {
+  async register(
+    name: string,
+    role: AgentRole,
+    capabilities: string[],
+  ): Promise<void> {
     if (!this.ws) throw new Error("Not connected");
 
     const ackId = generateId("ack");
 
-    this.ws.send(JSON.stringify({
-      type: "register",
-      from: this.agentId,
-      payload: { id: this.agentId, name, role, capabilities },
-      ackId,
-      timestamp: nowMs(),
-    }));
+    this.ws.send(
+      JSON.stringify({
+        type: "register",
+        from: this.agentId,
+        payload: { id: this.agentId, name, role, capabilities },
+        ackId,
+        timestamp: nowMs(),
+      }),
+    );
 
     // Wait for ACK
     await new Promise<void>((resolve, reject) => {
@@ -504,11 +529,13 @@ export class AgentClient {
 
   sendHeartbeat(): void {
     if (!this.ws) return;
-    this.ws.send(JSON.stringify({
-      type: "heartbeat",
-      from: this.agentId,
-      timestamp: nowMs(),
-    }));
+    this.ws.send(
+      JSON.stringify({
+        type: "heartbeat",
+        from: this.agentId,
+        timestamp: nowMs(),
+      }),
+    );
   }
 
   disconnect(): void {

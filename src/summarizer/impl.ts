@@ -13,24 +13,32 @@ export type SummaryResult = {
   summaryLength: number;
 };
 
-export async function summarize(text: string, options?: SummaryOptions): Promise<SummaryResult> {
+export async function summarize(
+  text: string,
+  options?: SummaryOptions,
+): Promise<SummaryResult> {
   const maxLen = options?.maxLength || 100;
   return {
     summary: text.substring(0, maxLen),
     originalLength: text.length,
-    summaryLength: Math.min(text.length, maxLen)
+    summaryLength: Math.min(text.length, maxLen),
   };
 }
 
-export async function summarizeWebpage(url: string, options?: SummaryOptions): Promise<SummaryResult> {
+export async function summarizeWebpage(
+  url: string,
+  options?: SummaryOptions,
+): Promise<SummaryResult> {
   return {
     summary: `Summary of ${url}`,
     originalLength: 0,
-    summaryLength: 0
+    summaryLength: 0,
   };
 }
 
-export async function translateSummary(summary: string, targetLang: string): Promise<string> {
+export async function translateSummary(
+  summary: string,
+  targetLang: string,
+): Promise<string> {
   return summary;
 }
-

@@ -81,11 +81,17 @@ function routeTaskInternal(instruction: string): TaskStrategy {
 
   const total = scores.terminal + scores.browser + scores.gui;
   if (total === 0) {
-    return { mode: "hybrid", confidence: 0.5, reason: "No clear pattern, try hybrid" };
+    return {
+      mode: "hybrid",
+      confidence: 0.5,
+      reason: "No clear pattern, try hybrid",
+    };
   }
 
   const max = Math.max(scores.terminal, scores.browser, scores.gui);
-  const dominant = Object.entries(scores).find(([, s]) => s === max)![0] as ExecutionMode;
+  const dominant = Object.entries(scores).find(
+    ([, s]) => s === max,
+  )![0] as ExecutionMode;
 
   const fallbacks: Record<string, ExecutionMode> = {
     terminal: "gui",
@@ -108,57 +114,63 @@ export const analyzeTask = routeTaskInternal;
 
 // ─── Mode Executors ────────────────────────────────────────────────────
 
-async function executeTerminal(instruction: string, logs: string[]): Promise<ToolResult> {
+async function executeTerminal(
+  instruction: string,
+  logs: string[],
+): Promise<ToolResult> {
   logs.push("[Terminal] Starting execution...");
   const session = Terminal.createSession("powershell");
-  
+
   try {
     // Extract command from instruction
     let command = instruction;
-    
+
     // Simple extraction: remove common prefixes
     const prefixes = [/^run\s+/i, /^execute\s+/i, /^执行\s*/i, /^运行\s*/i];
     for (const prefix of prefixes) {
       command = command.replace(prefix, "");
     }
-    
+
     logs.push(`[Terminal] Command: ${command.substring(0, 100)}`);
-    
+
     const result = await Terminal.executeCommand(session.id, command);
     logs.push(`[Terminal] Exit code: ${result.terminalCommand?.exitCode}`);
-    
+
     return result;
   } finally {
     Terminal.destroySession(session.id);
   }
 }
 
-async function executeBrowser(instruction: string, logs: string[]): Promise<ToolResult> {
+async function executeBrowser(
+  instruction: string,
+  logs: string[],
+): Promise<ToolResult> {
   logs.push("[Browser] Starting execution...");
-  
+
   try {
     const session = await Browser.createBrowserSession();
     logs.push(`[Browser] Session created: ${session.id}`);
-    
+
     // Extract URL
     const urlMatch = instruction.match(/(https?:\/\/[^\s]+)/);
     const url = urlMatch ? urlMatch[1] : "https://www.bilibili.com";
-    
+
     logs.push(`[Browser] Navigating to: ${url}`);
     const navResult = await Browser.navigate(session.id, url || "");
-    
+
     if (!navResult.success) {
       Browser.destroyBrowserSession(session.id);
       return navResult;
     }
-    
+
     // Wait and get info
-    await new Promise(r => setTimeout(r, 3000));
+    await new Promise((r) => setTimeout(r, 3000));
     const info = await Browser.getPageInfo(session.id);
     logs.push(`[Browser] Page: ${info?.title || "unknown"}`);
-    
+
     Browser.destroyBrowserSession(session.id);
-    
+
     return {
       success: true,
       output: `Navigated to ${info?.url || url}, title: ${info?.title || "unknown"}`,
@@ -170,30 +182,41 @@ async function executeBrowser(instruction: string, logs: string[]): Promise<Tool
   }
 }
 
-async function executeGUI(instruction: string, logs: string[]): Promise<ToolResult> {
+async function executeGUI(
+  instruction: string,
+  logs: string[],
+): Promise<ToolResult> {
   logs.push("[GUI] Starting execution...");
-  
+
   const start = nowMs();
-  
+
   try {
     // Take screenshot via native module
     const path = await import("node:path");
-    const ssPath = path.join(process.cwd(), ".state", `task-${generateId()}.png`);
-    
+    const ssPath = path.join(
+      process.cwd(),
+      ".state",
+      `task-${generateId()}.png`,
+    );
+
     logs.push("[GUI] Capturing screen...");
     const nativeMod = Native.loadNativeModule();
     if (!nativeMod) {
-      return { success: false, error: "Native module unavailable", durationMs: 0 };
+      return {
+        success: false,
+        error: "Native module unavailable",
+        durationMs: 0,
+      };
     }
-    
+
     nativeMod.captureScreen(ssPath);
-    
+
     // Get UI elements
     logs.push("[GUI] Getting UI elements...");
     const elements = nativeMod.getUiElements(null);
-    
+
     logs.push(`[GUI] Found ${elements.length} UI elements`);
-    
+
     return {
       success: true,
       output: `Screenshot saved to ${ssPath}, ${elements.length} UI elements detected`,
@@ -205,18 +228,21 @@ async function executeGUI(instruction: string, logs: string[]): Promise<ToolResu
   }
 }
 
-async function executeHybrid(instruction: string, logs: string[]): Promise<ToolResult> {
+async function executeHybrid(
+  instruction: string,
+  logs: string[],
+): Promise<ToolResult> {
   logs.push("[Hybrid] Trying terminal first...");
-  
+
   // Try terminal first
   const termResult = await executeTerminal(instruction, logs);
   if (termResult.success) {
     logs.push("[Hybrid] Terminal succeeded");
     return termResult;
   }
-  
+
   logs.push(`[Hybrid] Terminal failed: ${termResult.error}, trying GUI...`);
-  
+
   // Fall back to GUI
   return await executeGUI(instruction, logs);
 }
@@ -229,15 +255,19 @@ export async function executeWithStrategy(
 ): Promise<ExecutionResult> {
   const start = nowMs();
   const logs: string[] = [];
-  
+
   const actualStrategy = strategy ?? routeTaskInternal(instruction);
-  
-  log.info(`[Unified] Strategy: ${actualStrategy.mode} (${actualStrategy.reason})`);
-  logs.push(`Strategy: ${actualStrategy.mode} (${Math.round(actualStrategy.confidence * 100)}% confidence)`);
-  
+
+  log.info(
+    `[Unified] Strategy: ${actualStrategy.mode} (${actualStrategy.reason})`,
+  );
+  logs.push(
+    `Strategy: ${actualStrategy.mode} (${Math.round(actualStrategy.confidence * 100)}% confidence)`,
+  );
+
   let result: ToolResult;
   let finalMode = actualStrategy.mode;
-  
+
   try {
     switch (actualStrategy.mode) {
       case "terminal":
@@ -248,7 +278,7 @@ export async function executeWithStrategy(
           result = await executeGUI(instruction, logs);
         }
         break;
-        
+
       case "browser":
         result = await executeBrowser(instruction, logs);
         if (!result.success && actualStrategy.fallback) {
@@ -257,11 +287,11 @@ export async function executeWithStrategy(
           result = await executeGUI(instruction, logs);
         }
         break;
-        
+
       case "gui":
         result = await executeGUI(instruction, logs);
         break;
-        
+
       case "hybrid":
       default:
         result = await executeHybrid(instruction, logs);
@@ -272,9 +302,9 @@ export async function executeWithStrategy(
     log.error(`[Unified] Execution failed: ${e.message}`);
     result = { success: false, error: e.message, durationMs: nowMs() - start };
   }
-  
+
   const duration = nowMs() - start;
-  
+
   return {
     ...result,
     mode: result.success ? finalMode : (actualStrategy.fallback ?? finalMode),
@@ -290,10 +320,10 @@ export async function handleExecutionRequest(
   instruction: string,
   options?: { mode?: ExecutionMode; timeout?: number },
 ): Promise<ExecutionResult> {
-  const strategy = options?.mode 
-    ? { mode: options.mode, confidence: 1, reason: "User specified mode" } 
+  const strategy = options?.mode
+    ? { mode: options.mode, confidence: 1, reason: "User specified mode" }
     : routeTaskInternal(instruction);
-    
+
   return await executeWithStrategy(instruction, strategy);
 }
 

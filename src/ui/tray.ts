@@ -29,7 +29,7 @@ let trayInstance: any = null;
  */
 export function createTray(iconPath: string = "icon.png"): boolean {
   log.info("Creating system tray");
-  
+
   try {
     // This would use native APIs to create tray
     // For now, create placeholder
@@ -38,7 +38,7 @@ export function createTray(iconPath: string = "icon.png"): boolean {
       tooltip: "OpenOxygen",
       visible: true,
     };
-    
+
     log.info("System tray created");
     return true;
   } catch (error) {
@@ -64,7 +64,7 @@ export function setTrayTooltip(tooltip: string): void {
  */
 export function showTrayMenu(items: TrayMenuItem[]): void {
   log.debug(`Showing tray menu with ${items.length} items`);
-  
+
   // This would display native context menu
   // For now, just log
   for (const item of items) {
@@ -81,7 +81,7 @@ export function showTrayMenu(items: TrayMenuItem[]): void {
  */
 export function showQuickInput(): void {
   log.info("Showing quick input from tray");
-  
+
   // This would show a small input dialog near tray
   // For now, just log
 }
@@ -93,11 +93,11 @@ export function showQuickInput(): void {
  */
 export function updateTrayStatus(status: string, icon?: string): void {
   setTrayTooltip(`OpenOxygen - ${status}`);
-  
+
   if (icon && trayInstance) {
     trayInstance.icon = icon;
   }
-  
+
   log.debug(`Tray status: ${status}`);
 }
 
