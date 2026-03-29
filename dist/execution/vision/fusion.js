@@ -34,7 +34,7 @@ export class VisionLanguageFusion {
         const startTime = nowMs();
         const mode = params.mode ?? "fast";
         // 1. 获取截图
-        const screenshotPath = params.screenshotPath ?? await this.captureScreenshot();
+        const screenshotPath = params.screenshotPath ?? (await this.captureScreenshot());
         // 2. 获取 UI 元素（UIA）
         const uiaElements = this.getUIAElements();
         // 3. 压缩图像
@@ -167,7 +167,8 @@ export class VisionLanguageFusion {
             const labelLower = elem.label.toLowerCase();
             const responseLower = response.toLowerCase();
             // 检查响应中是否提到该元素
-            if (responseLower.includes(labelLower) || responseLower.includes(elem.id.toLowerCase())) {
+            if (responseLower.includes(labelLower) ||
+                responseLower.includes(elem.id.toLowerCase())) {
                 results.push({
                     elementId: elem.id,
                     elementType: elem.type,
@@ -204,7 +205,7 @@ export class VisionLanguageFusion {
         }
         // 输入操作
         if (/type|input|enter|输入/.test(lower)) {
-            const target = grounding.find(g => g.elementType === "Edit" || g.elementType === "input");
+            const target = grounding.find((g) => g.elementType === "Edit" || g.elementType === "input");
             if (target) {
                 return {
                     type: "type",

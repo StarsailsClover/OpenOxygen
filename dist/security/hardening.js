@@ -10,7 +10,7 @@
  * [Supply Chain]   插件投毒 → 签名校验 + 权限声明 + 沙箱执行
  * [CNCERT Advisory] 凭证明文存储 → 内存加密 + 文件权限锁定
  */
-import crypto from "node";
+import crypto from "node:crypto";
 import { createSubsystemLogger } from "../logging/index.js";
 const log = createSubsystemLogger("security/hardening");
 // ═══════════════════════════════════════════════════════════════════════════
@@ -19,12 +19,12 @@ const log = createSubsystemLogger("security/hardening");
 //    攻击者可构造恶意链接劫持 WebSocket 连接。
 //    OpenOxygen 方案：完全禁止从外部输入覆盖 gateway 地址。
 // ═══════════════════════════════════════════════════════════════════════════
-const ALLOWED_GATEWAY_HOSTS = new Set(["127.0.0.1", "localhost", ":"]);
+const ALLOWED_GATEWAY_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
 export function validateGatewayBinding(host, port) {
     // 禁止绑定到 0.0.0.0 或公网地址
     if (host === "0.0.0.0" || host === "::") {
         return {
-            safe,
+            safe: false,
             reason: `Binding to "${host}" exposes the gateway to the public network. Use "127.0.0.1" for local-only access.`,
         };
     }
@@ -33,19 +33,17 @@ export function validateGatewayBinding(host, port) {
     }
     if (port < 1024) {
         return {
-            safe,
+            safe: false,
             reason: `Port ${port} is a privileged port. Use a port >= 1024.`,
         };
     }
-    return { safe };
+    return { safe: true };
 }
 /**
  * 拒绝从 URL 参数、HTTP header 或外部输入动态设置 gateway 地址。
  * 这是 CVE-2026-25253 的根本修复。
  */
-export function sanitizeGatewayUrl(input) { }
- | null;
-{
+export function sanitizeGatewayUrl(input) {
     try {
         const url = new URL(input);
         if (!ALLOWED_GATEWAY_HOSTS.has(url.hostname)) {
@@ -58,19 +56,12 @@ export function sanitizeGatewayUrl(input) { }
         return null;
     }
 }
-maxRequests;
-maxAuthFailures;
-blockDurationMs;
-;
 const DEFAULT_RATE_LIMIT = {
-    windowMs, // 1 分钟窗口
-    maxRequests, // 每分钟最多 60 请求
-    maxAuthFailures, // 5 次认证失败后封禁
-    blockDurationMs, // 封禁 5 分钟
+    windowMs: 60_000, // 1 分钟窗口
+    maxRequests: 60, // 每分钟最多 60 请求
+    maxAuthFailures: 5, // 5 次认证失败后封禁
+    blockDurationMs: 300_000, // 封禁 5 分钟
 };
-authFailures;
-blockedUntil;
-;
 export class RateLimiter {
     clients = new Map();
     config;
@@ -84,15 +75,15 @@ export class RateLimiter {
         const now = Date.now();
         let record = this.clients.get(clientIp);
         if (!record) {
-            record = { requests: [], authFailures, blockedUntil };
+            record = { requests: [], authFailures: 0, blockedUntil: 0 };
             this.clients.set(clientIp, record);
         }
         // 检查是否在封禁期
         if (record.blockedUntil > now) {
             return {
-                allowed,
+                allowed: false,
                 reason: "Too many failed attempts. Temporarily blocked.",
-                retryAfterMs, : .blockedUntil - now,
+                retryAfterMs: record.blockedUntil - now,
             };
         }
         // 清理过期请求记录
@@ -101,13 +92,13 @@ export class RateLimiter {
         // 检查速率
         if (record.requests.length >= this.config.maxRequests) {
             return {
-                allowed,
+                allowed: false,
                 reason: "Rate limit exceeded.",
-                retryAfterMs, : .config.windowMs,
+                retryAfterMs: this.config.windowMs,
             };
         }
         record.requests.push(now);
-        return { allowed };
+        return { allowed: true };
     }
     /**
      * 记录认证失败。超过阈值自动封禁。
@@ -115,7 +106,7 @@ export class RateLimiter {
     recordAuthFailure(clientIp) {
         let record = this.clients.get(clientIp);
         if (!record) {
-            record = { requests: [], authFailures, blockedUntil };
+            record = { requests: [], authFailures: 0, blockedUntil: 0 };
             this.clients.set(clientIp, record);
         }
         record.authFailures += 1;
@@ -150,7 +141,7 @@ export class RateLimiter {
  * WebSocket Origin 校验。
  * 只允许来自本地或已知白名单的 Origin。
  */
-export function validateWebSocketOrigin(origin, , undefined, allowedOrigins) {
+export function validateWebSocketOrigin(origin, allowedOrigins) {
     if (!origin)
         return false; // 无 Origin 一律拒绝
     const allowed = new Set([
@@ -187,25 +178,56 @@ export function sanitizeShellArg(arg) {
  * 验证命令是否在白名单中。
  */
 export function validateCommand(command, allowedCommands) {
-    const basename = command.split(/[/\\]/).pop()?.toLowerCase().replace(/\.exe$/i, "") ?? "";
+    const basename = command
+        .split(/[/\\]/)
+        .pop()
+        ?.toLowerCase()
+        .replace(/\.exe$/i, "") ?? "";
     // 绝对禁止的命令（无论配置如何）
     const ALWAYS_BLOCKED = new Set([
-        "format", "diskpart", "bcdedit", "shutdown", "restart",
-        "sfc", "dism", "cipher", "reg", "regedit",
-        "net", "netsh", "wmic", "powershell", "cmd",
-        "bash", "sh", "curl", "wget", "certutil",
-        "bitsadmin", "mshta", "wscript", "cscript",
-        "rundll32", "regsvr32", "msiexec",
+        "format",
+        "diskpart",
+        "bcdedit",
+        "shutdown",
+        "restart",
+        "sfc",
+        "dism",
+        "cipher",
+        "reg",
+        "regedit",
+        "net",
+        "netsh",
+        "wmic",
+        "powershell",
+        "cmd",
+        "bash",
+        "sh",
+        "curl",
+        "wget",
+        "certutil",
+        "bitsadmin",
+        "mshta",
+        "wscript",
+        "cscript",
+        "rundll32",
+        "regsvr32",
+        "msiexec",
     ]);
     if (ALWAYS_BLOCKED.has(basename)) {
-        return { allowed, reason: `Command "${basename}" is permanently blocked for security.` };
+        return {
+            allowed: false,
+            reason: `Command "${basename}" is permanently blocked for security.`,
+        };
     }
     if (allowedCommands && allowedCommands.length > 0) {
         if (!allowedCommands.includes(basename)) {
-            return { allowed, reason: `Command "${basename}" is not in the allowed list.` };
+            return {
+                allowed: false,
+                reason: `Command "${basename}" is not in the allowed list.`,
+            };
         }
     }
-    return { allowed };
+    return { allowed: true };
 }
 /**
  * 净化环境变量，移除危险的 PATH 覆盖。
@@ -215,9 +237,15 @@ export function sanitizeEnvironment(env) {
     const sanitized = { ...env };
     // 移除可被利用的环境变量
     const DANGEROUS_VARS = [
-        "LD_PRELOAD", "LD_LIBRARY_PATH", "DYLD_INSERT_LIBRARIES",
-        "DYLD_LIBRARY_PATH", "NODE_OPTIONS", "ELECTRON_RUN_AS_NODE",
-        "PYTHONPATH", "RUBYLIB", "PERL5LIB",
+        "LD_PRELOAD",
+        "LD_LIBRARY_PATH",
+        "DYLD_INSERT_LIBRARIES",
+        "DYLD_LIBRARY_PATH",
+        "NODE_OPTIONS",
+        "ELECTRON_RUN_AS_NODE",
+        "PYTHONPATH",
+        "RUBYLIB",
+        "PERL5LIB",
     ];
     for (const v of DANGEROUS_VARS) {
         if (sanitized[v]) {
@@ -296,11 +324,11 @@ export function detectPromptInjection(input) {
     }
     const risk = patterns.some((p) => p.startsWith("HIGH"))
         ? "high"
-            .some((p) => p.startsWith("MEDIUM"))
+        : patterns.some((p) => p.startsWith("MEDIUM"))
             ? "medium"
-                .length > 0
+            : patterns.length > 0
                 ? "low"
-                : "none" :  : ;
+                : "none";
     if (risk !== "none") {
         log.warn(`Prompt injection detected (${risk}): ${patterns.join(", ")}`);
     }
@@ -314,17 +342,17 @@ export function detectPromptInjection(input) {
 /**
  * 计算文件的 SHA-256 哈希。
  */
-export function computeFileHash(content, , Buffer) {
+export function computeFileHash(content) {
     return crypto.createHash("sha256").update(content).digest("hex");
 }
 /**
  * 验证插件完整性。
  */
-export function verifyPluginIntegrity(content, , Buffer, expectedHash) {
+export function verifyPluginIntegrity(content, expectedHash) {
     const actual = computeFileHash(content);
     const match = actual === expectedHash.toLowerCase();
     if (!match) {
-        log.error(`Plugin integrity check failed ${expectedHash}, got ${actual}`);
+        log.error(`Plugin integrity check failed: expected ${expectedHash}, got ${actual}`);
     }
     return match;
 }
@@ -351,9 +379,9 @@ export function auditPluginPermissions(permissions) {
     }
     const risk = warnings.some((w) => w.includes("dangerous"))
         ? "dangerous"
-            .length > 0
+        : warnings.length > 0
             ? "caution"
-            : "safe" : ;
+            : "safe";
     return { risk, warnings };
 }
 // ═══════════════════════════════════════════════════════════════════════════
@@ -369,7 +397,10 @@ const RUNTIME_KEY = crypto.randomBytes(32);
 export function encryptSecret(plaintext) {
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv("aes-256-gcm", RUNTIME_KEY, iv);
-    const encrypted = Buffer.concat([cipher.update(plaintext, "utf-8"), cipher.final()]);
+    const encrypted = Buffer.concat([
+        cipher.update(plaintext, "utf-8"),
+        cipher.final(),
+    ]);
     const tag = cipher.getAuthTag();
     return `${iv.toString("hex")}:${tag.toString("hex")}:${encrypted.toString("hex")}`;
 }

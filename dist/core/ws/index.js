@@ -77,7 +77,11 @@ export class RealtimeChannel {
         this.heartbeatInterval = setInterval(() => {
             for (const [id, ws] of this.clients) {
                 if (ws.readyState === WebSocket.OPEN) {
-                    this.send(ws, { type: "ping", id: generateId("hb"), timestamp: nowMs() });
+                    this.send(ws, {
+                        type: "ping",
+                        id: generateId("hb"),
+                        timestamp: nowMs(),
+                    });
                 }
             }
         }, 30000);
@@ -143,7 +147,9 @@ export class RealtimeChannel {
         });
         try {
             const chatData = msg.data;
-            const messages = chatData?.messages || [{ role: "user", content: chatData?.message || "" }];
+            const messages = chatData?.messages || [
+                { role: "user", content: chatData?.message || "" },
+            ];
             const result = await this.inferenceEngine.infer({
                 messages,
                 mode: chatData?.mode || undefined,

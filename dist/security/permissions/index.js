@@ -7,57 +7,65 @@
 import { createSubsystemLogger } from "../../logging/index.js";
 const log = createSubsystemLogger("security/permissions");
 // ============================================================================
-// Permission Types
-// ============================================================================
-export export export export export export 
-// ============================================================================
 // Default Permission Sets
 // ============================================================================
 export const DEFAULT_PERMISSION_SETS = {
-    minimal,
+    minimal: {
+        id: "minimal",
+        name: "Minimal Access",
+        description: "Absolute minimal permissions for sandboxed execution",
+        permissions: [
+            { resource: "console", level: "write" },
+            { resource: "math", level: "execute" },
+            { resource: "date", level: "read" },
+        ],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+    },
+    standard: {
+        id: "standard",
+        name: "Standard Access",
+        description: "Standard permissions for trusted code execution",
+        permissions: [
+            { resource: "console", level: "write" },
+            { resource: "math", level: "execute" },
+            { resource: "date", level: "read" },
+            { resource: "json", level: "execute" },
+            { resource: "array", level: "execute" },
+            { resource: "object", level: "execute" },
+            { resource: "string", level: "execute" },
+        ],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+    },
+    elevated: {
+        id: "elevated",
+        name: "Elevated Access",
+        description: "Elevated permissions for system operations",
+        permissions: [
+            { resource: "console", level: "write" },
+            { resource: "math", level: "execute" },
+            { resource: "date", level: "read" },
+            { resource: "json", level: "execute" },
+            { resource: "array", level: "execute" },
+            { resource: "object", level: "execute" },
+            { resource: "string", level: "execute" },
+            { resource: "path", level: "read" },
+            { resource: "crypto", level: "execute" },
+            { resource: "url", level: "read" },
+        ],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+    },
+    unrestricted: {
+        id: "unrestricted",
+        name: "Unrestricted Access",
+        description: "Full system access (use with extreme caution)",
+        permissions: [{ resource: "*", level: "admin" }],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+    },
 };
-{
-    resource: "math", level;
-    "execute";
-}
-{
-    resource: "date", level;
-    "read";
-}
-createdAt.now(),
-    updatedAt.now(),
-;
-standard,
-    { resource: "math", level: "execute" },
-    { resource: "date", level: "read" },
-    { resource: "json", level: "execute" },
-    { resource: "array", level: "execute" },
-    { resource: "object", level: "execute" },
-    { resource: "string", level: "execute" },
-;
-createdAt.now(),
-    updatedAt.now(),
-;
-elevated,
-    { resource: "math", level: "execute" },
-    { resource: "date", level: "read" },
-    { resource: "json", level: "execute" },
-    { resource: "array", level: "execute" },
-    { resource: "object", level: "execute" },
-    { resource: "string", level: "execute" },
-    { resource: "path", level: "read" },
-    { resource: "crypto", level: "execute" },
-    { resource: "url", level: "read" },
-;
-createdAt.now(),
-    updatedAt.now(),
-;
-unrestricted,
-;
-createdAt.now(),
-    updatedAt.now(),
-;
-;
 // ============================================================================
 // Permission Manager
 // ============================================================================
@@ -78,7 +86,7 @@ class PermissionManager {
         const permissionSet = this.permissionSets.get(permissionSetId);
         if (!permissionSet) {
             return {
-                granted,
+                granted: false,
                 reason: `Permission set '${permissionSetId}' not found`,
             };
         }
@@ -86,38 +94,40 @@ class PermissionManager {
         const wildcard = permissionSet.permissions.find((p) => p.resource === "*");
         if (wildcard) {
             return {
-                granted,
-                level, : .level,
+                granted: true,
+                level: wildcard.level,
             };
         }
         // Find specific permission
-        const permission = permissionSet.permissions.find((p) => p.resource === request.resource || this.matchesPattern(request.resource, p.resource));
+        const permission = permissionSet.permissions.find((p) => p.resource === request.resource ||
+            this.matchesPattern(request.resource, p.resource));
         if (!permission) {
             return {
-                granted,
+                granted: false,
                 reason: `No permission granted for resource '${request.resource}'`,
             };
         }
         // Check conditions
-        if (permission.conditions && !this.checkConditions(permission.conditions, request.context)) {
+        if (permission.conditions &&
+            !this.checkConditions(permission.conditions, request.context)) {
             return {
-                granted,
+                granted: false,
                 reason: "Permission conditions not met",
-                level, : .level,
+                level: permission.level,
             };
         }
         // Check if level is sufficient
         const requiredLevel = this.actionToLevel(request.action);
         if (!this.isLevelSufficient(permission.level, requiredLevel)) {
             return {
-                granted,
-                reason: `Insufficient permission level '${permission.level}', need '${requiredLevel}'`,
-                level, : .level,
+                granted: false,
+                reason: `Insufficient permission level: have '${permission.level}', need '${requiredLevel}'`,
+                level: permission.level,
             };
         }
         return {
-            granted,
-            level, : .level,
+            granted: true,
+            level: permission.level,
         };
     }
     /**
@@ -131,8 +141,8 @@ class PermissionManager {
         const grantId = `${request.resource}:${Date.now()}`;
         const expiresAt = Date.now() + durationMs;
         const result = {
-            granted,
-            level, : .level,
+            granted: true,
+            level: check.level,
             expiresAt,
         };
         this.activeGrants.set(grantId, result);
@@ -147,148 +157,158 @@ class PermissionManager {
     /**
      * Create custom permission set
      */
-    createPermissionSet(set, , PermissionSet, , , , , ) { }
-}
- > ;
-{
-    const newSet = {
-        ...set,
-        id: `custom-${Date.now()}`,
-        createdAt, : .now(),
-        updatedAt, : .now(),
-    };
-    this.permissionSets.set(newSet.id, newSet);
-    log.info(`Permission set created: ${newSet.name} (${newSet.id})`);
-    return newSet;
-}
-/**
- * Update permission set
- */
-updatePermissionSet(id, updates) | null;
-{
-    const existing = this.permissionSets.get(id);
-    if (!existing) {
-        return null;
+    createPermissionSet(set) {
+        const newSet = {
+            ...set,
+            id: `custom-${Date.now()}`,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+        };
+        this.permissionSets.set(newSet.id, newSet);
+        log.info(`Permission set created: ${newSet.name} (${newSet.id})`);
+        return newSet;
     }
-    const updated = {
-        ...existing,
-        ...updates,
-        updatedAt, : .now(),
-    };
-    this.permissionSets.set(id, updated);
-    log.info(`Permission set updated: ${updated.name}`);
-    return updated;
-}
-/**
- * Delete permission set
- */
-deletePermissionSet(id);
-{
-    const existed = this.permissionSets.has(id);
-    if (existed) {
-        this.permissionSets.delete(id);
-        log.info(`Permission set deleted: ${id}`);
-    }
-    return existed;
-}
-/**
- * Get permission set
- */
-getPermissionSet(id) | undefined;
-{
-    return this.permissionSets.get(id);
-}
-/**
- * List all permission sets
- */
-listPermissionSets();
-{
-    return Array.from(this.permissionSets.values());
-}
-/**
- * Validate permission set
- */
-validatePermissionSet(set);
-{
-    const errors = [];
-    if (!set.name || set.name.length < 1) {
-        errors.push("Name is required");
-    }
-    if (!set.permissions || set.permissions.length === 0) {
-        errors.push("At least one permission is required");
-    }
-    for (const perm of set.permissions) {
-        if (!perm.resource) {
-            errors.push("Permission resource is required");
+    /**
+     * Update permission set
+     */
+    updatePermissionSet(id, updates) {
+        const existing = this.permissionSets.get(id);
+        if (!existing) {
+            return null;
         }
-        if (!perm.level) {
-            errors.push("Permission level is required");
-        }
+        const updated = {
+            ...existing,
+            ...updates,
+            updatedAt: Date.now(),
+        };
+        this.permissionSets.set(id, updated);
+        log.info(`Permission set updated: ${updated.name}`);
+        return updated;
     }
-    return {
-        valid, : .length === 0,
-        errors,
-    };
-}
-matchesPattern(resource, pattern);
-{
-    // Simple glob matching
-    const regex = new RegExp("^" + pattern.replace(/\*/g, ".*").replace(/\?/g, ".") + "$");
-    return regex.test(resource);
-}
-actionToLevel(action);
-{
-    const levelMap = {
-        read: "read",
-        write: "write",
-        execute: "execute",
-        delete: "write",
-        create: "write",
-        admin: "admin",
-    };
-    return levelMap[action] || "none";
-}
-isLevelSufficient(have, need);
-{
-    const levels = ["none", "read", "write", "execute", "admin"];
-    const haveIndex = levels.indexOf(have);
-    const needIndex = levels.indexOf(need);
-    return haveIndex >= needIndex;
-}
-checkConditions(conditions, context ?  : );
-{
-    if (!context)
-        return false;
-    for (const condition of conditions) {
-        const value = this.getContextValue(context, condition.type);
-        if (!this.evaluateCondition(value, condition)) {
+    /**
+     * Delete permission set
+     */
+    deletePermissionSet(id) {
+        const existed = this.permissionSets.has(id);
+        if (existed) {
+            this.permissionSets.delete(id);
+            log.info(`Permission set deleted: ${id}`);
+        }
+        return existed;
+    }
+    /**
+     * Get permission set
+     */
+    getPermissionSet(id) {
+        return this.permissionSets.get(id);
+    }
+    /**
+     * List all permission sets
+     */
+    listPermissionSets() {
+        return Array.from(this.permissionSets.values());
+    }
+    /**
+     * Validate permission set
+     */
+    validatePermissionSet(set) {
+        const errors = [];
+        if (!set.name || set.name.length < 1) {
+            errors.push("Name is required");
+        }
+        if (!set.permissions || set.permissions.length === 0) {
+            errors.push("At least one permission is required");
+        }
+        for (const perm of set.permissions) {
+            if (!perm.resource) {
+                errors.push("Permission resource is required");
+            }
+            if (!perm.level) {
+                errors.push("Permission level is required");
+            }
+        }
+        return {
+            valid: errors.length === 0,
+            errors,
+        };
+    }
+    // ============================================================================
+    // Private Helpers
+    // ============================================================================
+    matchesPattern(resource, pattern) {
+        // Simple glob matching
+        const regex = new RegExp("^" + pattern.replace(/\*/g, ".*").replace(/\?/g, ".") + "$");
+        return regex.test(resource);
+    }
+    actionToLevel(action) {
+        const levelMap = {
+            read: "read",
+            write: "write",
+            execute: "execute",
+            delete: "write",
+            create: "write",
+            admin: "admin",
+        };
+        return levelMap[action] || "none";
+    }
+    isLevelSufficient(have, need) {
+        const levels = [
+            "none",
+            "read",
+            "write",
+            "execute",
+            "admin",
+        ];
+        const haveIndex = levels.indexOf(have);
+        const needIndex = levels.indexOf(need);
+        return haveIndex >= needIndex;
+    }
+    checkConditions(conditions, context) {
+        if (!context)
             return false;
+        for (const condition of conditions) {
+            const value = this.getContextValue(context, condition.type);
+            if (!this.evaluateCondition(value, condition)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    getContextValue(context, type) {
+        switch (type) {
+            case "time":
+                return Date.now();
+            case "path":
+                return context.path;
+            case "size":
+                return context.size;
+            case "rate":
+                return context.rate;
+            default:
+                return context[type];
         }
     }
-    return true;
-}
-getContextValue(context, type);
-{
-    switch (type) {
-        case "time": Date.now();
-        case "path": context.path;
-        case "size": context.size;
-        case "rate": context.rate;
-        default: context[type];
-    }
-}
-evaluateCondition(value, condition);
-{
-    switch (condition.operator) {
-        case "eq": value === condition.value;
-        case "ne": value !== condition.value;
-        case "gt"(value) > (condition.value): ;
-        case "lt"(value) < (condition.value): ;
-        case "gte"(value) >= (condition.value): ;
-        case "lte"(value) <= (condition.value): ;
-        case "in"(condition.value[]).includes(value): ;
-        case "contains": String(value).includes(String(condition.value));
-        default: false;
+    evaluateCondition(value, condition) {
+        switch (condition.operator) {
+            case "eq":
+                return value === condition.value;
+            case "ne":
+                return value !== condition.value;
+            case "gt":
+                return value > condition.value;
+            case "lt":
+                return value < condition.value;
+            case "gte":
+                return value >= condition.value;
+            case "lte":
+                return value <= condition.value;
+            case "in":
+                return condition.value.includes(value);
+            case "contains":
+                return String(value).includes(String(condition.value));
+            default:
+                return false;
+        }
     }
 }
 // ============================================================================
@@ -302,15 +322,10 @@ export function checkPermission(request, permissionSetId) {
 export function grantTemporaryPermission(request, durationMs, permissionSetId) {
     return permissionManager.grantTemporaryPermission(request, durationMs, permissionSetId);
 }
-export function createPermissionSet(set, , PermissionSet, , , , , ) { }
- > ,
-;
-{
+export function createPermissionSet(set) {
     return permissionManager.createPermissionSet(set);
 }
-export function getPermissionSet(id) { }
- | undefined;
-{
+export function getPermissionSet(id) {
     return permissionManager.getPermissionSet(id);
 }
 export function listPermissionSets() {

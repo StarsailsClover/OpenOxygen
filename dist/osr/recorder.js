@@ -9,21 +9,16 @@ import { generateId, nowMs } from "../utils/index.js";
 import { getMousePosition } from "../native/mouse.js";
 import { GlobalMemory } from "../memory/global/index.js";
 const log = createSubsystemLogger("osr/recorder");
-;
 // Active recording session
-let activeSession;
- | null;
-null;
+let activeSession = null;
 // Recording interval
-let recordingInterval, Timeout;
- | null;
-null;
+let recordingInterval = null;
 // Screenshot interval (ms)
 const SCREENSHOT_INTERVAL = 1000;
 // Mouse tracking interval (ms)
 const MOUSE_TRACK_INTERVAL = 50;
 // Last mouse position
-let lastMousePos = { x, y };
+let lastMousePos = { x: 0, y: 0 };
 /**
  * Start recording
  * @param name - Recording name
@@ -35,12 +30,14 @@ export function startRecording(name, options = {}) {
     }
     log.info(`Starting recording: ${name}`);
     const session = {
-        id() { },
+        id: generateId("osr"),
         name,
-        startTime() { },
+        startTime: nowMs(),
         steps: [],
         state: "recording",
-        metadata,
+        metadata: {
+            screenResolution: getScreenResolution(),
+        },
     };
     activeSession = session;
     // Start mouse tracking
@@ -54,7 +51,7 @@ export function startRecording(name, options = {}) {
     // Record initial step
     recordStep({
         type: "window_focus",
-        data,
+        data: { action: "recording_started" },
     });
     log.info(`Recording started: ${session.id}`);
     return session;
@@ -62,9 +59,7 @@ export function startRecording(name, options = {}) {
 /**
  * Stop recording
  */
-export function stopRecording() { }
- | null;
-{
+export function stopRecording() {
     if (!activeSession) {
         log.warn("No active recording to stop");
         return null;
@@ -76,7 +71,7 @@ export function stopRecording() { }
     // Record final step
     recordStep({
         type: "window_focus",
-        data,
+        data: { action: "recording_stopped" },
     });
     activeSession.endTime = nowMs();
     activeSession.state = "idle";
@@ -99,7 +94,7 @@ export function pauseRecording() {
     stopScreenshotCapture();
     recordStep({
         type: "window_focus",
-        data,
+        data: { action: "recording_paused" },
     });
     log.info("Recording paused");
     return true;
@@ -116,7 +111,7 @@ export function resumeRecording() {
     startScreenshotCapture();
     recordStep({
         type: "window_focus",
-        data,
+        data: { action: "recording_resumed" },
     });
     log.info("Recording resumed");
     return true;
@@ -124,15 +119,13 @@ export function resumeRecording() {
 /**
  * Record a step
  */
-export function recordStep(partialStep, , RecordedStep, , , ) { }
- > ;
-{
+export function recordStep(partialStep) {
     if (!activeSession || activeSession.state !== "recording") {
         return;
     }
     const step = {
-        id() { },
-        timestamp() { },
+        id: generateId("step"),
+        timestamp: nowMs(),
         ...partialStep,
     };
     activeSession.steps.push(step);
@@ -144,7 +137,7 @@ export function recordStep(partialStep, , RecordedStep, , , ) { }
 export function recordMouseMove(x, y) {
     recordStep({
         type: "mouse_move",
-        data,
+        data: { x, y },
     });
 }
 /**
@@ -153,7 +146,7 @@ export function recordMouseMove(x, y) {
 export function recordMouseClick(x, y, button) {
     recordStep({
         type: "mouse_click",
-        data,
+        data: { x, y, button },
     });
 }
 /**
@@ -162,7 +155,7 @@ export function recordMouseClick(x, y, button) {
 export function recordMouseDrag(startX, startY, endX, endY, button) {
     recordStep({
         type: "mouse_drag",
-        data,
+        data: { startX, startY, endX, endY, button },
     });
 }
 /**
@@ -171,7 +164,7 @@ export function recordMouseDrag(startX, startY, endX, endY, button) {
 export function recordKeyPress(key) {
     recordStep({
         type: "key_press",
-        data,
+        data: { key },
     });
 }
 /**
@@ -180,7 +173,7 @@ export function recordKeyPress(key) {
 export function recordKeyCombination(keys) {
     recordStep({
         type: "key_combination",
-        data,
+        data: { keys },
     });
 }
 /**
@@ -189,7 +182,7 @@ export function recordKeyCombination(keys) {
 export function recordTypeText(text) {
     recordStep({
         type: "type_text",
-        data,
+        data: { text },
     });
 }
 /**
@@ -198,7 +191,7 @@ export function recordTypeText(text) {
 export function recordWindowFocus(windowTitle, app) {
     recordStep({
         type: "window_focus",
-        data,
+        data: { windowTitle, app },
     });
 }
 /**
@@ -230,9 +223,7 @@ function stopMouseTracking() {
     }
 }
 // Screenshot capture interval
-let screenshotInterval, Timeout;
- | null;
-null;
+let screenshotInterval = null;
 /**
  * Start screenshot capture
  */
@@ -240,7 +231,7 @@ function startScreenshotCapture() {
     if (screenshotInterval)
         return;
     screenshotInterval = setInterval(() => {
-        captureScreenshot().then(screenshot => {
+        captureScreenshot().then((screenshot) => {
             if (screenshot && activeSession) {
                 // Attach screenshot to last step or create new step
                 const lastStep = activeSession.steps[activeSession.steps.length - 1];
@@ -263,28 +254,25 @@ function stopScreenshotCapture() {
 /**
  * Capture screenshot
  */
-async function captureScreenshot() { }
-<string /> | null > {
-    try: {
-        const: native = require("../native-bridge.js"),
-        if(native) { }, : .captureScreenshot
+async function captureScreenshot() {
+    try {
+        const native = require("../native-bridge.js");
+        if (native.captureScreenshot) {
+            return native.captureScreenshot();
+        }
+        return null;
     }
-};
-{
-    return native.captureScreenshot();
-}
-return null;
-try { }
-catch (error) {
-    log.error(`Screenshot capture failed: ${error.message}`);
-    return null;
+    catch (error) {
+        log.error(`Screenshot capture failed: ${error.message}`);
+        return null;
+    }
 }
 /**
  * Get screen resolution
  */
 function getScreenResolution() {
     // Default resolution
-    return { width, height };
+    return { width: 1920, height: 1080 };
 }
 /**
  * Save recording to memory
@@ -303,9 +291,7 @@ function saveRecordingToMemory(session) {
 /**
  * Get active recording session
  */
-export function getActiveSession() { }
- | null;
-{
+export function getActiveSession() {
     return activeSession;
 }
 /**

@@ -18,7 +18,14 @@ export function createDefaultSandboxConfig() {
         timeoutMs: 30_000,
         maxMemoryMB: 256,
         allowedModules: ["path", "url", "crypto", "util"],
-        blockedAPIs: ["child_process", "fs", "net", "dgram", "cluster", "worker_threads"],
+        blockedAPIs: [
+            "child_process",
+            "fs",
+            "net",
+            "dgram",
+            "cluster",
+            "worker_threads",
+        ],
     };
 }
 // ============================================================================
@@ -275,12 +282,21 @@ function validateCode(code) {
         { pattern: /\bXMLHttpRequest\b/, desc: "XMLHttpRequest is not allowed" },
         { pattern: /\bWebSocket\b/, desc: "WebSocket is not allowed" },
         { pattern: /\blocalStorage\b/, desc: "localStorage access is not allowed" },
-        { pattern: /\bsessionStorage\b/, desc: "sessionStorage access is not allowed" },
+        {
+            pattern: /\bsessionStorage\b/,
+            desc: "sessionStorage access is not allowed",
+        },
         { pattern: /\bdocument\b/, desc: "document access is not allowed" },
         { pattern: /\bwindow\b/, desc: "window access is not allowed" },
-        { pattern: /\bconstructor\s*\[\s*"prototype"\s*\]/, desc: "Prototype pollution attempt detected" },
+        {
+            pattern: /\bconstructor\s*\[\s*"prototype"\s*\]/,
+            desc: "Prototype pollution attempt detected",
+        },
         { pattern: /__proto__/, desc: "Prototype access is not allowed" },
-        { pattern: /prototype\s*\.\s*constructor/, desc: "Constructor manipulation is not allowed" },
+        {
+            pattern: /prototype\s*\.\s*constructor/,
+            desc: "Constructor manipulation is not allowed",
+        },
     ];
     for (const { pattern, desc } of dangerousPatterns) {
         if (pattern.test(code)) {
@@ -289,7 +305,10 @@ function validateCode(code) {
     }
     // Check code length
     if (code.length > 100_000) {
-        return { valid: false, reason: "Code exceeds maximum length of 100,000 characters" };
+        return {
+            valid: false,
+            reason: "Code exceeds maximum length of 100,000 characters",
+        };
     }
     return { valid: true };
 }

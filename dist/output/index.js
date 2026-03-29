@@ -15,13 +15,13 @@ const log = createSubsystemLogger("output");
 export function showNotification(title, message, type = "info") {
     log.info(`Showing notification [${type}]: ${title}`);
     try {
-        const { execSync } = require("node");
+        const { execSync } = require("node:child_process");
         // Escape special characters
         const escapedTitle = title.replace(/"/g, '""');
         const escapedMessage = message.replace(/"/g, '""');
         const script = `
       Add-Type -AssemblyName System.Windows.Forms
-      [System.Windows.Forms.MessageBox]:("${escapedMessage}", "${escapedTitle}")
+      [System.Windows.Forms.MessageBox]::Show("${escapedMessage}", "${escapedTitle}")
     `;
         // For non-blocking notifications, use Windows Toast or similar
         // This is a simplified implementation
@@ -47,7 +47,7 @@ export function pushProgress(taskId, progress, message) {
         taskId,
         progress,
         message,
-        timestamp, : .now(),
+        timestamp: Date.now(),
     };
     log.debug(`Progress data: ${JSON.stringify(progressData)}`);
 }
@@ -56,17 +56,17 @@ export function pushProgress(taskId, progress, message) {
  * @param error - Error object or message
  * @param context - Error context
  */
-export function showFriendlyError(error, , string, context) {
-    const errorMessage = error instanceof Error ? error.message : ;
-    const fullMessage = context ? `${context}: ${errorMessage}` : ;
+export function showFriendlyError(error, context) {
+    const errorMessage = error instanceof Error ? error.message : error;
+    const fullMessage = context ? `${context}: ${errorMessage}` : errorMessage;
     log.error(`Friendly error: ${fullMessage}`);
     // Map technical errors to user-friendly messages
     const friendlyMessages = {
-        "ENOENT": "找不到指定的文件或路径",
-        "EACCES": "权限不足，无法访问",
-        "ECONNREFUSED": "连接被拒绝，请检查服务是否运行",
-        "ETIMEDOUT": "连接超时，请检查网络",
-        "ENOTFOUND": "无法找到指定的地址",
+        ENOENT: "找不到指定的文件或路径",
+        EACCES: "权限不足，无法访问",
+        ECONNREFUSED: "连接被拒绝，请检查服务是否运行",
+        ETIMEDOUT: "连接超时，请检查网络",
+        ENOTFOUND: "无法找到指定的地址",
     };
     let friendlyMessage = errorMessage;
     for (const [code, message] of Object.entries(friendlyMessages)) {
@@ -138,7 +138,7 @@ export function updateStatusBar(status, icon) {
 export function playSound(type = "info") {
     log.debug(`Playing sound: ${type}`);
     try {
-        const { execSync } = require("node");
+        const { execSync } = require("node:child_process");
         // Use Windows system sounds
         const soundMap = {
             success: "SystemAsterisk",

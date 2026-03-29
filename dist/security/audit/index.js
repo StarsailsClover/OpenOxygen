@@ -3,8 +3,8 @@
  *
  * 全链路审计：记录所有系统操作，支持查询、告警和事务回滚。
  */
-import fs from "node/promises";
-import path from "node";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { createSubsystemLogger } from "../../logging/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
 import { resolveStateDir } from "../../core/config/index.js";
@@ -28,14 +28,14 @@ export class AuditTrail {
      */
     async record(params) {
         const entry = {
-            id() { },
-            timestamp() { },
-            operation, : .operation,
-            actor, : .actor,
-            target, : .target,
-            severity, : .severity ?? "info",
-            details, : .details,
-            rollbackable, : .rollbackable ?? false,
+            id: generateId("audit"),
+            timestamp: nowMs(),
+            operation: params.operation,
+            actor: params.actor,
+            target: params.target,
+            severity: params.severity ?? "info",
+            details: params.details,
+            rollbackable: params.rollbackable ?? false,
         };
         this.entries.push(entry);
         // Trim in-memory buffer
@@ -87,7 +87,7 @@ export class AuditTrail {
     async appendToFile(entry) {
         try {
             const dir = path.dirname(this.filePath);
-            await fs.mkdir(dir, { recursive });
+            await fs.mkdir(dir, { recursive: true });
             await fs.appendFile(this.filePath, JSON.stringify(entry) + "\n", "utf-8");
         }
         catch (err) {
@@ -111,9 +111,9 @@ export class AuditTrail {
     }
     getStats() {
         return {
-            total, : .entries.length,
-            critical, : .entries.filter((e) => e.severity === "critical").length,
-            rollbackable, : .entries.filter((e) => e.rollbackable).length,
+            total: this.entries.length,
+            critical: this.entries.filter((e) => e.severity === "critical").length,
+            rollbackable: this.entries.filter((e) => e.rollbackable).length,
         };
     }
 }

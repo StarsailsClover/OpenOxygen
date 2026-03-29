@@ -5,8 +5,7 @@
 import { createSubsystemLogger } from "../logging/index.js";
 const log = createSubsystemLogger("ui/hotkey");
 // Registered hotkeys
-const registeredHotkeys = new Map < string;
-() => void  > ();
+const registeredHotkeys = new Map();
 // Hotkey combinations
 export const DEFAULT_HOTKEYS = {
     QUICK_INPUT: "Alt+Space",
@@ -23,7 +22,7 @@ export function registerHotkey(combination, callback) {
     log.info(`Registering hotkey: ${combination}`);
     try {
         // Parse combination
-        const keys = combination.split("+").map(k => k.trim().toLowerCase());
+        const keys = combination.split("+").map((k) => k.trim().toLowerCase());
         // Store callback
         registeredHotkeys.set(combination.toLowerCase(), callback);
         // Register with Windows (simplified)

@@ -4,14 +4,6 @@
  * 插件开发 SDK：提供类型定义和辅助函数，供第三方插件开发者使用。
  * 兼容 OpenClaw 的 plugin-sdk 导出接口。
  */
-addHook;
-addTool;
-onActivate;
-PluginBuilder;
-onDeactivate;
-PluginBuilder;
-build: () => OxygenPluginDefinition;
-;
 /**
  * Fluent builder for creating OpenOxygen plugins.
  *
@@ -28,23 +20,22 @@ build: () => OxygenPluginDefinition;
  *   .addTool({
  *     name: "my-tool",
  *     description: "Does something useful",
- *     parameters } },
- *     execute (params) => ({ success, output.input, durationMs }),
+ *     parameters: { type: "object", properties: { input: { type: "string" } } },
+ *     execute: async (params) => ({ success: true, output: params.input, durationMs: 0 }),
  *   })
  *   .build();
  * ```
  */
 export function definePlugin() {
-    let manifest = { name: "unnamed", version: "0.0.0", entryPoint: "index.js" };
+    let manifest = {
+        name: "unnamed",
+        version: "0.0.0",
+        entryPoint: "index.js",
+    };
     const hooks = [];
-    const tools;
-    <OxygenPluginDefinition />;
-    ["tools"] > ;
-    [];
+    const tools = [];
     let activateHandler;
-     | undefined;
     let deactivateHandler;
-     | undefined;
     const builder = {
         setManifest(m) {
             manifest = m;
@@ -69,10 +60,10 @@ export function definePlugin() {
         build() {
             return {
                 manifest,
-                hooks, : .length > 0 ? hooks : ,
-                tools, : .length > 0 ? tools : ,
-                activate,
-                deactivate,
+                hooks: hooks.length > 0 ? hooks : undefined,
+                tools: tools.length > 0 ? tools : undefined,
+                activate: activateHandler,
+                deactivate: deactivateHandler,
             };
         },
     };
@@ -80,8 +71,8 @@ export function definePlugin() {
 }
 // ─── Tool Helpers ───────────────────────────────────────────────────────────
 export function createToolResult(output, durationMs = 0) {
-    return { success, output, durationMs };
+    return { success: true, output, durationMs };
 }
 export function createToolError(error, durationMs = 0) {
-    return { success, error, durationMs };
+    return { success: false, error, durationMs };
 }

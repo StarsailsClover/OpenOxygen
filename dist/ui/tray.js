@@ -6,8 +6,6 @@
  */
 import { createSubsystemLogger } from "../logging/index.js";
 const log = createSubsystemLogger("ui/tray");
-// Tray menu items
-export 
 // Tray instance
 let trayInstance = null;
 /**
@@ -20,9 +18,9 @@ export function createTray(iconPath = "icon.png") {
         // This would use native APIs to create tray
         // For now, create placeholder
         trayInstance = {
-            icon,
+            icon: iconPath,
             tooltip: "OpenOxygen",
-            visible,
+            visible: true,
         };
         log.info("System tray created");
         return true;

@@ -4,21 +4,21 @@
  * 结构化日志系统，支持子系统标签、级别过滤和控制台捕获。
  * 独立实现，不依赖 OpenClaw 的 logging 模块。
  */
-import process from "node";
-export const LOG_LEVEL_PRIORITY = {
-    debug,
-    info,
-    warn,
-    error,
-    fatal,
+import process from "node:process";
+const LOG_LEVEL_PRIORITY = {
+    debug: 0,
+    info: 1,
+    warn: 2,
+    error: 3,
+    fatal: 4,
 };
 let globalMinLevel = "info";
 let consoleCapturing = false;
 const originalConsole = {
-    log, : .log,
-    warn, : .warn,
-    error, : .error,
-    debug, : .debug,
+    log: console.log,
+    warn: console.warn,
+    error: console.error,
+    debug: console.debug,
 };
 export function setLogLevel(level) {
     globalMinLevel = level;
@@ -37,15 +37,10 @@ function formatMessage(subsystem, level, args) {
     const lvl = level.toUpperCase().padEnd(5);
     const prefix = `[${ts}] [${lvl}] [${subsystem}]`;
     const msg = args
-        .map((a) => (typeof a === "string" ? a.stringify(a, null, 0) : ))
+        .map((a) => (typeof a === "string" ? a : JSON.stringify(a, null, 0)))
         .join(" ");
     return `${prefix} ${msg}`;
 }
-info;
-warn;
-error;
-fatal;
-;
 /**
  * Create a logger scoped to a subsystem name.
  * All output goes through the structured pipeline.
@@ -66,11 +61,11 @@ export function createSubsystemLogger(subsystem) {
         }
     };
     return {
-        debug(, args) { },
-        info(, args) { },
-        warn(, args) { },
-        error(, args) { },
-        fatal(, args) { },
+        debug: (...args) => emit("debug", args),
+        info: (...args) => emit("info", args),
+        warn: (...args) => emit("warn", args),
+        error: (...args) => emit("error", args),
+        fatal: (...args) => emit("fatal", args),
     };
 }
 /**
@@ -110,7 +105,7 @@ export function disableConsoleCapture() {
 /**
  * Initialize log level from environment variable.
  */
-export function initLogLevelFromEnv(env, ProcessEnv = process.env) {
+export function initLogLevelFromEnv(env = process.env) {
     const raw = env["OPENOXYGEN_LOG_LEVEL"];
     if (raw && raw in LOG_LEVEL_PRIORITY) {
         setLogLevel(raw);

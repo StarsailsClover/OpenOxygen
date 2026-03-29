@@ -7,10 +7,6 @@
 import { createSubsystemLogger } from "../../logging/index.js";
 const log = createSubsystemLogger("inference/reflection");
 // ============================================================================
-// Reflection Types
-// ============================================================================
-export export export export export export export export 
-// ============================================================================
 // Reflection Engine
 // ============================================================================
 export class ReflectionEngine {
@@ -53,7 +49,7 @@ export class ReflectionEngine {
             insights,
             recommendations,
             strategyAdjustments,
-            confidence, : .calculateConfidence(insights, context),
+            confidence: this.calculateConfidence(insights, context),
         };
         // Store in history
         this.addToHistory(result);
@@ -112,19 +108,22 @@ export class ReflectionEngine {
     // Private Methods
     // ============================================================================
     initializeDefaultPatterns() {
-        // Pattern Error Rate
+        // Pattern: High Error Rate
         this.addPattern({
             id: "high-error-rate",
             name: "High Error Rate Detection",
             description: "Detects executions with high error rates",
-            matcher, : .metrics.errors > 3 || ctx.metrics.errors / ctx.metrics.totalSteps > 0.3,
+            matcher: (ctx) => ctx.metrics.errors > 3 ||
+                ctx.metrics.errors / ctx.metrics.totalSteps > 0.3,
             action: (ctx) => ({
                 insights: [
                     {
                         type: "error",
                         description: `High error rate detected: ${ctx.metrics.errors} errors in ${ctx.metrics.totalSteps} steps`,
                         severity: "high",
-                        evidence, : .steps.filter((s) => s.type === "error").map((s) => s.content),
+                        evidence: ctx.steps
+                            .filter((s) => s.type === "error")
+                            .map((s) => s.content),
                     },
                 ],
                 recommendations: [
@@ -139,27 +138,29 @@ export class ReflectionEngine {
                 strategyAdjustments: [
                     {
                         target: "maxRetries",
-                        currentValue,
-                        suggestedValue,
+                        currentValue: 3,
+                        suggestedValue: 5,
                         rationale: "High error rate suggests need for more retries",
                     },
                 ],
-                confidence, .8: ,
+                confidence: 0.8,
             }),
         });
-        // Pattern Execution
+        // Pattern: Slow Execution
         this.addPattern({
             id: "slow-execution",
             name: "Slow Execution Detection",
             description: "Detects unusually slow executions",
-            matcher, : .metrics.totalDurationMs > 60000, // > 1 minute
+            matcher: (ctx) => ctx.metrics.totalDurationMs > 60000, // > 1 minute
             action: (ctx) => ({
                 insights: [
                     {
                         type: "bottleneck",
                         description: `Slow execution detected: ${ctx.metrics.totalDurationMs}ms total`,
                         severity: "medium",
-                        evidence: [`Average step duration: ${ctx.metrics.totalDurationMs / ctx.metrics.totalSteps}ms`],
+                        evidence: [
+                            `Average step duration: ${ctx.metrics.totalDurationMs / ctx.metrics.totalSteps}ms`,
+                        ],
                     },
                 ],
                 recommendations: [
@@ -174,27 +175,29 @@ export class ReflectionEngine {
                 strategyAdjustments: [
                     {
                         target: "timeoutMs",
-                        currentValue,
-                        suggestedValue, : .min(ctx.metrics.totalDurationMs * 1.5, 300000),
+                        currentValue: 30000,
+                        suggestedValue: Math.min(ctx.metrics.totalDurationMs * 1.5, 300000),
                         rationale: "Adjust timeout based on actual execution time",
                     },
                 ],
-                confidence, .7: ,
+                confidence: 0.7,
             }),
         });
-        // Pattern Efficiency
+        // Pattern: Token Efficiency
         this.addPattern({
             id: "token-efficiency",
             name: "Token Usage Analysis",
             description: "Analyzes token usage efficiency",
-            matcher, : .metrics.tokenUsage > 4000,
+            matcher: (ctx) => ctx.metrics.tokenUsage > 4000,
             action: (ctx) => ({
                 insights: [
                     {
                         type: "optimization",
                         description: `High token usage: ${ctx.metrics.tokenUsage} tokens`,
                         severity: "medium",
-                        evidence: [`Average per step: ${ctx.metrics.tokenUsage / ctx.metrics.totalSteps} tokens`],
+                        evidence: [
+                            `Average per step: ${ctx.metrics.tokenUsage / ctx.metrics.totalSteps} tokens`,
+                        ],
                     },
                 ],
                 recommendations: [
@@ -209,20 +212,20 @@ export class ReflectionEngine {
                 strategyAdjustments: [
                     {
                         target: "maxTokens",
-                        currentValue,
-                        suggestedValue,
+                        currentValue: 2048,
+                        suggestedValue: 1536,
                         rationale: "Reduce max tokens to encourage efficiency",
                     },
                 ],
-                confidence, .6: ,
+                confidence: 0.6,
             }),
         });
-        // Pattern Pattern
+        // Pattern: Success Pattern
         this.addPattern({
             id: "success-pattern",
             name: "Success Pattern Recognition",
             description: "Identifies patterns in successful executions",
-            matcher, : .outcome === "success" && ctx.metrics.totalSteps < 10,
+            matcher: (ctx) => ctx.outcome === "success" && ctx.metrics.totalSteps < 10,
             action: (ctx) => ({
                 insights: [
                     {
@@ -242,7 +245,7 @@ export class ReflectionEngine {
                     },
                 ],
                 strategyAdjustments: [],
-                confidence, .9: ,
+                confidence: 0.9,
             }),
         });
     }

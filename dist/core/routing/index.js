@@ -7,24 +7,14 @@
 import { createSubsystemLogger } from "../../logging/index.js";
 import { buildMainSessionKey, buildPeerSessionKey, DEFAULT_ACCOUNT_ID, DEFAULT_AGENT_ID, normalizeAgentId, } from "../sessions/index.js";
 const log = createSubsystemLogger("routing");
-channel ?  : ;
-accountId ?  : ;
-peerId ?  : ;
-peerKind ?  : "user" | "group";
-;
 export function listBindings(config) {
     const bindings = [];
     for (const agent of config.agents.list) {
         // Each agent implicitly binds to all channels unless restricted
-        bindings.push({ agentId, : .id });
+        bindings.push({ agentId: agent.id });
     }
     return bindings;
 }
-channel;
-accountId ?  | null : ;
-peerId ?  | null : ;
-peerKind ?  : "user" | "group";
-;
 // ─── Route Resolution ───────────────────────────────────────────────────────
 export function resolveRoute(input) {
     const { config, channel, accountId, peerId, peerKind } = input;
@@ -37,10 +27,10 @@ export function resolveRoute(input) {
             const sessionKey = buildPeerSessionKey(agentId, channel, peerId);
             return {
                 agentId,
-                channelId,
-                accountId,
+                channelId: channel,
+                accountId: normalizedAccount,
                 sessionKey,
-                mainSessionKey(agentId) { },
+                mainSessionKey: buildMainSessionKey(agentId),
                 matchedBy: "binding.peer",
             };
         }
@@ -51,13 +41,14 @@ export function resolveRoute(input) {
         if (accountMatch) {
             const agentId = normalizeAgentId(accountMatch.agentId);
             const sessionKey = peerId
-                ? buildPeerSessionKey(agentId, channel, peerId)(agentId) : ;
+                ? buildPeerSessionKey(agentId, channel, peerId)
+                : buildMainSessionKey(agentId);
             return {
                 agentId,
-                channelId,
-                accountId,
+                channelId: channel,
+                accountId: normalizedAccount,
                 sessionKey,
-                mainSessionKey(agentId) { },
+                mainSessionKey: buildMainSessionKey(agentId),
                 matchedBy: "binding.account",
             };
         }
@@ -67,37 +58,36 @@ export function resolveRoute(input) {
     if (channelMatch) {
         const agentId = normalizeAgentId(channelMatch.agentId);
         const sessionKey = peerId
-            ? buildPeerSessionKey(agentId, channel, peerId)(agentId) : ;
+            ? buildPeerSessionKey(agentId, channel, peerId)
+            : buildMainSessionKey(agentId);
         return {
             agentId,
-            channelId,
-            accountId,
+            channelId: channel,
+            accountId: normalizedAccount,
             sessionKey,
-            mainSessionKey(agentId) { },
+            mainSessionKey: buildMainSessionKey(agentId),
             matchedBy: "binding.channel",
         };
     }
-    // 4. Default default agent
+    // 4. Default: use default agent
     const defaultAgentId = config.agents.default
         ? normalizeAgentId(config.agents.default)
-        :
-    ;
+        : DEFAULT_AGENT_ID;
     const sessionKey = peerId
-        ? buildPeerSessionKey(defaultAgentId, channel, peerId)(defaultAgentId) : ;
+        ? buildPeerSessionKey(defaultAgentId, channel, peerId)
+        : buildMainSessionKey(defaultAgentId);
     log.debug(`Route resolved to default agent: ${defaultAgentId}`);
     return {
-        agentId,
-        channelId,
-        accountId,
+        agentId: defaultAgentId,
+        channelId: channel,
+        accountId: normalizedAccount,
         sessionKey,
-        mainSessionKey(defaultAgentId) { },
+        mainSessionKey: buildMainSessionKey(defaultAgentId),
         matchedBy: "default",
     };
 }
 // ─── Binding Matcher ────────────────────────────────────────────────────────
-function findBindingMatch(config, criteria) { }
- | null;
-{
+function findBindingMatch(config, criteria) {
     const bindings = listBindings(config);
     for (const binding of bindings) {
         if (criteria.peerId && binding.peerId === criteria.peerId) {
@@ -110,7 +100,10 @@ function findBindingMatch(config, criteria) { }
                 return binding;
             }
         }
-        if (criteria.channel && binding.channel === criteria.channel && !binding.peerId && !binding.accountId) {
+        if (criteria.channel &&
+            binding.channel === criteria.channel &&
+            !binding.peerId &&
+            !binding.accountId) {
             return binding;
         }
     }

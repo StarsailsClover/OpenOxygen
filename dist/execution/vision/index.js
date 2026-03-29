@@ -21,18 +21,27 @@ async function ensureDir(dir) {
 // ─── UIA Type Mapping ───────────────────────────────────────────────────────
 function mapUiaControlType(controlType) {
     const mapping = {
-        Button: "button", SplitButton: "button",
-        Edit: "input", ComboBox: "input",
-        Text: "text", Document: "text",
+        Button: "button",
+        SplitButton: "button",
+        Edit: "input",
+        ComboBox: "input",
+        Text: "text",
+        Document: "text",
         Image: "image",
         Hyperlink: "link",
-        Menu: "menu", MenuItem: "menu",
+        Menu: "menu",
+        MenuItem: "menu",
         Window: "window",
         ToolBar: "toolbar",
-        Tab: "tab", TabItem: "tab",
-        CheckBox: "checkbox", RadioButton: "checkbox",
-        List: "list", ListItem: "list", DataGrid: "list",
-        Pane: "panel", Group: "panel",
+        Tab: "tab",
+        TabItem: "tab",
+        CheckBox: "checkbox",
+        RadioButton: "checkbox",
+        List: "list",
+        ListItem: "list",
+        DataGrid: "list",
+        Pane: "panel",
+        Group: "panel",
     };
     return mapping[controlType] ?? "unknown";
 }
@@ -102,7 +111,7 @@ export class OxygenUltraVision {
         log.debug(`UIA: ${uiaElements.length} elements in ${nowMs() - uiaStart}ms`);
         // ── Layer 2: Image Processing (precise/full) ────────────────
         if (mode === "precise" || mode === "full") {
-            const screenshotPath = query.screenshotPath ?? await this.captureScreen();
+            const screenshotPath = query.screenshotPath ?? (await this.captureScreen());
             analysis.screenshotPath = screenshotPath;
             const visionStart = nowMs();
             const visionElements = await this.runImageProcessing(screenshotPath);
@@ -121,7 +130,8 @@ export class OxygenUltraVision {
         // ── Layer 3: LLM Understanding (full only) ──────────────────
         if (mode === "full" && this.inferenceEngine) {
             if (!analysis.screenshotPath) {
-                analysis.screenshotPath = query.screenshotPath ?? await this.captureScreen();
+                analysis.screenshotPath =
+                    query.screenshotPath ?? (await this.captureScreen());
             }
             const llmStart = nowMs();
             const llmDescription = await this.runLlmAnalysis(query.instruction, analysis.elements, analysis.activeWindow);
@@ -200,7 +210,10 @@ export class OxygenUltraVision {
     async runLlmAnalysis(instruction, elements, activeWindow) {
         if (!this.inferenceEngine)
             return "";
-        const elementSummary = elements.slice(0, 50).map((e) => `[${e.type}] "${e.label}" @ (${e.bounds.x},${e.bounds.y},${e.bounds.width}x${e.bounds.height}) ${e.interactable ? "✓" : "✗"}`).join("\n");
+        const elementSummary = elements
+            .slice(0, 50)
+            .map((e) => `[${e.type}] "${e.label}" @ (${e.bounds.x},${e.bounds.y},${e.bounds.width}x${e.bounds.height}) ${e.interactable ? "✓" : "✗"}`)
+            .join("\n");
         const messages = [
             {
                 role: "user",
@@ -258,7 +271,14 @@ Describe what you see and suggest the best action to fulfill the instruction. Be
             return { type: "click", params: { x: cx, y: cy } };
         }
         if (/type|输入|enter|填/.test(lower)) {
-            return { type: "type", params: { x: cx, y: cy, text: instruction.replace(/^(type|输入|enter|填写?)\s*/i, "") } };
+            return {
+                type: "type",
+                params: {
+                    x: cx,
+                    y: cy,
+                    text: instruction.replace(/^(type|输入|enter|填写?)\s*/i, ""),
+                },
+            };
         }
         if (/scroll|滚动/.test(lower)) {
             return { type: "scroll", params: { direction: "down", amount: 3 } };

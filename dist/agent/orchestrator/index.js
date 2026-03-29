@@ -13,42 +13,8 @@
  */
 import { createSubsystemLogger } from "../../logging/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
-import { delegateTask, updateTaskStatus, executeDelegatedTask } from "../communication/index.js";
-import { executeWithStrategy } from "../../execution/unified/index.js";
+import { executeWithStrategy, } from "../../execution/unified/index.js";
 const log = createSubsystemLogger("agent/orchestrator");
-name;
-instruction;
-mode ?  : ;
-dependsOn ?  : ; // SubTask IDs
-retryCount;
-maxRetries;
-timeoutMs;
-result ?  : ;
-status: "pending" | "waiting" | "running" | "completed" | "failed" | "skipped";
-startedAt ?  : ;
-completedAt ?  : ;
-;
-name;
-instruction;
-subtasks;
-strategy: "sequential" | "parallel" | "dag"; // DAG = Directed Acyclic Graph
-status: "pending" | "running" | "completed" | "failed" | "partial";
-createdAt;
-startedAt ?  : ;
-completedAt ?  : ;
-results;
-;
-description;
-subtasks < {
-    name,
-    instruction,
-    mode,
-    dependsOn,
-    maxRetries,
-    timeoutMs
-} > ;
-strategy: "sequential" | "parallel" | "dag";
-;
 // ─── Task Decomposition ─────────────────────────────────────────────────────
 /**
  * 基于 LLM 的任务分解（简化版：使用关键词匹配）
@@ -56,20 +22,41 @@ strategy: "sequential" | "parallel" | "dag";
 export function decomposeTask(instruction) {
     const lower = instruction.toLowerCase();
     // 部署项目模式
-    if (lower.includes("部署") || lower.includes("deploy") || lower.includes("发布")) {
+    if (lower.includes("部署") ||
+        lower.includes("deploy") ||
+        lower.includes("发布")) {
         return {
             name: "部署项目",
             description: `部署: ${instruction}`,
             strategy: "sequential",
             subtasks: [
-                { name: "构建", instruction: "npm run build", mode: "terminal", maxRetries },
-                { name: "测试", instruction: "npm test", mode: "terminal", dependsOn: ["构建"], maxRetries },
-                { name: "部署", instruction: "npm run deploy", mode: "terminal", dependsOn: ["测试"], maxRetries },
+                {
+                    name: "构建",
+                    instruction: "npm run build",
+                    mode: "terminal",
+                    maxRetries: 1,
+                },
+                {
+                    name: "测试",
+                    instruction: "npm test",
+                    mode: "terminal",
+                    dependsOn: ["构建"],
+                    maxRetries: 2,
+                },
+                {
+                    name: "部署",
+                    instruction: "npm run deploy",
+                    mode: "terminal",
+                    dependsOn: ["测试"],
+                    maxRetries: 1,
+                },
             ],
         };
     }
     // 代码审查模式
-    if (lower.includes("审查") || lower.includes("review") || lower.includes("code review")) {
+    if (lower.includes("审查") ||
+        lower.includes("review") ||
+        lower.includes("code review")) {
         return {
             name: "代码审查",
             description: `审查: ${instruction}`,
@@ -77,31 +64,48 @@ export function decomposeTask(instruction) {
             subtasks: [
                 { name: "语法检查", instruction: "npm run lint", mode: "terminal" },
                 { name: "类型检查", instruction: "npx tsc --noEmit", mode: "terminal" },
-                { name: "单元测试", instruction: "npm run test", mode: "terminal" },
+                {
+                    name: "单元测试",
+                    instruction: "npm run test:unit",
+                    mode: "terminal",
+                },
             ],
         };
     }
     // 数据收集模式
-    if (lower.includes("收集") || lower.includes("收集数据") || lower.includes("gather")) {
+    if (lower.includes("收集") ||
+        lower.includes("收集数据") ||
+        lower.includes("gather")) {
         return {
             name: "数据收集",
             description: `收集: ${instruction}`,
             strategy: "parallel",
             subtasks: [
-                { name: "打开网站A", instruction: "打开 https://site-a.com 收集数据", mode: "browser" },
-                { name: "打开网站B", instruction: "打开 https://site-b.com 收集数据", mode: "browser" },
-                { name: "整理数据", instruction: "整理收集到的数据", mode: "terminal", dependsOn: ["打开网站A", "打开网站B"] },
+                {
+                    name: "打开网站A",
+                    instruction: "打开 https://site-a.com 收集数据",
+                    mode: "browser",
+                },
+                {
+                    name: "打开网站B",
+                    instruction: "打开 https://site-b.com 收集数据",
+                    mode: "browser",
+                },
+                {
+                    name: "整理数据",
+                    instruction: "整理收集到的数据",
+                    mode: "terminal",
+                    dependsOn: ["打开网站A", "打开网站B"],
+                },
             ],
         };
     }
     // 默认：简单顺序执行
     return {
         name: "执行任务",
-        description,
+        description: instruction,
         strategy: "sequential",
-        subtasks: [
-            { name: "执行", instruction, mode },
-        ],
+        subtasks: [{ name: "执行", instruction, mode: undefined }],
     };
 }
 // ─── Orchestrator ───────────────────────────────────────────────────────────
@@ -109,33 +113,31 @@ const orchestrations = new Map();
 export function createOrchestration(instruction, plan) {
     const taskPlan = plan || decomposeTask(instruction);
     const subtasks = taskPlan.subtasks.map((st, index) => ({
-        id() { },
-        name, : .name || `步骤 ${index + 1}`,
-        instruction, : .instruction,
-        mode, : .mode,
-        dependsOn, : .dependsOn,
-        retryCount,
-        maxRetries, : .maxRetries ?? 1,
-        timeoutMs, : .timeoutMs ?? 60000,
+        id: generateId("subtask"),
+        name: st.name || `步骤 ${index + 1}`,
+        instruction: st.instruction,
+        mode: st.mode,
+        dependsOn: st.dependsOn,
+        retryCount: 0,
+        maxRetries: st.maxRetries ?? 1,
+        timeoutMs: st.timeoutMs ?? 60000,
         status: "pending",
     }));
     const orchestration = {
-        id() { },
-        name, : .name,
+        id: generateId("orch"),
+        name: taskPlan.name,
         instruction,
         subtasks,
-        strategy, : .strategy,
+        strategy: taskPlan.strategy,
         status: "pending",
-        createdAt() { },
-        results,
+        createdAt: nowMs(),
+        results: { success: 0, failed: 0, skipped: 0, total: subtasks.length },
     };
     orchestrations.set(orchestration.id, orchestration);
     log.info(`Orchestration created: ${orchestration.id} (${taskPlan.name}, ${subtasks.length} subtasks, ${taskPlan.strategy})`);
     return orchestration;
 }
-export function getOrchestration(id) { }
- | null;
-{
+export function getOrchestration(id) {
     return orchestrations.get(id) || null;
 }
 // ─── Execution Engine ───────────────────────────────────────────────────────
@@ -150,13 +152,13 @@ export async function executeOrchestration(orchestrationId, options) {
     try {
         switch (orch.strategy) {
             case "sequential":
-                executeSequential(orch, options);
+                await executeSequential(orch, options);
                 break;
             case "parallel":
-                executeParallel(orch, options);
+                await executeParallel(orch, options);
                 break;
             case "dag":
-                executeDAG(orch, options);
+                await executeDAG(orch, options);
                 break;
         }
     }
@@ -176,8 +178,9 @@ async function executeSequential(orch, options) {
     for (const subtask of orch.subtasks) {
         await executeSubtask(orch, subtask, options);
         // Stop if critical subtask fails
-        if (subtask.status === "failed" && subtask.retryCount >= subtask.maxRetries) {
-            // Mark remaining 
+        if (subtask.status === "failed" &&
+            subtask.retryCount >= subtask.maxRetries) {
+            // Mark remaining as skipped
             for (const remaining of orch.subtasks) {
                 if (remaining.status === "pending") {
                     remaining.status = "skipped";
@@ -189,7 +192,7 @@ async function executeSequential(orch, options) {
 }
 // ─── Parallel Execution ─────────────────────────────────────────────────────
 async function executeParallel(orch, options) {
-    const promises = orch.subtasks.map(st => executeSubtask(orch, st, options));
+    const promises = orch.subtasks.map((st) => executeSubtask(orch, st, options));
     await Promise.all(promises);
 }
 // ─── DAG Execution ──────────────────────────────────────────────────────────
@@ -201,7 +204,7 @@ async function executeDAG(orch, options) {
             return true;
         // Check if all dependencies are completed
         for (const depName of subtask.dependsOn) {
-            const dep = orch.subtasks.find(st => st.name === depName);
+            const dep = orch.subtasks.find((st) => st.name === depName);
             if (!dep)
                 return false;
             if (dep.status !== "completed")
@@ -210,7 +213,7 @@ async function executeDAG(orch, options) {
         return true;
     }
     async function executeReady() {
-        const ready = orch.subtasks.filter(st => st.status === "pending" && !completed.has(st.id) && !failed.has(st.id));
+        const ready = orch.subtasks.filter((st) => st.status === "pending" && !completed.has(st.id) && !failed.has(st.id));
         for (const subtask of ready) {
             if (await canExecute(subtask)) {
                 // Execute immediately (could be parallelized)
@@ -220,15 +223,15 @@ async function executeDAG(orch, options) {
                 }
                 else if (subtask.status === "failed") {
                     failed.add(subtask.id);
-                    // Mark dependents 
+                    // Mark dependents as skipped
                     markDependentsSkipped(orch, subtask.name);
                 }
             }
         }
         // Continue if there are still pending tasks
-        const stillPending = orch.subtasks.some(st => st.status === "pending");
+        const stillPending = orch.subtasks.some((st) => st.status === "pending");
         if (stillPending) {
-            await new Promise(r => setTimeout(r, 100)); // Small delay to prevent busy loop
+            await new Promise((r) => setTimeout(r, 100)); // Small delay to prevent busy loop
             await executeReady();
         }
     }
@@ -253,9 +256,8 @@ async function executeSubtask(orch, subtask, options) {
     try {
         // Use unified executor
         const result = await executeWithStrategy(subtask.instruction, subtask.mode
-            ? { mode, : .mode, confidence, reason: "Orchestrated subtask" }
-            :
-        );
+            ? { mode: subtask.mode, confidence: 1, reason: "Orchestrated subtask" }
+            : undefined);
         subtask.result = result;
         subtask.completedAt = nowMs();
         if (result.success) {
@@ -280,11 +282,15 @@ async function executeSubtask(orch, subtask, options) {
         subtask.status = "failed";
         subtask.completedAt = nowMs();
         subtask.result = {
-            success,
-            error, : .message,
-            durationMs,
-            mode, : .mode || "hybrid",
-            strategy,
+            success: false,
+            error: e.message,
+            durationMs: 0,
+            mode: subtask.mode || "hybrid",
+            strategy: {
+                mode: subtask.mode || "hybrid",
+                confidence: 0,
+                reason: "Exception",
+            },
             logs: [],
         };
         log.error(`Subtask exception: ${subtask.name} - ${e.message}`);
@@ -292,28 +298,24 @@ async function executeSubtask(orch, subtask, options) {
     options?.onProgress?.(orch, subtask);
 }
 // ─── Result Calculation ─────────────────────────────────────────────────────
-function calculateResults(orch) { }
-["results"];
-{
+function calculateResults(orch) {
     let success = 0, failed = 0, skipped = 0;
     for (const st of orch.subtasks) {
         switch (st.status) {
-            case "completed"++:
-                ;
+            case "completed":
+                success++;
                 break;
-            case "failed"++:
-                ;
+            case "failed":
+                failed++;
                 break;
-            case "skipped"++:
-                ;
+            case "skipped":
+                skipped++;
                 break;
         }
     }
-    return { success, failed, skipped, total, : .subtasks.length };
+    return { success, failed, skipped, total: orch.subtasks.length };
 }
-function determineFinalStatus(orch) { }
-["status"];
-{
+function determineFinalStatus(orch) {
     if (orch.results.failed === 0 && orch.results.skipped === 0) {
         return "completed";
     }
@@ -335,8 +337,16 @@ export function generateExecutionReport(orch) {
     lines.push("");
     lines.push("子任务:");
     for (const st of orch.subtasks) {
-        const icon = st.status === "completed" ? "✅".status === "failed" ? "❌".status === "skipped" ? "⏭️" : "⏳" :  : ;
-        const duration = st.completedAt && st.startedAt ? `(${((st.completedAt - st.startedAt) / 1000).toFixed(1)}s)` : "";
+        const icon = st.status === "completed"
+            ? "✅"
+            : st.status === "failed"
+                ? "❌"
+                : st.status === "skipped"
+                    ? "⏭️"
+                    : "⏳";
+        const duration = st.completedAt && st.startedAt
+            ? `(${((st.completedAt - st.startedAt) / 1000).toFixed(1)}s)`
+            : "";
         lines.push(`  ${icon} ${st.name.padEnd(20)} ${st.status.padEnd(10)} ${duration}`);
         if (st.result?.error) {
             lines.push(`      错误: ${st.result.error.substring(0, 50)}`);

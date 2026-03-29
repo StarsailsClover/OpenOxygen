@@ -8,16 +8,6 @@ import { createSubsystemLogger } from "../logging/index.js";
 import { generateId, nowMs } from "../utils/index.js";
 import { GlobalMemory } from "../memory/global/index.js";
 const log = createSubsystemLogger("multi-agent/runtime");
-// Agent types
-export 
-// Agent capabilities
-export 
-// Agent status
-export 
-// Agent definition
-export 
-// Task assignment
-export 
 // Agent registry
 const agents = new Map();
 // Task assignments
@@ -28,13 +18,11 @@ const checkpoints = new Map();
  * Register an agent
  * @param agent - Agent to register
  */
-export function registerAgent(agent, , Agent, , , ) { }
- > ;
-{
+export function registerAgent(agent) {
     const fullAgent = {
         ...agent,
-        id() { },
-        lastHeartbeat() { },
+        id: generateId("agent"),
+        lastHeartbeat: nowMs(),
     };
     agents.set(fullAgent.id, fullAgent);
     log.info(`Agent registered: ${fullAgent.name} (${fullAgent.id})`);
@@ -55,9 +43,7 @@ export function unregisterAgent(agentId) {
  * Get agent by ID
  * @param agentId - Agent ID
  */
-export function getAgent(agentId) { }
- | undefined;
-{
+export function getAgent(agentId) {
     return agents.get(agentId);
 }
 /**
@@ -67,13 +53,13 @@ export function getAgent(agentId) { }
 export function listAgents(filter) {
     let result = Array.from(agents.values());
     if (filter?.type) {
-        result = result.filter(a => a.type === filter.type);
+        result = result.filter((a) => a.type === filter.type);
     }
     if (filter?.status) {
-        result = result.filter(a => a.status === filter.status);
+        result = result.filter((a) => a.status === filter.status);
     }
     if (filter?.capability) {
-        result = result.filter(a => a.capabilities.includes(filter.capability));
+        result = result.filter((a) => a.capabilities.includes(filter.capability));
     }
     return result;
 }
@@ -81,17 +67,15 @@ export function listAgents(filter) {
  * Find best agent for task
  * @param requiredCapabilities - Required capabilities
  */
-export function findBestAgent(requiredCapabilities) { }
- | null;
-{
-    const candidates = listAgents({ status: "idle" }).filter(agent => requiredCapabilities.every(cap => agent.capabilities.includes(cap)));
+export function findBestAgent(requiredCapabilities) {
+    const candidates = listAgents({ status: "idle" }).filter((agent) => requiredCapabilities.every((cap) => agent.capabilities.includes(cap)));
     if (candidates.length === 0) {
         return null;
     }
     // Sort by capability match score
     candidates.sort((a, b) => {
-        const scoreA = a.capabilities.filter(c => requiredCapabilities.includes(c)).length;
-        const scoreB = b.capabilities.filter(c => requiredCapabilities.includes(c)).length;
+        const scoreA = a.capabilities.filter((c) => requiredCapabilities.includes(c)).length;
+        const scoreB = b.capabilities.filter((c) => requiredCapabilities.includes(c)).length;
         return scoreB - scoreA;
     });
     return candidates[0];
@@ -104,9 +88,7 @@ export function findBestAgent(requiredCapabilities) { }
 export async function delegateTask(instruction, options = {}) {
     log.info(`Delegating task: ${instruction.substring(0, 50)}...`);
     // Find agent
-    let agent;
-     | null;
-    null;
+    let agent = null;
     if (options.preferredAgent) {
         agent = getAgent(options.preferredAgent);
         if (agent && agent.status !== "idle") {
@@ -124,11 +106,11 @@ export async function delegateTask(instruction, options = {}) {
     }
     // Create assignment
     const assignment = {
-        id() { },
-        agentId, : .id,
+        id: generateId("task"),
+        agentId: agent.id,
         instruction,
         status: "assigned",
-        startTime() { },
+        startTime: nowMs(),
     };
     assignments.set(assignment.id, assignment);
     // Update agent status
@@ -158,7 +140,7 @@ async function executeTaskAsync(assignment, timeoutMs = 30000, allowRetry = true
             setTimeout(() => reject(new Error("Task timeout")), timeoutMs);
         });
         const executionPromise = handleExecutionRequest({
-            instruction, : .instruction,
+            instruction: assignment.instruction,
             mode: "auto",
         });
         const result = await Promise.race([executionPromise, timeoutPromise]);
@@ -168,7 +150,7 @@ async function executeTaskAsync(assignment, timeoutMs = 30000, allowRetry = true
         // Save checkpoint
         saveCheckpoint(assignment.id, {
             result,
-            timestamp() { },
+            timestamp: nowMs(),
         });
         log.info(`Task ${assignment.id} completed: ${assignment.status}`);
     }
@@ -194,9 +176,7 @@ async function executeTaskAsync(assignment, timeoutMs = 30000, allowRetry = true
  * Get task assignment
  * @param assignmentId - Assignment ID
  */
-export function getAssignment(assignmentId) { }
- | undefined;
-{
+export function getAssignment(assignmentId) {
     return assignments.get(assignmentId);
 }
 /**
@@ -226,7 +206,7 @@ export async function waitForTask(assignmentId, timeoutMs = 60000) {
 export function saveCheckpoint(taskId, data) {
     checkpoints.set(taskId, {
         ...data,
-        timestamp() { },
+        timestamp: nowMs(),
     });
     // Also save to persistent memory
     try {
@@ -243,9 +223,7 @@ export function saveCheckpoint(taskId, data) {
  * Load checkpoint
  * @param taskId - Task ID
  */
-export function loadCheckpoint(taskId) { }
- | null;
-{
+export function loadCheckpoint(taskId) {
     // Try memory first
     const checkpoint = checkpoints.get(taskId);
     if (checkpoint) {
@@ -279,8 +257,8 @@ export async function resumeTask(taskId, instruction) {
     }
     // Delegate with checkpoint context
     return delegateTask(instruction, {
-        timeoutMs,
-        allowRetry,
+        timeoutMs: 60000,
+        allowRetry: true,
     });
 }
 /**
@@ -313,16 +291,16 @@ export function cancelTask(assignmentId) {
 export function getTaskStatistics() {
     const all = Array.from(assignments.values());
     return {
-        total, : .length,
-        completed, : .filter(a => a.status === "completed").length,
-        failed, : .filter(a => a.status === "failed").length,
-        pending, : .filter(a => a.status === "pending").length,
-        running, : .filter(a => a.status === "running").length,
+        total: all.length,
+        completed: all.filter((a) => a.status === "completed").length,
+        failed: all.filter((a) => a.status === "failed").length,
+        pending: all.filter((a) => a.status === "pending").length,
+        running: all.filter((a) => a.status === "running").length,
     };
 }
 // Helper
 function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 // Export all functions
 export default {

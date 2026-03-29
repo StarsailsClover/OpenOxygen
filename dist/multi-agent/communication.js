@@ -6,78 +6,66 @@
  */
 import { createSubsystemLogger } from "../logging/index.js";
 import { generateId, nowMs } from "../utils/index.js";
-import EventEmitter from "node";
+import EventEmitter from "node:events";
 const log = createSubsystemLogger("multi-agent/communication");
-// Message types
-export 
-// Agent message
-export 
-// Message handler
-export 
 // Communication hub
 class CommunicationHub extends EventEmitter {
-    handlers = new Map < string;
-    MessageHandler;
-}
- > ();
-/**
- * Send message to specific agent
- */
-send(message < AgentMessage, "id" | "timestamp" > );
-{
-    const fullMessage = {
-        ...message,
-        id() { },
-        timestamp() { },
-    };
-    log.debug(`Message ${fullMessage.id} from ${fullMessage.from} to ${fullMessage.to || "broadcast"}`);
-    // Emit for local handlers
-    this.emit("message", fullMessage);
-    // Call specific handlers
-    if (fullMessage.to) {
-        const handlers = this.handlers.get(fullMessage.to) || [];
-        for (const handler of handlers) {
-            try {
-                handler(fullMessage);
-            }
-            catch (error) {
-                log.error(`Handler error: ${error.message}`);
+    handlers = new Map();
+    /**
+     * Send message to specific agent
+     */
+    send(message) {
+        const fullMessage = {
+            ...message,
+            id: generateId("msg"),
+            timestamp: nowMs(),
+        };
+        log.debug(`Message ${fullMessage.id} from ${fullMessage.from} to ${fullMessage.to || "broadcast"}`);
+        // Emit for local handlers
+        this.emit("message", fullMessage);
+        // Call specific handlers
+        if (fullMessage.to) {
+            const handlers = this.handlers.get(fullMessage.to) || [];
+            for (const handler of handlers) {
+                try {
+                    handler(fullMessage);
+                }
+                catch (error) {
+                    log.error(`Handler error: ${error.message}`);
+                }
             }
         }
+        return fullMessage;
     }
-    return fullMessage;
-}
-/**
- * Broadcast message to all agents
- */
-broadcast(from, type, payload);
-{
-    return this.send({
-        type,
-        from,
-        payload,
-    });
-}
-/**
- * Register message handler for agent
- */
-registerHandler(agentId, handler);
-{
-    const handlers = this.handlers.get(agentId) || [];
-    handlers.push(handler);
-    this.handlers.set(agentId, handlers);
-    log.debug(`Handler registered for agent: ${agentId}`);
-}
-/**
- * Unregister message handler
- */
-unregisterHandler(agentId, handler);
-{
-    const handlers = this.handlers.get(agentId) || [];
-    const index = handlers.indexOf(handler);
-    if (index > -1) {
-        handlers.splice(index, 1);
+    /**
+     * Broadcast message to all agents
+     */
+    broadcast(from, type, payload) {
+        return this.send({
+            type,
+            from,
+            payload,
+        });
+    }
+    /**
+     * Register message handler for agent
+     */
+    registerHandler(agentId, handler) {
+        const handlers = this.handlers.get(agentId) || [];
+        handlers.push(handler);
         this.handlers.set(agentId, handlers);
+        log.debug(`Handler registered for agent: ${agentId}`);
+    }
+    /**
+     * Unregister message handler
+     */
+    unregisterHandler(agentId, handler) {
+        const handlers = this.handlers.get(agentId) || [];
+        const index = handlers.indexOf(handler);
+        if (index > -1) {
+            handlers.splice(index, 1);
+            this.handlers.set(agentId, handlers);
+        }
     }
 }
 // Singleton hub
@@ -137,7 +125,7 @@ export function sendError(from, to, error) {
  */
 export function sendHeartbeat(agentId) {
     return broadcastMessage(agentId, "heartbeat", {
-        timestamp() { },
+        timestamp: nowMs(),
     });
 }
 // Export

@@ -17,7 +17,11 @@ export function generateShortId(length = 8) {
 }
 export function generateTimestampId(prefix) {
     const now = new Date();
-    const ts = now.toISOString().replace(/[:.]/g, "-").replace("T", "_").replace("Z", "");
+    const ts = now
+        .toISOString()
+        .replace(/[:.]/g, "-")
+        .replace("T", "_")
+        .replace("Z", "");
     const suffix = generateShortId();
     return `${prefix}-${ts}-${suffix}`;
 }

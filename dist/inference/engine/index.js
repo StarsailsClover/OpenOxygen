@@ -52,7 +52,11 @@ async function callOpenAICompatible(messages, config, tools, providerName) {
     if (tools && tools.length > 0) {
         requestBody["tools"] = tools.map((t) => ({
             type: "function",
-            function: { name: t.name, description: t.description, parameters: t.parameters },
+            function: {
+                name: t.name,
+                description: t.description,
+                parameters: t.parameters,
+            },
         }));
     }
     const response = await fetch(`${baseUrl}/chat/completions`, {
@@ -76,7 +80,9 @@ async function callOpenAICompatible(messages, config, tools, providerName) {
     let finalContent = rawContent;
     if (!finalContent && reasoning) {
         // 尝试提取 reasoning 中最后一段作为答案
-        const lines = reasoning.split("\n").filter((l) => l.trim().length > 0);
+        const lines = reasoning
+            .split("\n")
+            .filter((l) => l.trim().length > 0);
         finalContent = lines[lines.length - 1] || reasoning.slice(0, 500);
     }
     return {
@@ -164,7 +170,11 @@ const providers = {
     },
     gemini: {
         name: "gemini",
-        chat: (msgs, cfg, tools) => callOpenAICompatible(msgs, { ...cfg, baseUrl: cfg.baseUrl ?? "https://generativelanguage.googleapis.com/v1beta/openai" }, tools, "gemini"),
+        chat: (msgs, cfg, tools) => callOpenAICompatible(msgs, {
+            ...cfg,
+            baseUrl: cfg.baseUrl ??
+                "https://generativelanguage.googleapis.com/v1beta/openai",
+        }, tools, "gemini"),
     },
     openrouter: {
         name: "openrouter",
@@ -205,7 +215,10 @@ export class InferenceEngine {
         // Prepend system prompt if provided
         let messages = [...request.messages];
         if (request.systemPrompt) {
-            messages = [{ role: "system", content: request.systemPrompt }, ...messages];
+            messages = [
+                { role: "system", content: request.systemPrompt },
+                ...messages,
+            ];
         }
         log.info(`Inference [${mode}] via ${model.provider}/${model.model}`);
         const timeoutMs = mode === "deep" ? 120_000 : mode === "balanced" ? 60_000 : 30_000;

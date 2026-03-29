@@ -96,7 +96,10 @@ export class TaskPlanner {
     async generatePlan(goal, context) {
         const plan = createEmptyPlan(goal);
         const messages = [
-            { role: "user", content: context ? `Context: ${context}\n\nGoal: ${goal}` : goal },
+            {
+                role: "user",
+                content: context ? `Context: ${context}\n\nGoal: ${goal}` : goal,
+            },
         ];
         try {
             const response = await this.engine.infer({
@@ -108,7 +111,9 @@ export class TaskPlanner {
             const steps = parsePlanSteps(response.content);
             const stepIds = [];
             for (const raw of steps) {
-                const deps = (raw.dependencies ?? []).map((idx) => stepIds[idx]).filter(Boolean);
+                const deps = (raw.dependencies ?? [])
+                    .map((idx) => stepIds[idx])
+                    .filter(Boolean);
                 const step = addStep(plan, raw.action, raw.params ?? {}, deps);
                 stepIds.push(step.id);
             }

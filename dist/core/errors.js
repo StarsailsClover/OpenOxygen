@@ -49,19 +49,16 @@ export var ErrorCode;
     ErrorCode[ErrorCode["INTERNAL_ERROR"] = 9001] = "INTERNAL_ERROR";
     ErrorCode[ErrorCode["INTERNAL_NOT_IMPLEMENTED"] = 9002] = "INTERNAL_NOT_IMPLEMENTED";
 })(ErrorCode || (ErrorCode = {}));
-export export function createError(code, message, details, requestId) {
+export function createError(code, message, details, requestId) {
     return {
         code,
         message,
         details,
-        timestamp, : .now(),
+        timestamp: Date.now(),
         requestId,
     };
 }
-export function isOxygenError(error) { }
-is;
-OxygenError;
-{
+export function isOxygenError(error) {
     return (typeof error === "object" &&
         error !== null &&
         "code" in error &&

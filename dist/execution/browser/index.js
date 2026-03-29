@@ -53,7 +53,7 @@ class CDPClient {
                     }
                     if (msg.method) {
                         const handlers = this.eventHandlers.get(msg.method) || [];
-                        handlers.forEach(h => h(msg.params));
+                        handlers.forEach((h) => h(msg.params));
                     }
                 }
                 catch (e) {
@@ -154,7 +154,7 @@ async function waitForCDP(session, port, timeoutMs = 30000) {
             // First try /json/list to get page targets
             const req = http.get(`http://127.0.0.1:${port}/json/list`, (res) => {
                 let data = "";
-                res.on("data", (chunk) => data += chunk);
+                res.on("data", (chunk) => (data += chunk));
                 res.on("end", () => {
                     try {
                         const targets = JSON.parse(data);
@@ -291,9 +291,9 @@ export async function getPageInfo(sessionId) {
     if (!session?.cdpClient)
         return null;
     try {
-        const result = await session.cdpClient.send("Runtime.evaluate", {
+        const result = (await session.cdpClient.send("Runtime.evaluate", {
             expression: "({ url: window.location.href, title: document.title })",
-        });
+        }));
         return result?.result?.value || null;
     }
     catch {
@@ -308,7 +308,7 @@ export async function querySelector(sessionId, selector) {
     if (!session?.cdpClient)
         return null;
     try {
-        const result = await session.cdpClient.send("Runtime.evaluate", {
+        const result = (await session.cdpClient.send("Runtime.evaluate", {
             expression: `
         (function() {
           const el = document.querySelector("${selector.replace(/"/g, '\\"')}");
@@ -333,7 +333,7 @@ export async function querySelector(sessionId, selector) {
           };
         })()
       `,
-        });
+        }));
         const data = result?.result?.value;
         if (!data)
             return null;
@@ -358,7 +358,7 @@ export async function querySelectorAll(sessionId, selector) {
     if (!session?.cdpClient)
         return [];
     try {
-        const result = await session.cdpClient.send("Runtime.evaluate", {
+        const result = (await session.cdpClient.send("Runtime.evaluate", {
             expression: `
         (function() {
           const elements = document.querySelectorAll("${selector.replace(/"/g, '\\"')}");
@@ -378,7 +378,7 @@ export async function querySelectorAll(sessionId, selector) {
           });
         })()
       `,
-        });
+        }));
         const items = result?.result?.value || [];
         return items.map((data, i) => ({
             id: generateId("el"),
@@ -439,7 +439,7 @@ async function findElementByText(sessionId, text) {
     if (!session?.cdpClient)
         return null;
     try {
-        const result = await session.cdpClient.send("Runtime.evaluate", {
+        const result = (await session.cdpClient.send("Runtime.evaluate", {
             expression: `
         (function() {
           const xpath = "//*[contains(text(), '${text.replace(/'/g, "\\'")}')]";
@@ -458,7 +458,7 @@ async function findElementByText(sessionId, text) {
           };
         })()
       `,
-        });
+        }));
         const data = result?.result?.value;
         if (!data)
             return null;
@@ -493,7 +493,12 @@ async function findElementByUIA(sessionId, name) {
             selector: `[uia-name="${found.name}"]`,
             tagName: found.controlType || "UNKNOWN",
             text: found.name || "",
-            bounds: { x: found.x, y: found.y, width: found.width, height: found.height },
+            bounds: {
+                x: found.x,
+                y: found.y,
+                width: found.width,
+                height: found.height,
+            },
             visible: !found.isOffscreen,
             clickable: found.controlType === "Button" || found.controlType === "Hyperlink",
             attributes: { automationId: found.automationId },
@@ -516,7 +521,11 @@ export async function clickElement(sessionId, selector) {
         // Get element position
         const element = await querySelector(sessionId, selector);
         if (!element) {
-            return { success: false, error: `Element not found: ${selector}`, durationMs: 0 };
+            return {
+                success: false,
+                error: `Element not found: ${selector}`,
+                durationMs: 0,
+            };
         }
         // Click via CDP
         await session.cdpClient.send("Input.dispatchMouseEvent", {
@@ -622,7 +631,7 @@ export async function compareWithExternalBrowser(url) {
         const start = nowMs();
         const session = await createBrowserSession({ headless: true });
         await navigate(session.id, url);
-        await new Promise(r => setTimeout(r, 2000));
+        await new Promise((r) => setTimeout(r, 2000));
         const elements = await querySelectorAll(session.id, "*");
         results.oxygen = {
             success: true,
@@ -641,7 +650,7 @@ export async function compareWithExternalBrowser(url) {
         // Launch Chrome via native
         const { execSync } = require("node:child_process");
         execSync(`start chrome "${url}" --new-window`);
-        await new Promise(r => setTimeout(r, 3000));
+        await new Promise((r) => setTimeout(r, 3000));
         const elements = native.getUiElements(null);
         results.external = {
             success: true,

@@ -6,7 +6,7 @@
  * 接口兼容 OpenClaw 的 MemorySearchManager。
  */
 import { createSubsystemLogger } from "../../logging/index.js";
-import { generateId, nowMs } from "../../utils/index.js";
+import { nowMs } from "../../utils/index.js";
 const log = createSubsystemLogger("memory/vector");
 // ─── Vector Math ────────────────────────────────────────────────────────────
 function cosineSimilarity(a, b) {
@@ -21,7 +21,7 @@ function cosineSimilarity(a, b) {
         normB += b[i] * b[i];
     }
     const denom = Math.sqrt(normA) * Math.sqrt(normB);
-    return denom === 0 ? 0 / denom : ;
+    return denom === 0 ? 0 : dotProduct / denom;
 }
 // ─── BM25 Scoring ───────────────────────────────────────────────────────────
 const BM25_K1 = 1.2;
@@ -46,7 +46,8 @@ function computeBM25(query, document, avgDocLength, docFrequencies, totalDocs) {
             continue;
         const df = docFrequencies.get(term) ?? 0;
         const idf = Math.log((totalDocs - df + 0.5) / (df + 0.5) + 1);
-        const tfNorm = (tf * (BM25_K1 + 1)) / (tf + BM25_K1 * (1 - BM25_B + BM25_B * (docLength / avgDocLength)));
+        const tfNorm = (tf * (BM25_K1 + 1)) /
+            (tf + BM25_K1 * (1 - BM25_B + BM25_B * (docLength / avgDocLength)));
         score += idf * tfNorm;
     }
     return score;
@@ -73,10 +74,11 @@ export class VectorStore {
         }
         // Recalculate average document length
         const totalTokens = this.chunks.reduce((sum, c) => sum + tokenize(c.content).length, 0);
-        this.avgDocLength = this.chunks.length > 0 ? totalTokens / this.chunks.length : ;
+        this.avgDocLength =
+            this.chunks.length > 0 ? totalTokens / this.chunks.length : 0;
     }
     /**
-     * Hybrid search vector similarity and BM25 keyword scoring.
+     * Hybrid search: combines vector similarity and BM25 keyword scoring.
      */
     search(query, queryEmbedding, opts) {
         const maxResults = opts?.maxResults ?? 10;
@@ -98,12 +100,11 @@ export class VectorStore {
             if (queryEmbedding && chunk.embedding) {
                 vectorScore = cosineSimilarity(queryEmbedding, chunk.embedding);
             }
-            // Hybrid score combination
+            // Hybrid score: weighted combination
             const hybridScore = queryEmbedding
                 ? vectorScore * 0.6 + bm25Score * 0.4
-                :
-            ;
-            return { chunk, score };
+                : bm25Score;
+            return { chunk, score: hybridScore };
         });
         // Sort by score descending
         scored.sort((a, b) => b.score - a.score);
@@ -111,12 +112,12 @@ export class VectorStore {
             .filter((s) => s.score >= minScore)
             .slice(0, maxResults)
             .map((s) => ({
-            path, : .chunk.path,
-            startLine, : .chunk.startLine,
-            endLine, : .chunk.endLine,
-            score, : .score,
-            snippet, : .chunk.content.slice(0, 700),
-            source, : .chunk.source,
+            path: s.chunk.path,
+            startLine: s.chunk.startLine,
+            endLine: s.chunk.endLine,
+            score: s.score,
+            snippet: s.chunk.content.slice(0, 700),
+            source: s.chunk.source,
         }));
     }
     getChunkCount() {

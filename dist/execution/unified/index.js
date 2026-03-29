@@ -56,7 +56,11 @@ function routeTaskInternal(instruction) {
     }
     const total = scores.terminal + scores.browser + scores.gui;
     if (total === 0) {
-        return { mode: "hybrid", confidence: 0.5, reason: "No clear pattern, try hybrid" };
+        return {
+            mode: "hybrid",
+            confidence: 0.5,
+            reason: "No clear pattern, try hybrid",
+        };
     }
     const max = Math.max(scores.terminal, scores.browser, scores.gui);
     const dominant = Object.entries(scores).find(([, s]) => s === max)[0];
@@ -112,7 +116,7 @@ async function executeBrowser(instruction, logs) {
             return navResult;
         }
         // Wait and get info
-        await new Promise(r => setTimeout(r, 3000));
+        await new Promise((r) => setTimeout(r, 3000));
         const info = await Browser.getPageInfo(session.id);
         logs.push(`[Browser] Page: ${info?.title || "unknown"}`);
         Browser.destroyBrowserSession(session.id);
@@ -137,7 +141,11 @@ async function executeGUI(instruction, logs) {
         logs.push("[GUI] Capturing screen...");
         const nativeMod = Native.loadNativeModule();
         if (!nativeMod) {
-            return { success: false, error: "Native module unavailable", durationMs: 0 };
+            return {
+                success: false,
+                error: "Native module unavailable",
+                durationMs: 0,
+            };
         }
         nativeMod.captureScreen(ssPath);
         // Get UI elements

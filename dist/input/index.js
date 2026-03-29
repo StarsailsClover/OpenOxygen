@@ -94,7 +94,7 @@ export function getClipboardText() {
     `;
         const result = execSync(`powershell -Command "${script}"`, {
             encoding: "utf-8",
-            maxBuffer: 1024 * 1024 // 1MB buffer
+            maxBuffer: 1024 * 1024, // 1MB buffer
         });
         return result.trim();
     }
@@ -111,9 +111,7 @@ export function setClipboardText(text) {
     try {
         const { execSync } = require("node:child_process");
         // Escape special characters
-        const escapedText = text
-            .replace(/"/g, '""')
-            .replace(/'/g, "''");
+        const escapedText = text.replace(/"/g, '""').replace(/'/g, "''");
         const script = `
       Add-Type -AssemblyName System.Windows.Forms
       [System.Windows.Forms.Clipboard]::SetText("${escapedText}")

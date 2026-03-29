@@ -20,8 +20,14 @@ export function createDefaultTerminalConfig() {
         timeoutMs: 30_000,
         maxOutputBytes: 1024 * 1024,
         blockedCommands: [
-            "rm -rf /", "rmdir /s /q C:", "format", "del /f /s /q C:",
-            "shutdown", "reboot", "Stop-Computer", "Restart-Computer",
+            "rm -rf /",
+            "rmdir /s /q C:",
+            "format",
+            "del /f /s /q C:",
+            "shutdown",
+            "reboot",
+            "Stop-Computer",
+            "Restart-Computer",
         ],
     };
 }
@@ -151,7 +157,10 @@ export async function executeCommand(sessionId, command) {
             const duration = nowMs() - start;
             // Update cwd if cd command
             if (/^cd\s+/i.test(command) && code === 0) {
-                const newDir = command.replace(/^cd\s+/i, "").trim().replace(/"/g, "");
+                const newDir = command
+                    .replace(/^cd\s+/i, "")
+                    .trim()
+                    .replace(/"/g, "");
                 if (newDir) {
                     session.cwd = path.isAbsolute(newDir)
                         ? newDir

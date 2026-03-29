@@ -46,7 +46,7 @@ export class InputSafetyGuard {
         if (this.opCount >= INPUT_SAFETY_CONFIG.maxConsecutiveOps) {
             return {
                 allowed: false,
-                reason: `Too many consecutive operations (${this.opCount}), reset required`
+                reason: `Too many consecutive operations (${this.opCount}), reset required`,
             };
         }
         // 检查操作间隔
@@ -55,7 +55,7 @@ export class InputSafetyGuard {
         if (elapsed < INPUT_SAFETY_CONFIG.minIntervalMs) {
             return {
                 allowed: false,
-                reason: `Operation too frequent (${elapsed}ms < ${INPUT_SAFETY_CONFIG.minIntervalMs}ms)`
+                reason: `Operation too frequent (${elapsed}ms < ${INPUT_SAFETY_CONFIG.minIntervalMs}ms)`,
             };
         }
         return { allowed: true };

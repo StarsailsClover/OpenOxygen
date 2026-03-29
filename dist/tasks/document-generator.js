@@ -4,15 +4,11 @@
 import { createSubsystemLogger } from "../logging/index.js";
 import { generateId } from "../utils/index.js";
 const log = createSubsystemLogger("tasks/docgen");
-content;
-type;
-outputPath ?  : ;
-;
 export async function generateDocument(options) {
     log.info(`Generating ${options.type}: ${options.title}`);
     const docId = generateId("doc");
     const outputPath = options.outputPath || `./output/document-${docId}.${options.type}`;
-    // TODO actual document generation
+    // TODO: Implement actual document generation
     log.info(`Document generated: ${outputPath}`);
     return outputPath;
 }
