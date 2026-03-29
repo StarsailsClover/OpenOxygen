@@ -6,30 +6,90 @@
  */
 
 import { createSubsystemLogger } from "../../logging/index.js";
-import type { InferenceMode, ModelConfig, ModelProvider } from "../../types/index.js";
+import type {
+  InferenceMode,
+  ModelConfig,
+  ModelProvider,
+} from "../../types/index.js";
 
 const log = createSubsystemLogger("inference/router");
 
 // ─── Model Capability Profile ───────────────────────────────────────────────
 
 type ModelCapability = {
-  reasoning: number;    // 0-10
-  speed: number;        // 0-10
-  vision: number;       // 0-10
-  toolUse: number;      // 0-10
+  reasoning: number; // 0-10
+  speed: number; // 0-10
+  vision: number; // 0-10
+  toolUse: number; // 0-10
   costPer1kTokens: number; // USD
-  maxContext: number;   // tokens
+  maxContext: number; // tokens
 };
 
 const MODEL_PROFILES: Record<string, ModelCapability> = {
-  "gpt-4o": { reasoning: 9, speed: 7, vision: 9, toolUse: 9, costPer1kTokens: 0.005, maxContext: 128000 },
-  "gpt-4o-mini": { reasoning: 7, speed: 9, vision: 7, toolUse: 8, costPer1kTokens: 0.00015, maxContext: 128000 },
-  "gpt-5.1": { reasoning: 10, speed: 6, vision: 10, toolUse: 10, costPer1kTokens: 0.01, maxContext: 256000 },
-  "claude-sonnet-4-20250514": { reasoning: 9, speed: 7, vision: 8, toolUse: 9, costPer1kTokens: 0.003, maxContext: 200000 },
-  "claude-opus-4-20250514": { reasoning: 10, speed: 5, vision: 9, toolUse: 9, costPer1kTokens: 0.015, maxContext: 200000 },
-  "gemini-2.5-pro": { reasoning: 9, speed: 7, vision: 9, toolUse: 8, costPer1kTokens: 0.00125, maxContext: 1000000 },
-  "gemini-2.5-flash": { reasoning: 7, speed: 9, vision: 7, toolUse: 7, costPer1kTokens: 0.00015, maxContext: 1000000 },
-  "step-2-16k": { reasoning: 8, speed: 8, vision: 7, toolUse: 7, costPer1kTokens: 0.001, maxContext: 16000 },
+  "gpt-4o": {
+    reasoning: 9,
+    speed: 7,
+    vision: 9,
+    toolUse: 9,
+    costPer1kTokens: 0.005,
+    maxContext: 128000,
+  },
+  "gpt-4o-mini": {
+    reasoning: 7,
+    speed: 9,
+    vision: 7,
+    toolUse: 8,
+    costPer1kTokens: 0.00015,
+    maxContext: 128000,
+  },
+  "gpt-5.1": {
+    reasoning: 10,
+    speed: 6,
+    vision: 10,
+    toolUse: 10,
+    costPer1kTokens: 0.01,
+    maxContext: 256000,
+  },
+  "claude-sonnet-4-20250514": {
+    reasoning: 9,
+    speed: 7,
+    vision: 8,
+    toolUse: 9,
+    costPer1kTokens: 0.003,
+    maxContext: 200000,
+  },
+  "claude-opus-4-20250514": {
+    reasoning: 10,
+    speed: 5,
+    vision: 9,
+    toolUse: 9,
+    costPer1kTokens: 0.015,
+    maxContext: 200000,
+  },
+  "gemini-2.5-pro": {
+    reasoning: 9,
+    speed: 7,
+    vision: 9,
+    toolUse: 8,
+    costPer1kTokens: 0.00125,
+    maxContext: 1000000,
+  },
+  "gemini-2.5-flash": {
+    reasoning: 7,
+    speed: 9,
+    vision: 7,
+    toolUse: 7,
+    costPer1kTokens: 0.00015,
+    maxContext: 1000000,
+  },
+  "step-2-16k": {
+    reasoning: 8,
+    speed: 8,
+    vision: 7,
+    toolUse: 7,
+    costPer1kTokens: 0.001,
+    maxContext: 16000,
+  },
 };
 
 function getModelProfile(model: string): ModelCapability | null {
@@ -96,7 +156,9 @@ export function markKeyFailed(provider: string, key: string): void {
   const pool = keyPools.get(provider);
   if (pool) {
     pool.failedKeys.add(key);
-    log.warn(`Key marked as failed for ${provider} (${pool.failedKeys.size}/${pool.keys.length})`);
+    log.warn(
+      `Key marked as failed for ${provider} (${pool.failedKeys.size}/${pool.keys.length})`,
+    );
   }
 }
 
@@ -130,7 +192,10 @@ export class ModelRouter {
     this.initKeyPools();
   }
 
-  route(mode: InferenceMode, constraints?: RoutingConstraints): RoutingDecision | null {
+  route(
+    mode: InferenceMode,
+    constraints?: RoutingConstraints,
+  ): RoutingDecision | null {
     const strategy = constraints?.strategy ?? "balanced";
     const candidates = this.filterCandidates(constraints);
 
@@ -195,7 +260,9 @@ export class ModelRouter {
     if (constraints?.maxCostPer1kTokens) {
       candidates = candidates.filter((m) => {
         const profile = getModelProfile(m.model);
-        return profile ? profile.costPer1kTokens <= constraints.maxCostPer1kTokens! : true;
+        return profile
+          ? profile.costPer1kTokens <= constraints.maxCostPer1kTokens!
+          : true;
       });
     }
 

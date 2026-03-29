@@ -281,7 +281,9 @@ export class ScriptTemplateSystem {
   /**
    * Register template
    */
-  registerTemplate(template: Omit<ScriptTemplate, "id" | "createdAt" | "updatedAt">): ScriptTemplate {
+  registerTemplate(
+    template: Omit<ScriptTemplate, "id" | "createdAt" | "updatedAt">,
+  ): ScriptTemplate {
     const fullTemplate: ScriptTemplate = {
       ...template,
       id: generateId("tpl"),
@@ -308,7 +310,7 @@ export class ScriptTemplateSystem {
    */
   getTemplatesByCategory(category: string): ScriptTemplate[] {
     return Array.from(this.templates.values()).filter(
-      (t) => t.category === category
+      (t) => t.category === category,
     );
   }
 
@@ -331,7 +333,7 @@ export class ScriptTemplateSystem {
    */
   updateTemplate(
     id: string,
-    updates: Partial<Omit<ScriptTemplate, "id" | "createdAt">>
+    updates: Partial<Omit<ScriptTemplate, "id" | "createdAt">>,
   ): ScriptTemplate | null {
     const template = this.templates.get(id);
     if (!template) return null;
@@ -396,7 +398,7 @@ export class ScriptTemplateSystem {
    */
   validateParameters(
     template: ScriptTemplate,
-    parameters: Record<string, any>
+    parameters: Record<string, any>,
   ): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -418,7 +420,7 @@ export class ScriptTemplateSystem {
       const actualType = Array.isArray(value) ? "array" : typeof value;
       if (actualType !== param.type) {
         errors.push(
-          `Parameter ${param.name} should be ${param.type}, got ${actualType}`
+          `Parameter ${param.name} should be ${param.type}, got ${actualType}`,
         );
         continue;
       }
@@ -428,29 +430,38 @@ export class ScriptTemplateSystem {
         const regex = new RegExp(param.validation.pattern);
         if (!regex.test(value)) {
           errors.push(
-            `Parameter ${param.name} does not match pattern: ${param.validation.pattern}`
+            `Parameter ${param.name} does not match pattern: ${param.validation.pattern}`,
           );
         }
       }
 
       // Range validation
       if (param.type === "number") {
-        if (param.validation?.min !== undefined && value < param.validation.min) {
+        if (
+          param.validation?.min !== undefined &&
+          value < param.validation.min
+        ) {
           errors.push(
-            `Parameter ${param.name} should be >= ${param.validation.min}`
+            `Parameter ${param.name} should be >= ${param.validation.min}`,
           );
         }
-        if (param.validation?.max !== undefined && value > param.validation.max) {
+        if (
+          param.validation?.max !== undefined &&
+          value > param.validation.max
+        ) {
           errors.push(
-            `Parameter ${param.name} should be <= ${param.validation.max}`
+            `Parameter ${param.name} should be <= ${param.validation.max}`,
           );
         }
       }
 
       // Options validation
-      if (param.validation?.options && !param.validation.options.includes(value)) {
+      if (
+        param.validation?.options &&
+        !param.validation.options.includes(value)
+      ) {
         errors.push(
-          `Parameter ${param.name} should be one of: ${param.validation.options.join(", ")}`
+          `Parameter ${param.name} should be one of: ${param.validation.options.join(", ")}`,
         );
       }
     }
@@ -478,7 +489,7 @@ export class ScriptTemplateSystem {
       (t) =>
         t.name.toLowerCase().includes(lowerQuery) ||
         t.description.toLowerCase().includes(lowerQuery) ||
-        t.category.toLowerCase().includes(lowerQuery)
+        t.category.toLowerCase().includes(lowerQuery),
     );
   }
 

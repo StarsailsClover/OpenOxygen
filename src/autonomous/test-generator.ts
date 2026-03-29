@@ -9,7 +9,11 @@
 import { createSubsystemLogger } from "../logging/index.js";
 import { generateId, nowMs } from "../utils/index.js";
 import { GlobalMemory } from "../memory/global/index.js";
-import { decomposeTask, createOrchestration, executeOrchestration } from "../agent/orchestrator/index.js";
+import {
+  decomposeTask,
+  createOrchestration,
+  executeOrchestration,
+} from "../agent/orchestrator/index.js";
 import type { TaskPlan, Subtask } from "../agent/orchestrator/index.js";
 
 const log = createSubsystemLogger("autonomous/test-generator");
@@ -70,7 +74,7 @@ function initializeTestPatterns(): TestPattern[] {
       generateTest: (fn) => ({
         name: `${fn.name} should execute successfully`,
         description: `Test that ${fn.name} executes without errors`,
-        code: `const result = await ${fn.name}(${fn.params.map(p => `"test_${p.name}"`).join(", ")});`,
+        code: `const result = await ${fn.name}(${fn.params.map((p) => `"test_${p.name}"`).join(", ")});`,
         expectedResult: "defined",
       }),
     },
@@ -122,16 +126,19 @@ const testPatterns = initializeTestPatterns();
  */
 export function analyzeFunction(fn: Function): FunctionInfo {
   const name = fn.name || "anonymous";
-  
+
   // Extract parameters from function string
   const fnString = fn.toString();
   const paramMatch = fnString.match(/\(([^)]*)\)/);
   const params: FunctionInfo["params"] = [];
-  
+
   if (paramMatch) {
-    const paramList = paramMatch[1].split(",").map(p => p.trim()).filter(p => p);
+    const paramList = paramMatch[1]
+      .split(",")
+      .map((p) => p.trim())
+      .filter((p) => p);
     for (const param of paramList) {
-      const [paramName, defaultValue] = param.split("=").map(p => p.trim());
+      const [paramName, defaultValue] = param.split("=").map((p) => p.trim());
       params.push({
         name: paramName,
         type: "unknown",
@@ -139,10 +146,10 @@ export function analyzeFunction(fn: Function): FunctionInfo {
       });
     }
   }
-  
+
   // Check if async
   const async = fnString.startsWith("async");
-  
+
   return {
     name,
     params,
@@ -157,17 +164,17 @@ export function analyzeFunction(fn: Function): FunctionInfo {
  */
 export function generateTestsForFunction(
   fn: Function,
-  options: { count?: number; patterns?: string[] } = {}
+  options: { count?: number; patterns?: string[] } = {},
 ): GeneratedTest[] {
   const functionInfo = analyzeFunction(fn);
   const tests: GeneratedTest[] = [];
-  
+
   log.info(`Generating tests for function: ${functionInfo.name}`);
-  
+
   // Find applicable patterns
-  const applicablePatterns = testPatterns.filter(pattern => {
+  const applicablePatterns = testPatterns.filter((pattern) => {
     // Check if pattern applies to this function
-    return pattern.applicableTo.some(pattern => {
+    return pattern.applicableTo.some((pattern) => {
       if (pattern === "*") return true;
       if (pattern.includes("*")) {
         const regex = new RegExp(pattern.replace(/\*/g, ".*"));
@@ -176,7 +183,7 @@ export function generateTestsForFunction(
       return false;
     });
   });
-  
+
   // Generate tests from patterns
   for (const pattern of applicablePatterns.slice(0, options.count || 4)) {
     try {
@@ -184,10 +191,12 @@ export function generateTestsForFunction(
       tests.push(test);
       log.debug(`Generated test: ${test.name}`);
     } catch (error) {
-      log.error(`Failed to generate test from pattern ${pattern.id}: ${error.message}`);
+      log.error(
+        `Failed to generate test from pattern ${pattern.id}: ${error.message}`,
+      );
     }
   }
-  
+
   return tests;
 }
 
@@ -196,31 +205,34 @@ export function generateTestsForFunction(
  * Uses memory and patterns to decompose tasks without human intervention
  * @param instruction - User instruction
  */
-export async function autonomousDecompose(instruction: string): Promise<TaskPlan> {
+export async function autonomousDecompose(
+  instruction: string,
+): Promise<TaskPlan> {
   log.info(`Autonomous decomposition: ${instruction}`);
-  
+
   // Check memory for similar decompositions
   const memory = new GlobalMemory(".state", ".state/autonomous-memory.db");
   const similarTasks = memory.queryTasks({ limit: 10 });
-  
+
   // Find similar task patterns
-  const similarPatterns = similarTasks.filter(task => {
+  const similarPatterns = similarTasks.filter((task) => {
     const instructionWords = instruction.toLowerCase().split(/\s+/);
     const taskWords = task.instruction.toLowerCase().split(/\s+/);
-    const overlap = instructionWords.filter(w => taskWords.includes(w));
+    const overlap = instructionWords.filter((w) => taskWords.includes(w));
     return overlap.length >= 2;
   });
-  
+
   // Use similar patterns to inform decomposition
   let plan = decomposeTask(instruction);
-  
+
   // Enhance plan based on memory
   if (similarPatterns.length > 0) {
     log.info(`Found ${similarPatterns.length} similar task patterns`);
-    
+
     // Adjust strategy based on success rate of similar tasks
-    const successRate = similarPatterns.filter(t => t.success).length / similarPatterns.length;
-    
+    const successRate =
+      similarPatterns.filter((t) => t.success).length / similarPatterns.length;
+
     if (successRate < 0.5) {
       // Low success rate - add more verification steps
       plan.subtasks.push({
@@ -230,18 +242,18 @@ export async function autonomousDecompose(instruction: string): Promise<TaskPlan
       });
     }
   }
-  
+
   memory.close();
-  
+
   // Record this decomposition
   recordDecision({
     context: `Decompose: ${instruction}`,
     decision: `Strategy: ${plan.strategy}, ${plan.subtasks.length} subtasks`,
-    reasoning: `Based on ${similarPatterns.length} similar patterns with ${similarPatterns.filter(t => t.success).length / (similarPatterns.length || 1) * 100}% success rate`,
+    reasoning: `Based on ${similarPatterns.length} similar patterns with ${(similarPatterns.filter((t) => t.success).length / (similarPatterns.length || 1)) * 100}% success rate`,
     action: async () => plan,
     success: true,
   });
-  
+
   return plan;
 }
 
@@ -252,39 +264,39 @@ export async function autonomousDecompose(instruction: string): Promise<TaskPlan
  */
 export async function autonomousExecute(instruction: string): Promise<any> {
   log.info(`Autonomous execution: ${instruction}`);
-  
+
   // Step 1: Decompose task
   const plan = await autonomousDecompose(instruction);
-  
+
   // Step 2: Create orchestration
   const orch = createOrchestration({
     name: `Autonomous: ${instruction.substring(0, 50)}`,
     subtasks: plan.subtasks,
     strategy: plan.strategy,
   });
-  
+
   // Step 3: Execute with reflection
   let result;
   let retryCount = 0;
   const maxRetries = 3;
-  
+
   while (retryCount < maxRetries) {
     result = await executeOrchestration(orch.id);
-    
+
     // Step 4: Reflect on result
     const reflection = reflectOnResult(result, instruction);
-    
+
     if (reflection.success) {
       log.info(`Task completed successfully`);
       break;
     } else {
       log.warn(`Task failed, reflection: ${reflection.reasoning}`);
-      
+
       // Step 5: Adjust and retry if needed
       if (reflection.shouldRetry && retryCount < maxRetries - 1) {
         retryCount++;
         log.info(`Retrying (${retryCount}/${maxRetries})`);
-        
+
         // Modify plan based on reflection
         adjustPlan(plan, reflection);
       } else {
@@ -292,7 +304,7 @@ export async function autonomousExecute(instruction: string): Promise<any> {
       }
     }
   }
-  
+
   // Record decision
   recordDecision({
     context: `Execute: ${instruction}`,
@@ -301,7 +313,7 @@ export async function autonomousExecute(instruction: string): Promise<any> {
     action: async () => result,
     success: result?.status === "completed",
   });
-  
+
   return result;
 }
 
@@ -310,7 +322,10 @@ export async function autonomousExecute(instruction: string): Promise<any> {
  * @param result - Execution result
  * @param originalInstruction - Original instruction
  */
-function reflectOnResult(result: any, originalInstruction: string): {
+function reflectOnResult(
+  result: any,
+  originalInstruction: string,
+): {
   success: boolean;
   shouldRetry: boolean;
   reasoning: string;
@@ -323,7 +338,7 @@ function reflectOnResult(result: any, originalInstruction: string): {
       reasoning: "No result received",
     };
   }
-  
+
   if (result.status === "completed") {
     return {
       success: true,
@@ -331,21 +346,25 @@ function reflectOnResult(result: any, originalInstruction: string): {
       reasoning: "Task completed successfully",
     };
   }
-  
+
   if (result.status === "failed") {
     // Analyze failure
-    const failedSubtasks = result.subtasks?.filter((s: any) => s.status === "failed") || [];
-    
+    const failedSubtasks =
+      result.subtasks?.filter((s: any) => s.status === "failed") || [];
+
     if (failedSubtasks.length > 0) {
-      const errors = failedSubtasks.map((s: any) => s.result?.error).filter(Boolean);
-      
+      const errors = failedSubtasks
+        .map((s: any) => s.result?.error)
+        .filter(Boolean);
+
       // Check if errors are recoverable
-      const recoverableErrors = errors.filter((e: string) => 
-        e.includes("timeout") || 
-        e.includes("network") || 
-        e.includes("temporarily")
+      const recoverableErrors = errors.filter(
+        (e: string) =>
+          e.includes("timeout") ||
+          e.includes("network") ||
+          e.includes("temporarily"),
       );
-      
+
       if (recoverableErrors.length > 0) {
         return {
           success: false,
@@ -354,21 +373,21 @@ function reflectOnResult(result: any, originalInstruction: string): {
           adjustments: { increaseTimeout: true },
         };
       }
-      
+
       return {
         success: false,
         shouldRetry: false,
         reasoning: `Non-recoverable errors: ${errors.join(", ")}`,
       };
     }
-    
+
     return {
       success: false,
       shouldRetry: true,
       reasoning: "Unknown failure",
     };
   }
-  
+
   return {
     success: false,
     shouldRetry: false,
@@ -395,20 +414,22 @@ function adjustPlan(plan: TaskPlan, reflection: any): void {
  * Record autonomous decision
  * @param decision - Decision to record
  */
-function recordDecision(decision: Omit<AutonomousDecision, "id" | "timestamp">): void {
+function recordDecision(
+  decision: Omit<AutonomousDecision, "id" | "timestamp">,
+): void {
   const fullDecision: AutonomousDecision = {
     id: generateId("decision"),
     timestamp: nowMs(),
     ...decision,
   };
-  
+
   decisionMemory.push(fullDecision);
-  
+
   // Keep only last 100 decisions
   if (decisionMemory.length > 100) {
     decisionMemory.shift();
   }
-  
+
   log.debug(`Recorded decision: ${fullDecision.id}`);
 }
 
@@ -435,40 +456,40 @@ export function learnFromDecisions(): {
       recommendations: [],
     };
   }
-  
-  const successCount = decisionMemory.filter(d => d.success).length;
+
+  const successCount = decisionMemory.filter((d) => d.success).length;
   const successRate = successCount / decisionMemory.length;
-  
+
   // Find common failure patterns
   const failures = decisionMemory
-    .filter(d => !d.success)
-    .map(d => d.reasoning);
-  
+    .filter((d) => !d.success)
+    .map((d) => d.reasoning);
+
   const failureCounts: Record<string, number> = {};
   for (const failure of failures) {
     failureCounts[failure] = (failureCounts[failure] || 0) + 1;
   }
-  
+
   const commonFailures = Object.entries(failureCounts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
     .map(([reason]) => reason);
-  
+
   // Generate recommendations
   const recommendations: string[] = [];
-  
+
   if (successRate < 0.7) {
     recommendations.push("Consider adding more verification steps");
   }
-  
-  if (commonFailures.some(f => f.includes("timeout"))) {
+
+  if (commonFailures.some((f) => f.includes("timeout"))) {
     recommendations.push("Increase default timeout values");
   }
-  
-  if (commonFailures.some(f => f.includes("permission"))) {
+
+  if (commonFailures.some((f) => f.includes("permission"))) {
     recommendations.push("Check permission requirements before execution");
   }
-  
+
   return {
     successRate,
     commonFailures,

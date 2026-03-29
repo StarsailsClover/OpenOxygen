@@ -48,23 +48,23 @@ export interface DocxOptions {
 export async function generateDocx(
   sections: DocxSection[],
   outputPath: string,
-  options: DocxOptions = {}
+  options: DocxOptions = {},
 ): Promise<{ success: boolean; outputPath: string; error?: string }> {
   log.info(`Generating DOCX: ${outputPath}`);
-  
+
   try {
     // Ensure directory exists
     const dir = path.dirname(outputPath);
     fs.mkdirSync(dir, { recursive: true });
-    
+
     // For now, generate markdown as placeholder
     // In production, use docx library
     const markdownContent = convertSectionsToMarkdown(sections, options);
     const mdPath = outputPath.replace(/\.docx$/i, ".md");
     fs.writeFileSync(mdPath, markdownContent, "utf-8");
-    
+
     log.info(`Document generated: ${mdPath}`);
-    
+
     return {
       success: true,
       outputPath: mdPath,
@@ -84,25 +84,25 @@ export async function generateDocx(
  */
 function convertSectionsToMarkdown(
   sections: DocxSection[],
-  options: DocxOptions
+  options: DocxOptions,
 ): string {
   let markdown = "";
-  
+
   // Header
   if (options.title) {
     markdown += `# ${options.title}\n\n`;
   }
-  
+
   if (options.author) {
     markdown += `**作者:** ${options.author}\n\n`;
   }
-  
+
   if (options.subject) {
     markdown += `**主题:** ${options.subject}\n\n`;
   }
-  
+
   markdown += `---\n\n`;
-  
+
   // Sections
   for (const section of sections) {
     switch (section.type) {
@@ -111,33 +111,33 @@ function convertSectionsToMarkdown(
         const hashes = "#".repeat(level);
         markdown += `${hashes} ${section.content}\n\n`;
         break;
-        
+
       case "paragraph":
         markdown += `${section.content}\n\n`;
         break;
-        
+
       case "list":
         for (const item of section.items || []) {
           markdown += `- ${item}\n`;
         }
         markdown += "\n";
         break;
-        
+
       case "table":
         markdown += convertTableToMarkdown(section.rows || []);
         markdown += "\n";
         break;
-        
+
       case "image":
         markdown += `![Image](${section.imagePath})\n\n`;
         break;
-        
+
       case "pageBreak":
         markdown += `---\n\n`;
         break;
     }
   }
-  
+
   return markdown;
 }
 
@@ -146,19 +146,19 @@ function convertSectionsToMarkdown(
  */
 function convertTableToMarkdown(rows: any[][]): string {
   if (rows.length === 0) return "";
-  
+
   let markdown = "";
-  
+
   // Header row
   const header = rows[0];
   markdown += "| " + header.join(" | ") + " |\n";
   markdown += "| " + header.map(() => "---").join(" | ") + " |\n";
-  
+
   // Data rows
   for (let i = 1; i < rows.length; i++) {
     markdown += "| " + rows[i].join(" | ") + " |\n";
   }
-  
+
   return markdown;
 }
 
@@ -175,7 +175,7 @@ export async function generateDailyReportDocx(
     issues: string;
     plans: string[];
   },
-  outputPath: string
+  outputPath: string,
 ): Promise<{ success: boolean; outputPath: string }> {
   const sections: DocxSection[] = [
     { type: "heading", content: "日报", level: 1 },
@@ -189,7 +189,7 @@ export async function generateDailyReportDocx(
     { type: "heading", content: "计划", level: 2 },
     { type: "list", items: data.plans },
   ];
-  
+
   return generateDocx(sections, outputPath, {
     title: `日报 - ${data.date}`,
   });
@@ -207,7 +207,7 @@ export async function generateProjectReportDocx(
     details: string[];
     conclusion: string;
   },
-  outputPath: string
+  outputPath: string,
 ): Promise<{ success: boolean; outputPath: string }> {
   const sections: DocxSection[] = [
     { type: "heading", content: data.title, level: 1 },
@@ -218,7 +218,7 @@ export async function generateProjectReportDocx(
     { type: "heading", content: "结论", level: 2 },
     { type: "paragraph", content: data.conclusion },
   ];
-  
+
   return generateDocx(sections, outputPath, {
     title: data.title,
   });

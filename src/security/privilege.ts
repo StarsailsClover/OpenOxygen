@@ -46,11 +46,13 @@ export function detectPrivilegeLevel(): PrivilegeStatus {
   try {
     // Windows: 使用 whoami 和 net session 检测
     const username = execSync("whoami", { encoding: "utf-8" }).trim();
-    const [domain = "", user = "unknown"] = username.includes("\\") ? username.split("\\") : ["", username];
-    
+    const [domain = "", user = "unknown"] = username.includes("\\")
+      ? username.split("\\")
+      : ["", username];
+
     let isElevated = false;
     let level: PrivilegeLevel = "user";
-    
+
     try {
       // net session 只有管理员能成功执行
       execSync("net session", { stdio: "ignore" });
@@ -59,13 +61,16 @@ export function detectPrivilegeLevel(): PrivilegeStatus {
     } catch {
       isElevated = false;
     }
-    
+
     // 检测 SYSTEM 账户
-    if (username.toLowerCase().includes("system") || username.toLowerCase().includes("nt authority")) {
+    if (
+      username.toLowerCase().includes("system") ||
+      username.toLowerCase().includes("nt authority")
+    ) {
       level = "system";
       isElevated = true;
     }
-    
+
     return {
       level,
       isElevated,
@@ -125,12 +130,14 @@ export class LowPrivilegeSandbox {
       // 创建用户
       execSync(
         `net user ${this.config.username} ${this.config.password} /add /active:yes /comment:"OpenOxygen Sandbox User"`,
-        { stdio: "inherit" }
+        { stdio: "inherit" },
       );
 
       // 从 Users 组移除（限制权限）
       try {
-        execSync(`net localgroup Users ${this.config.username} /delete`, { stdio: "ignore" });
+        execSync(`net localgroup Users ${this.config.username} /delete`, {
+          stdio: "ignore",
+        });
       } catch {
         // 忽略错误
       }
@@ -143,7 +150,7 @@ export class LowPrivilegeSandbox {
         try {
           execSync(
             `icacls "${path}" /grant ${this.config.username}:(OI)(CI)RX /T`,
-            { stdio: "ignore" }
+            { stdio: "ignore" },
           );
         } catch {
           log.warn(`Failed to set permission for ${path}`);
@@ -155,7 +162,7 @@ export class LowPrivilegeSandbox {
         try {
           execSync(
             `icacls "${path}" /deny ${this.config.username}:(OI)(CI)F /T`,
-            { stdio: "ignore" }
+            { stdio: "ignore" },
           );
         } catch {
           // 忽略错误
@@ -177,7 +184,9 @@ export class LowPrivilegeSandbox {
     if (platform() !== "win32") return false;
 
     try {
-      execSync(`net user ${this.config.username} /delete`, { stdio: "inherit" });
+      execSync(`net user ${this.config.username} /delete`, {
+        stdio: "inherit",
+      });
       log.info(`Deleted user: ${this.config.username}`);
       return true;
     } catch (err) {
@@ -189,16 +198,23 @@ export class LowPrivilegeSandbox {
   /**
    * 以低权限用户执行命令
    */
-  executeAsUser(command: string, args: string[] = []): Promise<{ success: boolean; output: string; error?: string }> {
+  executeAsUser(
+    command: string,
+    args: string[] = [],
+  ): Promise<{ success: boolean; output: string; error?: string }> {
     return new Promise((resolve) => {
       if (platform() !== "win32") {
-        resolve({ success: false, output: "", error: "Only supported on Windows" });
+        resolve({
+          success: false,
+          output: "",
+          error: "Only supported on Windows",
+        });
         return;
       }
 
       // 使用 runas 以低权限用户执行
       const runasCmd = `runas /user:${this.config.username} "${command} ${args.join(" ")}"`;
-      
+
       const child = spawn("cmd", ["/c", runasCmd], {
         windowsHide: true,
       });
@@ -240,7 +256,9 @@ export class LowPrivilegeSandbox {
  */
 export function dropPrivileges(targetUser?: string): boolean {
   if (platform() === "win32") {
-    log.warn("Privilege drop not supported on Windows, use LowPrivilegeSandbox instead");
+    log.warn(
+      "Privilege drop not supported on Windows, use LowPrivilegeSandbox instead",
+    );
     return false;
   }
 
@@ -251,10 +269,10 @@ export function dropPrivileges(targetUser?: string): boolean {
         const user = targetUser || "nobody";
         // 获取用户 UID（简化处理）
         const { uid, gid } = getUserIds(user);
-        
-      process.setgid?.(gid);
-      process.setuid?.(uid);
-        
+
+        process.setgid?.(gid);
+        process.setuid?.(uid);
+
         log.info(`Dropped privileges to ${user} (uid=${uid}, gid=${gid})`);
         return true;
       }
@@ -268,7 +286,9 @@ export function dropPrivileges(targetUser?: string): boolean {
 
 function getUserIds(username: string): { uid: number; gid: number } {
   try {
-    const output = execSync(`id -u ${username} && id -g ${username}`, { encoding: "utf-8" });
+    const output = execSync(`id -u ${username} && id -g ${username}`, {
+      encoding: "utf-8",
+    });
     const [uid, gid] = output.trim().split("\n").map(Number);
     return { uid: uid || 65534, gid: gid || 65534 };
   } catch {
@@ -300,7 +320,7 @@ export function spawnIsolated(config: IsolatedProcessConfig): Promise<{
 }> {
   return new Promise((resolve) => {
     const startTime = Date.now();
-    
+
     // 构建隔离参数
     const spawnOptions: any = {
       windowsHide: true,
@@ -318,15 +338,19 @@ export function spawnIsolated(config: IsolatedProcessConfig): Promise<{
         Wait-Job $job -Timeout ${Math.floor(config.timeoutMs / 1000)}
         Receive-Job $job
       `;
-      
+
       const child = spawn("powershell", ["-Command", psCommand], spawnOptions);
-      
+
       let output = "";
       let error = "";
-      
-      child.stdout?.on("data", (data) => { output += data.toString(); });
-      child.stderr?.on("data", (data) => { error += data.toString(); });
-      
+
+      child.stdout?.on("data", (data) => {
+        output += data.toString();
+      });
+      child.stderr?.on("data", (data) => {
+        error += data.toString();
+      });
+
       child.on("close", (code) => {
         resolve({
           success: code === 0,
@@ -340,25 +364,29 @@ export function spawnIsolated(config: IsolatedProcessConfig): Promise<{
         ...spawnOptions,
         env: { ...process.env, PATH: "/usr/bin:/bin" },
       });
-      
+
       let output = "";
       let error = "";
-      
-      child.stdout?.on("data", (data) => { output += data.toString(); });
-      child.stderr?.on("data", (data) => { error += data.toString(); });
-      
+
+      child.stdout?.on("data", (data) => {
+        output += data.toString();
+      });
+      child.stderr?.on("data", (data) => {
+        error += data.toString();
+      });
+
       // 内存限制（通过 cgroup，简化处理）
       const memoryWatcher = setInterval(() => {
         // 实际实现需要读取 /proc/[pid]/status
       }, 1000);
-      
+
       // 超时
       const timeout = setTimeout(() => {
         clearInterval(memoryWatcher);
         child.kill("SIGTERM");
         setTimeout(() => child.kill("SIGKILL"), 5000);
       }, config.timeoutMs);
-      
+
       child.on("close", (code) => {
         clearInterval(memoryWatcher);
         clearTimeout(timeout);
@@ -390,9 +418,9 @@ export class PrivilegePolicy {
    */
   check(): { allowed: boolean; current: PrivilegeStatus; reason?: string } {
     const current = detectPrivilegeLevel();
-    
+
     const levels = { system: 3, admin: 2, user: 1, restricted: 0 };
-    
+
     if (levels[current.level] < levels[this.minLevel]) {
       return {
         allowed: false,
@@ -400,16 +428,17 @@ export class PrivilegePolicy {
         reason: `Current level ${current.level} below required ${this.minLevel}`,
       };
     }
-    
+
     // 警告：以管理员运行
     if (current.level === "admin" || current.level === "system") {
       return {
         allowed: true,
         current,
-        reason: "WARNING: Running with elevated privileges. Consider using LowPrivilegeSandbox.",
+        reason:
+          "WARNING: Running with elevated privileges. Consider using LowPrivilegeSandbox.",
       };
     }
-    
+
     return { allowed: true, current };
   }
 
@@ -426,24 +455,24 @@ export class PrivilegePolicy {
    */
   async executeSensitive<T>(
     operation: () => Promise<T>,
-    options: { useSandbox?: boolean; sandboxConfig?: LowPrivilegeConfig } = {}
+    options: { useSandbox?: boolean; sandboxConfig?: LowPrivilegeConfig } = {},
   ): Promise<T> {
     const check = this.check();
-    
+
     if (!check.allowed) {
       throw new Error(`Privilege check failed: ${check.reason}`);
     }
-    
+
     if (check.current.level === "admin" && options.useSandbox) {
       // 使用沙箱执行
       if (!this.sandbox && options.sandboxConfig) {
         this.enableSandbox(options.sandboxConfig);
       }
-      
+
       // 实际执行需要序列化操作，这里简化处理
       log.warn("Sandbox execution requested but not fully implemented");
     }
-    
+
     return operation();
   }
 }

@@ -1,6 +1,6 @@
 /**
  * Skill Registry
- * 
+ *
  * Central registry for all skills
  * Manages skill registration, discovery, and execution
  */
@@ -51,13 +51,13 @@ class SkillRegistry {
    */
   register(skill: Skill): void {
     this.skills.set(skill.id, skill);
-    
+
     // Add to category
     if (!this.categories.has(skill.category)) {
       this.categories.set(skill.category, new Set());
     }
     this.categories.get(skill.category)!.add(skill.id);
-    
+
     log.info(`Skill registered: ${skill.name} (${skill.id})`);
   }
 
@@ -127,7 +127,7 @@ class SkillRegistry {
   listByCategory(category: string): Skill[] {
     const skillIds = this.categories.get(category);
     if (!skillIds) return [];
-    
+
     return Array.from(skillIds)
       .map((id) => this.skills.get(id))
       .filter((skill): skill is Skill => skill !== undefined);
@@ -149,7 +149,7 @@ class SkillRegistry {
       (skill) =>
         skill.name.toLowerCase().includes(lowerQuery) ||
         skill.description.toLowerCase().includes(lowerQuery) ||
-        skill.id.toLowerCase().includes(lowerQuery)
+        skill.id.toLowerCase().includes(lowerQuery),
     );
   }
 
@@ -176,7 +176,10 @@ export function getSkill(skillId: string): Skill | undefined {
   return skillRegistry.get(skillId);
 }
 
-export function executeSkill(skillId: string, ...args: any[]): Promise<ToolResult> {
+export function executeSkill(
+  skillId: string,
+  ...args: any[]
+): Promise<ToolResult> {
   return skillRegistry.execute(skillId, ...args);
 }
 

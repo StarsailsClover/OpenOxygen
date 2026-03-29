@@ -15,20 +15,20 @@ const log = createSubsystemLogger("input/safety");
 export const INPUT_SAFETY_CONFIG = {
   // 最大连续输入操作数
   maxConsecutiveOps: 10,
-  
+
   // 操作之间最小间隔 (ms)
   minIntervalMs: 100,
-  
+
   // 紧急停止热键: Ctrl+Shift+Esc
   emergencyHotkey: {
     ctrl: true,
     shift: true,
     key: "Escape",
   },
-  
+
   // 自动释放超时 (ms)
   autoReleaseTimeoutMs: 5000,
-  
+
   // 安全区域 (屏幕中心区域不操作)
   safeZone: {
     enabled: true,
@@ -56,9 +56,9 @@ export class InputSafetyGuard {
 
     // 检查连续操作数
     if (this.opCount >= INPUT_SAFETY_CONFIG.maxConsecutiveOps) {
-      return { 
-        allowed: false, 
-        reason: `Too many consecutive operations (${this.opCount}), reset required` 
+      return {
+        allowed: false,
+        reason: `Too many consecutive operations (${this.opCount}), reset required`,
       };
     }
 
@@ -66,9 +66,9 @@ export class InputSafetyGuard {
     const now = Date.now();
     const elapsed = now - this.lastOpTime;
     if (elapsed < INPUT_SAFETY_CONFIG.minIntervalMs) {
-      return { 
-        allowed: false, 
-        reason: `Operation too frequent (${elapsed}ms < ${INPUT_SAFETY_CONFIG.minIntervalMs}ms)` 
+      return {
+        allowed: false,
+        reason: `Operation too frequent (${elapsed}ms < ${INPUT_SAFETY_CONFIG.minIntervalMs}ms)`,
       };
     }
 
@@ -81,8 +81,10 @@ export class InputSafetyGuard {
   record(operation: string): void {
     this.opCount++;
     this.lastOpTime = Date.now();
-    
-    log.debug(`Input operation recorded: ${operation} (count: ${this.opCount})`);
+
+    log.debug(
+      `Input operation recorded: ${operation} (count: ${this.opCount})`,
+    );
 
     // 设置自动释放
     this.resetAutoReleaseTimer();
@@ -122,21 +124,28 @@ export class InputSafetyGuard {
   emergencyStop(): void {
     this.pause();
     this.clearAutoReleaseTimer();
-    
+
     // 尝试释放所有按键
     this.releaseAllKeys();
-    
+
     log.error("EMERGENCY STOP: All input operations halted");
   }
 
   /**
    * 检查坐标是否在安全区域
    */
-  isInSafeZone(x: number, y: number, screenWidth: number, screenHeight: number): boolean {
+  isInSafeZone(
+    x: number,
+    y: number,
+    screenWidth: number,
+    screenHeight: number,
+  ): boolean {
     if (!INPUT_SAFETY_CONFIG.safeZone.enabled) return true;
 
-    const marginX = screenWidth * (INPUT_SAFETY_CONFIG.safeZone.marginPercent / 100);
-    const marginY = screenHeight * (INPUT_SAFETY_CONFIG.safeZone.marginPercent / 100);
+    const marginX =
+      screenWidth * (INPUT_SAFETY_CONFIG.safeZone.marginPercent / 100);
+    const marginY =
+      screenHeight * (INPUT_SAFETY_CONFIG.safeZone.marginPercent / 100);
 
     return (
       x >= marginX &&
@@ -188,7 +197,7 @@ export const inputSafetyGuard = new InputSafetyGuard();
 export async function safeInput<T>(
   operation: string,
   fn: () => Promise<T>,
-  options?: { skipSafetyCheck?: boolean }
+  options?: { skipSafetyCheck?: boolean },
 ): Promise<T> {
   if (!options?.skipSafetyCheck) {
     const check = inputSafetyGuard.check(operation);
@@ -217,7 +226,7 @@ export async function safeInput<T>(
  */
 export function emergencyRecover(): void {
   inputSafetyGuard.emergencyStop();
-  
+
   // 尝试移动鼠标到屏幕中心
   try {
     const native = require("../native-bridge.js");
@@ -232,7 +241,7 @@ export function emergencyRecover(): void {
   } catch (err) {
     log.error("Failed to recover mouse position:", err);
   }
-  
+
   log.info("Emergency recovery completed");
 }
 

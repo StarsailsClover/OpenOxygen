@@ -1,6 +1,6 @@
 /**
  * Permission System Tests
- * 
+ *
  * Test suite for zero-trust permission management
  */
 
@@ -23,7 +23,7 @@ describe("Permission System", () => {
     test("should deny access with minimal permissions", () => {
       const result = checkPermission(
         { action: "read", resource: "file" },
-        "minimal"
+        "minimal",
       );
       expect(result.granted).toBe(false);
     });
@@ -31,7 +31,7 @@ describe("Permission System", () => {
     test("should grant console access with minimal permissions", () => {
       const result = checkPermission(
         { action: "write", resource: "console" },
-        "minimal"
+        "minimal",
       );
       expect(result.granted).toBe(true);
     });
@@ -39,7 +39,7 @@ describe("Permission System", () => {
     test("should grant file read with standard permissions", () => {
       const result = checkPermission(
         { action: "read", resource: "file" },
-        "standard"
+        "standard",
       );
       expect(result.granted).toBe(true);
     });
@@ -47,7 +47,7 @@ describe("Permission System", () => {
     test("should deny admin action with standard permissions", () => {
       const result = checkPermission(
         { action: "admin", resource: "system" },
-        "standard"
+        "standard",
       );
       expect(result.granted).toBe(false);
     });
@@ -55,7 +55,7 @@ describe("Permission System", () => {
     test("should grant all with unrestricted permissions", () => {
       const result = checkPermission(
         { action: "admin", resource: "anything" },
-        "unrestricted"
+        "unrestricted",
       );
       expect(result.granted).toBe(true);
     });
@@ -70,7 +70,7 @@ describe("Permission System", () => {
         for (let j = 0; j <= i; j++) {
           const result = checkPermission(
             { action: levels[j], resource: "test" },
-            "elevated"
+            "elevated",
           );
           // Should be granted if we have sufficient level
           expect(result.level).toBeDefined();
@@ -84,7 +84,7 @@ describe("Permission System", () => {
       const result = grantTemporaryPermission(
         { action: "read", resource: "file" },
         60000,
-        "elevated"
+        "elevated",
       );
       expect(result.granted).toBe(true);
       expect(result.expiresAt).toBeDefined();
@@ -95,7 +95,7 @@ describe("Permission System", () => {
       const result = grantTemporaryPermission(
         { action: "read", resource: "file" },
         60000,
-        "elevated"
+        "elevated",
       );
       const after = Date.now();
 
@@ -178,7 +178,7 @@ describe("Permission System", () => {
     test("should match exact resource", () => {
       const result = checkPermission(
         { action: "read", resource: "file.txt" },
-        "standard"
+        "standard",
       );
       // Should check if pattern matching works
       expect(result).toBeDefined();
@@ -194,7 +194,7 @@ describe("Permission System", () => {
 
       const result = permissionManager.checkPermission(
         { action: "read", resource: "file/test.txt" },
-        set.id
+        set.id,
       );
 
       expect(result.granted).toBe(true);

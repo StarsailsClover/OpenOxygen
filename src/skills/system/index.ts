@@ -1,6 +1,6 @@
 /**
  * System Operations Skills
- * 
+ *
  * High-frequency system automation
  * File management, clipboard, desktop organization
  */
@@ -21,7 +21,7 @@ const log = createSubsystemLogger("skills/system");
 
 export async function listFiles(dirPath: string): Promise<ToolResult> {
   log.info(`Listing files: ${dirPath}`);
-  
+
   try {
     const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
     const files = entries.map((entry) => ({
@@ -29,7 +29,7 @@ export async function listFiles(dirPath: string): Promise<ToolResult> {
       isDirectory: entry.isDirectory(),
       isFile: entry.isFile(),
     }));
-    
+
     return {
       success: true,
       data: { path: dirPath, files },
@@ -44,7 +44,7 @@ export async function listFiles(dirPath: string): Promise<ToolResult> {
 
 export async function readFile(filePath: string): Promise<ToolResult> {
   log.info(`Reading file: ${filePath}`);
-  
+
   try {
     const content = await fs.promises.readFile(filePath, "utf-8");
     return {
@@ -59,9 +59,12 @@ export async function readFile(filePath: string): Promise<ToolResult> {
   }
 }
 
-export async function writeFile(filePath: string, content: string): Promise<ToolResult> {
+export async function writeFile(
+  filePath: string,
+  content: string,
+): Promise<ToolResult> {
   log.info(`Writing file: ${filePath}`);
-  
+
   try {
     await fs.promises.writeFile(filePath, content, "utf-8");
     return {
@@ -78,7 +81,7 @@ export async function writeFile(filePath: string, content: string): Promise<Tool
 
 export async function copyFile(src: string, dest: string): Promise<ToolResult> {
   log.info(`Copying file: ${src} -> ${dest}`);
-  
+
   try {
     await fs.promises.copyFile(src, dest);
     return {
@@ -95,7 +98,7 @@ export async function copyFile(src: string, dest: string): Promise<ToolResult> {
 
 export async function moveFile(src: string, dest: string): Promise<ToolResult> {
   log.info(`Moving file: ${src} -> ${dest}`);
-  
+
   try {
     await fs.promises.rename(src, dest);
     return {
@@ -112,7 +115,7 @@ export async function moveFile(src: string, dest: string): Promise<ToolResult> {
 
 export async function deleteFile(filePath: string): Promise<ToolResult> {
   log.info(`Deleting file: ${filePath}`);
-  
+
   try {
     await fs.promises.unlink(filePath);
     return {
@@ -129,7 +132,7 @@ export async function deleteFile(filePath: string): Promise<ToolResult> {
 
 export async function createDirectory(dirPath: string): Promise<ToolResult> {
   log.info(`Creating directory: ${dirPath}`);
-  
+
   try {
     await fs.promises.mkdir(dirPath, { recursive: true });
     return {
@@ -146,7 +149,7 @@ export async function createDirectory(dirPath: string): Promise<ToolResult> {
 
 export async function deleteDirectory(dirPath: string): Promise<ToolResult> {
   log.info(`Deleting directory: ${dirPath}`);
-  
+
   try {
     await fs.promises.rm(dirPath, { recursive: true, force: true });
     return {
@@ -171,11 +174,11 @@ export async function batchRename(
   replacement: string,
 ): Promise<ToolResult> {
   log.info(`Batch renaming in: ${dirPath}`);
-  
+
   try {
     const entries = await fs.promises.readdir(dirPath);
     const renamed: string[] = [];
-    
+
     for (const entry of entries) {
       if (entry.includes(pattern)) {
         const newName = entry.replace(pattern, replacement);
@@ -185,7 +188,7 @@ export async function batchRename(
         renamed.push(`${entry} -> ${newName}`);
       }
     }
-    
+
     return {
       success: true,
       data: { path: dirPath, renamed },
@@ -203,28 +206,30 @@ export async function findFiles(
   pattern: string,
 ): Promise<ToolResult> {
   log.info(`Finding files: ${pattern} in ${dirPath}`);
-  
+
   try {
     const results: string[] = [];
-    
+
     async function search(currentPath: string) {
-      const entries = await fs.promises.readdir(currentPath, { withFileTypes: true });
-      
+      const entries = await fs.promises.readdir(currentPath, {
+        withFileTypes: true,
+      });
+
       for (const entry of entries) {
         const fullPath = path.join(currentPath, entry.name);
-        
+
         if (entry.name.includes(pattern)) {
           results.push(fullPath);
         }
-        
+
         if (entry.isDirectory()) {
           await search(fullPath);
         }
       }
     }
-    
+
     await search(dirPath);
-    
+
     return {
       success: true,
       data: { pattern, results },
@@ -243,11 +248,11 @@ export async function findFiles(
 
 export async function getClipboard(): Promise<ToolResult> {
   log.info("Getting clipboard content");
-  
+
   try {
     // Use PowerShell on Windows
     const { stdout } = await execAsync("powershell -command Get-Clipboard");
-    
+
     return {
       success: true,
       data: { content: stdout.trim() },
@@ -262,11 +267,13 @@ export async function getClipboard(): Promise<ToolResult> {
 
 export async function setClipboard(content: string): Promise<ToolResult> {
   log.info("Setting clipboard content");
-  
+
   try {
     // Use PowerShell on Windows
-    await execAsync(`powershell -command Set-Clipboard -Value "${content.replace(/"/g, '""')}"`);
-    
+    await execAsync(
+      `powershell -command Set-Clipboard -Value "${content.replace(/"/g, '""')}"`,
+    );
+
     return {
       success: true,
       data: { content },
@@ -281,10 +288,10 @@ export async function setClipboard(content: string): Promise<ToolResult> {
 
 export async function clearClipboard(): Promise<ToolResult> {
   log.info("Clearing clipboard");
-  
+
   try {
-    await execAsync("powershell -command Set-Clipboard -Value \"\"");
-    
+    await execAsync('powershell -command Set-Clipboard -Value ""');
+
     return {
       success: true,
       data: { cleared: true },
@@ -303,7 +310,7 @@ export async function clearClipboard(): Promise<ToolResult> {
 
 export async function organizeDesktop(): Promise<ToolResult> {
   log.info("Organizing desktop");
-  
+
   try {
     const desktopPath = path.join(process.env.USERPROFILE || "", "Desktop");
     const organized: Record<string, string[]> = {
@@ -313,13 +320,13 @@ export async function organizeDesktop(): Promise<ToolResult> {
       archives: [],
       others: [],
     };
-    
+
     const entries = await fs.promises.readdir(desktopPath);
-    
+
     for (const entry of entries) {
       const ext = path.extname(entry).toLowerCase();
       const fullPath = path.join(desktopPath, entry);
-      
+
       if ([".doc", ".docx", ".pdf", ".txt", ".md"].includes(ext)) {
         organized.documents.push(fullPath);
       } else if ([".jpg", ".jpeg", ".png", ".gif", ".bmp"].includes(ext)) {
@@ -332,7 +339,7 @@ export async function organizeDesktop(): Promise<ToolResult> {
         organized.others.push(fullPath);
       }
     }
-    
+
     return {
       success: true,
       data: { organized },
@@ -347,24 +354,24 @@ export async function organizeDesktop(): Promise<ToolResult> {
 
 export async function cleanTempFiles(): Promise<ToolResult> {
   log.info("Cleaning temporary files");
-  
+
   try {
     const tempPaths = [
       process.env.TEMP,
       process.env.TMP,
       path.join(process.env.USERPROFILE || "", "AppData", "Local", "Temp"),
     ].filter(Boolean) as string[];
-    
+
     let cleaned = 0;
-    
+
     for (const tempPath of tempPaths) {
       try {
         const entries = await fs.promises.readdir(tempPath);
-        
+
         for (const entry of entries) {
           const fullPath = path.join(tempPath, entry);
           const stats = await fs.promises.stat(fullPath);
-          
+
           // Delete files older than 7 days
           const age = Date.now() - stats.mtime.getTime();
           if (age > 7 * 24 * 60 * 60 * 1000) {
@@ -378,7 +385,7 @@ export async function cleanTempFiles(): Promise<ToolResult> {
         // Ignore errors for individual paths
       }
     }
-    
+
     return {
       success: true,
       data: { cleaned },
@@ -397,7 +404,7 @@ export async function cleanTempFiles(): Promise<ToolResult> {
 
 export async function getSystemInfo(): Promise<ToolResult> {
   log.info("Getting system info");
-  
+
   try {
     const info = {
       platform: process.platform,
@@ -409,7 +416,7 @@ export async function getSystemInfo(): Promise<ToolResult> {
       homeDir: require("node:os").homedir(),
       tempDir: require("node:os").tmpdir(),
     };
-    
+
     return {
       success: true,
       data: info,
@@ -443,6 +450,6 @@ export function registerSystemSkills(skillRegistry: any): void {
   skillRegistry.register("system.desktop.organize", organizeDesktop);
   skillRegistry.register("system.temp.clean", cleanTempFiles);
   skillRegistry.register("system.info", getSystemInfo);
-  
+
   log.info("System operations skills registered");
 }

@@ -1,6 +1,6 @@
 /**
  * Multimodal Engine
- * 
+ *
  * Unified multimodal processing:
  * - Audio: Whisper, Edge TTS
  * - Vision: Qwen-VL, GPT-4V
@@ -149,8 +149,16 @@ export async function detectUIElements(
   try {
     // Placeholder for UI-TARS integration
     const elements = [
-      { type: "button", text: "Submit", bounds: { x: 100, y: 200, w: 80, h: 30 } },
-      { type: "input", placeholder: "Enter text", bounds: { x: 100, y: 150, w: 200, h: 30 } },
+      {
+        type: "button",
+        text: "Submit",
+        bounds: { x: 100, y: 200, w: 80, h: 30 },
+      },
+      {
+        type: "input",
+        placeholder: "Enter text",
+        bounds: { x: 100, y: 150, w: 200, h: 30 },
+      },
     ];
 
     return {
@@ -180,9 +188,7 @@ export async function compareImages(
       success: true,
       data: {
         similarity: 0.85,
-        differences: [
-          { x: 100, y: 200, description: "Color change" },
-        ],
+        differences: [{ x: 100, y: 200, description: "Color change" }],
       },
     };
   } catch (error) {
@@ -289,9 +295,11 @@ export class MultimodalRouter {
     }
   }
 
-  private async processAudio(input: MultimodalInput): Promise<MultimodalOutput> {
+  private async processAudio(
+    input: MultimodalInput,
+  ): Promise<MultimodalOutput> {
     const result = await transcribeAudio(input.data as Buffer);
-    
+
     if (result.success) {
       return {
         type: "text",
@@ -303,9 +311,11 @@ export class MultimodalRouter {
     throw new Error(result.error);
   }
 
-  private async processVision(input: MultimodalInput): Promise<MultimodalOutput> {
+  private async processVision(
+    input: MultimodalInput,
+  ): Promise<MultimodalOutput> {
     const result = await analyzeImage(input.data as Buffer);
-    
+
     if (result.success) {
       return {
         type: "text",
@@ -317,9 +327,11 @@ export class MultimodalRouter {
     throw new Error(result.error);
   }
 
-  private async processVideo(input: MultimodalInput): Promise<MultimodalOutput> {
+  private async processVideo(
+    input: MultimodalInput,
+  ): Promise<MultimodalOutput> {
     const result = await analyzeVideo(input.data as Buffer);
-    
+
     if (result.success) {
       return {
         type: "text",

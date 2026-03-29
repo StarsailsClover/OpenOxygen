@@ -8,7 +8,11 @@
 import { createSubsystemLogger } from "../logging/index.js";
 import { generateId, nowMs } from "../utils/index.js";
 import { VectorStore } from "../memory/vector/index.js";
-import type { MemoryChunk, MemorySearchResult, MemorySource } from "../types/index.js";
+import type {
+  MemoryChunk,
+  MemorySearchResult,
+  MemorySource,
+} from "../types/index.js";
 import type { SQLiteStore } from "./sqlite.js";
 import { createHash } from "node:crypto";
 
@@ -18,7 +22,11 @@ const log = createSubsystemLogger("storage/vectors");
 // Int8 Quantization
 // ═══════════════════════════════════════════════════════════════════════════
 
-export function quantizeFloat64ToInt8(vector: number[]): { quantized: Int8Array; scale: number; offset: number } {
+export function quantizeFloat64ToInt8(vector: number[]): {
+  quantized: Int8Array;
+  scale: number;
+  offset: number;
+} {
   const min = Math.min(...vector);
   const max = Math.max(...vector);
   const range = max - min || 1;
@@ -33,7 +41,11 @@ export function quantizeFloat64ToInt8(vector: number[]): { quantized: Int8Array;
   return { quantized, scale, offset };
 }
 
-export function dequantizeInt8ToFloat64(quantized: Int8Array, scale: number, offset: number): number[] {
+export function dequantizeInt8ToFloat64(
+  quantized: Int8Array,
+  scale: number,
+  offset: number,
+): number[] {
   const result = new Array(quantized.length);
   for (let i = 0; i < quantized.length; i++) {
     result[i] = (quantized[i]! + 127) / scale + offset;
@@ -98,11 +110,14 @@ export class PersistentVectorStore {
   private useQuantization: boolean;
   private maxMemoryChunks: number;
 
-  constructor(sqliteStore: SQLiteStore, options?: {
-    maxMemoryChunks?: number;
-    maxCacheSize?: number;
-    useQuantization?: boolean;
-  }) {
+  constructor(
+    sqliteStore: SQLiteStore,
+    options?: {
+      maxMemoryChunks?: number;
+      maxCacheSize?: number;
+      useQuantization?: boolean;
+    },
+  ) {
     this.memoryStore = new VectorStore();
     this.sqliteStore = sqliteStore;
     this.embeddingCache = new LRUCache(options?.maxCacheSize || 10000);
@@ -124,7 +139,10 @@ export class PersistentVectorStore {
       filePath: chunk.path,
       startLine: chunk.startLine,
       endLine: chunk.endLine,
-      contentHash: createHash("sha256").update(chunk.content).digest("hex").slice(0, 16),
+      contentHash: createHash("sha256")
+        .update(chunk.content)
+        .digest("hex")
+        .slice(0, 16),
       chunkSize: chunk.content.length,
       createdAt: chunk.createdAt,
       expiresAt: chunk.expiresAt,
@@ -159,7 +177,9 @@ export class PersistentVectorStore {
       added++;
     }
 
-    log.info(`Added ${added} chunks, skipped ${skipped} (memory limit: ${this.maxMemoryChunks})`);
+    log.info(
+      `Added ${added} chunks, skipped ${skipped} (memory limit: ${this.maxMemoryChunks})`,
+    );
     return { added, skipped };
   }
 
@@ -180,9 +200,11 @@ export class PersistentVectorStore {
   cleanup(): { memoryRemoved: number; dbRemoved: number } {
     const memoryRemoved = this.memoryStore.removeExpired();
     const dbRemoved = this.sqliteStore.deleteExpiredChunks();
-    
+
     if (memoryRemoved > 0 || dbRemoved > 0) {
-      log.info(`Cleanup: ${memoryRemoved} memory, ${dbRemoved} db chunks removed`);
+      log.info(
+        `Cleanup: ${memoryRemoved} memory, ${dbRemoved} db chunks removed`,
+      );
     }
 
     return { memoryRemoved, dbRemoved };

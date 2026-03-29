@@ -1,6 +1,6 @@
 /**
  * Office Automation Skills
- * 
+ *
  * High-frequency office automation skills
  * Supports Word, Excel, PowerPoint
  */
@@ -20,16 +20,18 @@ export interface WordDocument {
   paragraphs?: string[];
 }
 
-export async function createWordDocument(doc: WordDocument): Promise<ToolResult> {
+export async function createWordDocument(
+  doc: WordDocument,
+): Promise<ToolResult> {
   log.info(`Creating Word document: ${doc.path}`);
-  
+
   try {
     // Use COM automation or Office.js
     const content = doc.content || doc.paragraphs?.join("\n") || "";
-    
+
     // Placeholder for actual implementation
     // Would use node-win32com or Office.js
-    
+
     return {
       success: true,
       data: { path: doc.path, content },
@@ -45,7 +47,7 @@ export async function createWordDocument(doc: WordDocument): Promise<ToolResult>
 
 export async function readWordDocument(path: string): Promise<ToolResult> {
   log.info(`Reading Word document: ${path}`);
-  
+
   try {
     // Placeholder for actual implementation
     return {
@@ -65,7 +67,7 @@ export async function editWordDocument(
   edits: Array<{ find: string; replace: string }>,
 ): Promise<ToolResult> {
   log.info(`Editing Word document: ${path}`);
-  
+
   try {
     // Placeholder for actual implementation
     return {
@@ -94,9 +96,11 @@ export interface ExcelSheet {
   data: (string | number)[][];
 }
 
-export async function createExcelWorkbook(workbook: ExcelWorkbook): Promise<ToolResult> {
+export async function createExcelWorkbook(
+  workbook: ExcelWorkbook,
+): Promise<ToolResult> {
   log.info(`Creating Excel workbook: ${workbook.path}`);
-  
+
   try {
     // Placeholder for actual implementation
     return {
@@ -111,9 +115,12 @@ export async function createExcelWorkbook(workbook: ExcelWorkbook): Promise<Tool
   }
 }
 
-export async function readExcelSheet(path: string, sheetName?: string): Promise<ToolResult> {
+export async function readExcelSheet(
+  path: string,
+  sheetName?: string,
+): Promise<ToolResult> {
   log.info(`Reading Excel sheet: ${path}`);
-  
+
   try {
     // Placeholder for actual implementation
     return {
@@ -135,7 +142,7 @@ export async function writeExcelCell(
   value: string | number,
 ): Promise<ToolResult> {
   log.info(`Writing Excel cell: ${path}!${sheet}.${cell}`);
-  
+
   try {
     // Placeholder for actual implementation
     return {
@@ -165,14 +172,19 @@ export interface PowerPointSlide {
   layout?: string;
 }
 
-export async function createPowerPoint(presentation: PowerPointPresentation): Promise<ToolResult> {
+export async function createPowerPoint(
+  presentation: PowerPointPresentation,
+): Promise<ToolResult> {
   log.info(`Creating PowerPoint: ${presentation.path}`);
-  
+
   try {
     // Placeholder for actual implementation
     return {
       success: true,
-      data: { path: presentation.path, slides: presentation.slides?.length || 0 },
+      data: {
+        path: presentation.path,
+        slides: presentation.slides?.length || 0,
+      },
     };
   } catch (error) {
     return {
@@ -186,9 +198,12 @@ export async function createPowerPoint(presentation: PowerPointPresentation): Pr
 // PDF Operations
 // ============================================================================
 
-export async function convertToPDF(inputPath: string, outputPath: string): Promise<ToolResult> {
+export async function convertToPDF(
+  inputPath: string,
+  outputPath: string,
+): Promise<ToolResult> {
   log.info(`Converting to PDF: ${inputPath} -> ${outputPath}`);
-  
+
   try {
     // Placeholder for actual implementation
     return {
@@ -203,9 +218,12 @@ export async function convertToPDF(inputPath: string, outputPath: string): Promi
   }
 }
 
-export async function mergePDFs(inputPaths: string[], outputPath: string): Promise<ToolResult> {
+export async function mergePDFs(
+  inputPaths: string[],
+  outputPath: string,
+): Promise<ToolResult> {
   log.info(`Merging PDFs: ${inputPaths.length} files -> ${outputPath}`);
-  
+
   try {
     // Placeholder for actual implementation
     return {
@@ -234,6 +252,6 @@ export function registerOfficeSkills(skillRegistry: any): void {
   skillRegistry.register("office.powerpoint.create", createPowerPoint);
   skillRegistry.register("office.pdf.convert", convertToPDF);
   skillRegistry.register("office.pdf.merge", mergePDFs);
-  
+
   log.info("Office automation skills registered");
 }

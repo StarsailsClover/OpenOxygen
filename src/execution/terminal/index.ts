@@ -48,15 +48,24 @@ export function createDefaultTerminalConfig() {
     timeoutMs: 30_000,
     maxOutputBytes: 1024 * 1024,
     blockedCommands: [
-      "rm -rf /", "rmdir /s /q C:", "format", "del /f /s /q C:",
-      "shutdown", "reboot", "Stop-Computer", "Restart-Computer",
+      "rm -rf /",
+      "rmdir /s /q C:",
+      "format",
+      "del /f /s /q C:",
+      "shutdown",
+      "reboot",
+      "Stop-Computer",
+      "Restart-Computer",
     ],
   };
 }
 
 // ─── Security ───────────────────────────────────────────────────────────────
 
-function isCommandSafe(command: string, blocked: string[]): { safe: boolean; reason?: string } {
+function isCommandSafe(
+  command: string,
+  blocked: string[],
+): { safe: boolean; reason?: string } {
   for (const blockedCmd of blocked) {
     if (command.toLowerCase().includes(blockedCmd.toLowerCase())) {
       return { safe: false, reason: `Blocked command pattern: ${blockedCmd}` };
@@ -184,7 +193,9 @@ export async function executeCommand(
 
     // Timeout
     const timer = setTimeout(() => {
-      try { child.kill("SIGTERM"); } catch {}
+      try {
+        child.kill("SIGTERM");
+      } catch {}
     }, cfg.timeoutMs);
 
     child.stdout?.on("data", (data: Buffer) => {
@@ -204,7 +215,10 @@ export async function executeCommand(
 
       // Update cwd if cd command
       if (/^cd\s+/i.test(command) && code === 0) {
-        const newDir = command.replace(/^cd\s+/i, "").trim().replace(/"/g, "");
+        const newDir = command
+          .replace(/^cd\s+/i, "")
+          .trim()
+          .replace(/"/g, "");
         if (newDir) {
           session.cwd = path.isAbsolute(newDir)
             ? newDir

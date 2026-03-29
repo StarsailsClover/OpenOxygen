@@ -61,7 +61,7 @@ export class PerformanceOptimizer {
     };
 
     this.metrics.push(metrics);
-    
+
     // Keep only last 100
     if (this.metrics.length > 100) {
       this.metrics = this.metrics.slice(-100);
@@ -102,7 +102,7 @@ export class PerformanceOptimizer {
 
     // Cache optimization
     this.optimizations.set("cache", true);
-    
+
     // Lazy loading
     this.optimizations.set("lazy", true);
 
@@ -200,9 +200,18 @@ export class CrossPlatformTester {
     try {
       // Test imports
       await import("../index.js");
-      return { name: "Basic Functionality", passed: true, duration: nowMs() - start };
+      return {
+        name: "Basic Functionality",
+        passed: true,
+        duration: nowMs() - start,
+      };
     } catch (error: any) {
-      return { name: "Basic Functionality", passed: false, duration: nowMs() - start, error: error.message };
+      return {
+        name: "Basic Functionality",
+        passed: false,
+        duration: nowMs() - start,
+        error: error.message,
+      };
     }
   }
 
@@ -214,9 +223,18 @@ export class CrossPlatformTester {
     try {
       const { loadNativeModuleESM } = await import("../native/esm-adapter.js");
       const native = await loadNativeModuleESM();
-      return { name: "Native Module", passed: native !== null, duration: nowMs() - start };
+      return {
+        name: "Native Module",
+        passed: native !== null,
+        duration: nowMs() - start,
+      };
     } catch (error: any) {
-      return { name: "Native Module", passed: false, duration: nowMs() - start, error: error.message };
+      return {
+        name: "Native Module",
+        passed: false,
+        duration: nowMs() - start,
+        error: error.message,
+      };
     }
   }
 
@@ -228,9 +246,18 @@ export class CrossPlatformTester {
     try {
       const { ensureOllamaRunning } = await import("../ollama/launcher.js");
       const running = await ensureOllamaRunning();
-      return { name: "Ollama Connection", passed: running, duration: nowMs() - start };
+      return {
+        name: "Ollama Connection",
+        passed: running,
+        duration: nowMs() - start,
+      };
     } catch (error: any) {
-      return { name: "Ollama Connection", passed: false, duration: nowMs() - start, error: error.message };
+      return {
+        name: "Ollama Connection",
+        passed: false,
+        duration: nowMs() - start,
+        error: error.message,
+      };
     }
   }
 
@@ -240,10 +267,20 @@ export class CrossPlatformTester {
   private async testOUV(): Promise<TestResult> {
     const start = nowMs();
     try {
-      const { OUVVisualUnderstandingController } = await import("../ouv/visual-understanding.js");
-      return { name: "OUV Visual Understanding", passed: true, duration: nowMs() - start };
+      const { OUVVisualUnderstandingController } =
+        await import("../ouv/visual-understanding.js");
+      return {
+        name: "OUV Visual Understanding",
+        passed: true,
+        duration: nowMs() - start,
+      };
     } catch (error: any) {
-      return { name: "OUV Visual Understanding", passed: false, duration: nowMs() - start, error: error.message };
+      return {
+        name: "OUV Visual Understanding",
+        passed: false,
+        duration: nowMs() - start,
+        error: error.message,
+      };
     }
   }
 
@@ -253,12 +290,22 @@ export class CrossPlatformTester {
   private async testOSR(): Promise<TestResult> {
     const start = nowMs();
     try {
-      const { EnhancedOSRRecorder } = await import("../osr/enhanced-recorder.js");
+      const { EnhancedOSRRecorder } =
+        await import("../osr/enhanced-recorder.js");
       const recorder = new EnhancedOSRRecorder();
       const started = recorder.startRecording();
-      return { name: "OSR Recording", passed: started, duration: nowMs() - start };
+      return {
+        name: "OSR Recording",
+        passed: started,
+        duration: nowMs() - start,
+      };
     } catch (error: any) {
-      return { name: "OSR Recording", passed: false, duration: nowMs() - start, error: error.message };
+      return {
+        name: "OSR Recording",
+        passed: false,
+        duration: nowMs() - start,
+        error: error.message,
+      };
     }
   }
 
@@ -296,19 +343,20 @@ export class DocumentationGenerator {
     docs += "- `mouseMove(x, y)` - Move mouse to position\n";
     docs += "- `mouseClick(button)` - Click mouse button\n";
     docs += "- `typeText(text)` - Type text\n\n";
-    
+
     docs += "### OUV Visual Understanding\n";
-    docs += "- `OUVVisualUnderstandingController` - Visual analysis controller\n";
+    docs +=
+      "- `OUVVisualUnderstandingController` - Visual analysis controller\n";
     docs += "- `understandScreen(screenshot)` - Analyze screen content\n\n";
-    
+
     docs += "### OSR Recording\n";
     docs += "- `EnhancedOSRRecorder` - Smart recording with patterns\n";
     docs += "- `OSRPlayer` - Playback with verification\n\n";
-    
+
     docs += "### Ollama Integration\n";
     docs += "- `ensureOllamaRunning()` - Ensure Ollama is running\n";
     docs += "- `getOllamaStatus()` - Get Ollama status\n\n";
-    
+
     return docs;
   }
 
@@ -323,12 +371,12 @@ export class DocumentationGenerator {
     changelog += "- OSR player with visual verification\n";
     changelog += "- Performance optimizer\n";
     changelog += "- Cross-platform tester\n\n";
-    
+
     changelog += "## 26w15aF Phase A.2\n";
     changelog += "- OUV visual understanding system\n";
     changelog += "- Ollama VLM integration\n";
     changelog += "- Multi-agent coordination\n\n";
-    
+
     return changelog;
   }
 }

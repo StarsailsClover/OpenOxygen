@@ -16,7 +16,16 @@ const log = createSubsystemLogger("osr/recorder");
 export type RecordingState = "idle" | "recording" | "paused";
 
 // Step types
-export type StepType = "mouse_move" | "mouse_click" | "mouse_drag" | "key_press" | "key_combination" | "type_text" | "window_focus" | "screenshot" | "delay";
+export type StepType =
+  | "mouse_move"
+  | "mouse_click"
+  | "mouse_drag"
+  | "key_press"
+  | "key_combination"
+  | "type_text"
+  | "window_focus"
+  | "screenshot"
+  | "delay";
 
 // Recorded step
 export interface RecordedStep {
@@ -64,14 +73,14 @@ let lastMousePos = { x: 0, y: 0 };
  */
 export function startRecording(
   name: string,
-  options: { captureScreenshots?: boolean; trackMouse?: boolean } = {}
+  options: { captureScreenshots?: boolean; trackMouse?: boolean } = {},
 ): RecordingSession {
   if (activeSession?.state === "recording") {
     throw new Error("Already recording");
   }
-  
+
   log.info(`Starting recording: ${name}`);
-  
+
   const session: RecordingSession = {
     id: generateId("osr"),
     name,
@@ -82,25 +91,25 @@ export function startRecording(
       screenResolution: getScreenResolution(),
     },
   };
-  
+
   activeSession = session;
-  
+
   // Start mouse tracking
   if (options.trackMouse !== false) {
     startMouseTracking();
   }
-  
+
   // Start screenshot capture
   if (options.captureScreenshots !== false) {
     startScreenshotCapture();
   }
-  
+
   // Record initial step
   recordStep({
     type: "window_focus",
     data: { action: "recording_started" },
   });
-  
+
   log.info(`Recording started: ${session.id}`);
   return session;
 }
@@ -113,28 +122,28 @@ export function stopRecording(): RecordingSession | null {
     log.warn("No active recording to stop");
     return null;
   }
-  
+
   log.info("Stopping recording");
-  
+
   // Stop tracking
   stopMouseTracking();
   stopScreenshotCapture();
-  
+
   // Record final step
   recordStep({
     type: "window_focus",
     data: { action: "recording_stopped" },
   });
-  
+
   activeSession.endTime = nowMs();
   activeSession.state = "idle";
-  
+
   // Save to memory
   saveRecordingToMemory(activeSession);
-  
+
   const session = activeSession;
   activeSession = null;
-  
+
   log.info(`Recording stopped: ${session.id}, ${session.steps.length} steps`);
   return session;
 }
@@ -146,16 +155,16 @@ export function pauseRecording(): boolean {
   if (!activeSession || activeSession.state !== "recording") {
     return false;
   }
-  
+
   activeSession.state = "paused";
   stopMouseTracking();
   stopScreenshotCapture();
-  
+
   recordStep({
     type: "window_focus",
     data: { action: "recording_paused" },
   });
-  
+
   log.info("Recording paused");
   return true;
 }
@@ -167,16 +176,16 @@ export function resumeRecording(): boolean {
   if (!activeSession || activeSession.state !== "paused") {
     return false;
   }
-  
+
   activeSession.state = "recording";
   startMouseTracking();
   startScreenshotCapture();
-  
+
   recordStep({
     type: "window_focus",
     data: { action: "recording_resumed" },
   });
-  
+
   log.info("Recording resumed");
   return true;
 }
@@ -184,17 +193,19 @@ export function resumeRecording(): boolean {
 /**
  * Record a step
  */
-export function recordStep(partialStep: Omit<RecordedStep, "id" | "timestamp">): void {
+export function recordStep(
+  partialStep: Omit<RecordedStep, "id" | "timestamp">,
+): void {
   if (!activeSession || activeSession.state !== "recording") {
     return;
   }
-  
+
   const step: RecordedStep = {
     id: generateId("step"),
     timestamp: nowMs(),
     ...partialStep,
   };
-  
+
   activeSession.steps.push(step);
   log.debug(`Recorded step: ${step.type}`);
 }
@@ -227,7 +238,7 @@ export function recordMouseDrag(
   startY: number,
   endX: number,
   endY: number,
-  button: string
+  button: string,
 ): void {
   recordStep({
     type: "mouse_drag",
@@ -280,14 +291,14 @@ export function recordWindowFocus(windowTitle: string, app?: string): void {
  */
 function startMouseTracking(): void {
   if (recordingInterval) return;
-  
+
   recordingInterval = setInterval(() => {
     const pos = getMousePosition();
     if (pos) {
       // Only record if position changed significantly
       const dx = Math.abs(pos.x - lastMousePos.x);
       const dy = Math.abs(pos.y - lastMousePos.y);
-      
+
       if (dx > 5 || dy > 5) {
         recordMouseMove(pos.x, pos.y);
         lastMousePos = pos;
@@ -314,9 +325,9 @@ let screenshotInterval: NodeJS.Timeout | null = null;
  */
 function startScreenshotCapture(): void {
   if (screenshotInterval) return;
-  
+
   screenshotInterval = setInterval(() => {
-    captureScreenshot().then(screenshot => {
+    captureScreenshot().then((screenshot) => {
       if (screenshot && activeSession) {
         // Attach screenshot to last step or create new step
         const lastStep = activeSession.steps[activeSession.steps.length - 1];

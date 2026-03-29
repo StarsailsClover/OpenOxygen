@@ -64,23 +64,26 @@ export type ElementLocator = {
 class CDPClient {
   private ws: WebSocket | null = null;
   private messageId = 0;
-  private pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
+  private pending = new Map<
+    number,
+    { resolve: (v: unknown) => void; reject: (e: Error) => void }
+  >();
   private eventHandlers = new Map<string, ((params: unknown) => void)[]>();
 
   async connect(wsEndpoint: string): Promise<void> {
     return new Promise((resolve, reject) => {
       this.ws = new WebSocket(wsEndpoint);
-      
+
       this.ws.on("open", () => {
         log.info(`CDP connected: ${wsEndpoint}`);
         resolve();
       });
-      
+
       this.ws.on("error", (err) => {
         log.error(`CDP connection error: ${err}`);
         reject(err);
       });
-      
+
       this.ws.on("message", (data: Buffer) => {
         try {
           const msg = JSON.parse(data.toString());
@@ -92,7 +95,7 @@ class CDPClient {
           }
           if (msg.method) {
             const handlers = this.eventHandlers.get(msg.method) || [];
-            handlers.forEach(h => h(msg.params));
+            handlers.forEach((h) => h(msg.params));
           }
         } catch (e) {
           log.error(`CDP message parse error: ${e}`);
@@ -101,7 +104,10 @@ class CDPClient {
     });
   }
 
-  async send(method: string, params?: Record<string, unknown>): Promise<unknown> {
+  async send(
+    method: string,
+    params?: Record<string, unknown>,
+  ): Promise<unknown> {
     return new Promise((resolve, reject) => {
       if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
         reject(new Error("CDP not connected"));
@@ -130,15 +136,16 @@ class CDPClient {
 
 const sessions = new Map<string, BrowserSession>();
 
-export async function createBrowserSession(
-  options?: {
-    headless?: boolean;
-    inheritCookies?: boolean;
-  },
-): Promise<BrowserSession> {
+export async function createBrowserSession(options?: {
+  headless?: boolean;
+  inheritCookies?: boolean;
+}): Promise<BrowserSession> {
   const cdpPort = 9222;
-  const userDataDir = path.join(os.tmpdir(), `oxygen-browser-${generateShortId(8)}`);
-  
+  const userDataDir = path.join(
+    os.tmpdir(),
+    `oxygen-browser-${generateShortId(8)}`,
+  );
+
   // Ensure directory exists
   if (!fs.existsSync(userDataDir)) {
     fs.mkdirSync(userDataDir, { recursive: true });
@@ -170,9 +177,9 @@ export async function createBrowserSession(
   }
 
   log.info(`Launching Chromium: ${chromiumPath}`);
-  
+
   const process_ = spawn(chromiumPath, args, { detached: false });
-  
+
   const session: BrowserSession = {
     id: generateId("browser"),
     process: process_,
@@ -188,7 +195,7 @@ export async function createBrowserSession(
 
   // Wait for CDP - connect to page target, not browser target
   await waitForCDP(session, cdpPort);
-  
+
   // Enable domains on page target
   const cdp = session.cdpClient;
   if (cdp) {
@@ -201,22 +208,31 @@ export async function createBrowserSession(
     }
   }
 
-  log.info(`Browser session created: ${session.id} (cookies: ${inheritedCookies})`);
+  log.info(
+    `Browser session created: ${session.id} (cookies: ${inheritedCookies})`,
+  );
   return session;
 }
 
-async function waitForCDP(session: BrowserSession, port: number, timeoutMs = 30000): Promise<void> {
+async function waitForCDP(
+  session: BrowserSession,
+  port: number,
+  timeoutMs = 30000,
+): Promise<void> {
   const http = await import("node:http");
-  
+
   // Step 1: Get page target (not browser target)
   const pageWsUrl = await new Promise<string>((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error("CDP timeout")), timeoutMs);
-    
+    const timeout = setTimeout(
+      () => reject(new Error("CDP timeout")),
+      timeoutMs,
+    );
+
     const check = () => {
       // First try /json/list to get page targets
       const req = http.get(`http://127.0.0.1:${port}/json/list`, (res: any) => {
         let data = "";
-        res.on("data", (chunk: string) => data += chunk);
+        res.on("data", (chunk: string) => (data += chunk));
         res.on("end", () => {
           try {
             const targets = JSON.parse(data);
@@ -234,16 +250,16 @@ async function waitForCDP(session: BrowserSession, port: number, timeoutMs = 300
           }
         });
       });
-      
+
       req.on("error", () => setTimeout(check, 500));
       req.setTimeout(500, () => req.destroy());
     };
-    
+
     check();
   });
 
   session.wsEndpoint = pageWsUrl;
-  
+
   if (session.cdpClient) {
     await session.cdpClient.connect(session.wsEndpoint);
   }
@@ -259,11 +275,11 @@ function findChromium(): string | null {
     "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
     `${process.env.LOCALAPPDATA}\\Microsoft\\Edge\\Application\\msedge.exe`,
   ];
-  
+
   for (const p of paths) {
     if (fs.existsSync(p)) return p;
   }
-  
+
   return null;
 }
 
@@ -271,13 +287,28 @@ function findChromium(): string | null {
 // Cookie Inheritance (安全：仅复制到临时目录)
 // ═══════════════════════════════════════════════════════════════════════════
 
-
 export function findSystemBrowserCookies(): { edge?: string; chrome?: string } {
   const paths: { edge?: string; chrome?: string } = {};
   const localAppData = process.env.LOCALAPPDATA || "";
 
-  const edgePath = path.join(localAppData, "Microsoft", "Edge", "User Data", "Default", "Network", "Cookies");
-  const chromePath = path.join(localAppData, "Google", "Chrome", "User Data", "Default", "Network", "Cookies");
+  const edgePath = path.join(
+    localAppData,
+    "Microsoft",
+    "Edge",
+    "User Data",
+    "Default",
+    "Network",
+    "Cookies",
+  );
+  const chromePath = path.join(
+    localAppData,
+    "Google",
+    "Chrome",
+    "User Data",
+    "Default",
+    "Network",
+    "Cookies",
+  );
 
   if (fs.existsSync(edgePath)) paths.edge = edgePath;
   if (fs.existsSync(chromePath)) paths.chrome = chromePath;
@@ -287,7 +318,7 @@ export function findSystemBrowserCookies(): { edge?: string; chrome?: string } {
 
 async function inheritSystemCookies(targetDir: string): Promise<boolean> {
   const cookies = findSystemBrowserCookies();
-  
+
   if (!cookies.edge && !cookies.chrome) {
     log.warn("No system browser cookies found");
     return false;
@@ -299,7 +330,7 @@ async function inheritSystemCookies(targetDir: string): Promise<boolean> {
     return false;
   }
   const browserName = cookies.edge ? "Edge" : "Chrome";
-  
+
   try {
     const targetDefaultDir = path.join(targetDir, "Default");
     if (!fs.existsSync(targetDefaultDir)) {
@@ -307,12 +338,15 @@ async function inheritSystemCookies(targetDir: string): Promise<boolean> {
     }
 
     // Copy cookies
-    await fs.promises.copyFile(sourcePath, path.join(targetDefaultDir, "Cookies"));
-    
+    await fs.promises.copyFile(
+      sourcePath,
+      path.join(targetDefaultDir, "Cookies"),
+    );
+
     // Copy related files for full session
     const sourceDir = path.dirname(sourcePath);
     const filesToCopy = ["Login Data", "Web Data", "Preferences"];
-    
+
     for (const file of filesToCopy) {
       try {
         const src = path.join(sourceDir, "..", file);
@@ -334,7 +368,10 @@ async function inheritSystemCookies(targetDir: string): Promise<boolean> {
 // Page Operations
 // ═══════════════════════════════════════════════════════════════════════════
 
-export async function navigate(sessionId: string, url: string): Promise<ToolResult> {
+export async function navigate(
+  sessionId: string,
+  url: string,
+): Promise<ToolResult> {
   const session = sessions.get(sessionId);
   if (!session?.cdpClient) {
     return { success: false, error: "Session not available", durationMs: 0 };
@@ -343,7 +380,7 @@ export async function navigate(sessionId: string, url: string): Promise<ToolResu
   const start = nowMs();
   try {
     await session.cdpClient.send("Page.navigate", { url });
-    
+
     // Wait for load
     await new Promise<void>((resolve) => {
       const timeout = setTimeout(resolve, 5000);
@@ -367,14 +404,16 @@ export async function navigate(sessionId: string, url: string): Promise<ToolResu
   }
 }
 
-export async function getPageInfo(sessionId: string): Promise<{ url: string; title: string } | null> {
+export async function getPageInfo(
+  sessionId: string,
+): Promise<{ url: string; title: string } | null> {
   const session = sessions.get(sessionId);
   if (!session?.cdpClient) return null;
 
   try {
-    const result = await session.cdpClient.send("Runtime.evaluate", {
+    const result = (await session.cdpClient.send("Runtime.evaluate", {
       expression: "({ url: window.location.href, title: document.title })",
-    }) as any;
+    })) as any;
     return result?.result?.value || null;
   } catch {
     return null;
@@ -393,7 +432,7 @@ export async function querySelector(
   if (!session?.cdpClient) return null;
 
   try {
-    const result = await session.cdpClient.send("Runtime.evaluate", {
+    const result = (await session.cdpClient.send("Runtime.evaluate", {
       expression: `
         (function() {
           const el = document.querySelector("${selector.replace(/"/g, '\\"')}");
@@ -418,7 +457,7 @@ export async function querySelector(
           };
         })()
       `,
-    }) as any;
+    })) as any;
 
     const data = result?.result?.value;
     if (!data) return null;
@@ -447,7 +486,7 @@ export async function querySelectorAll(
   if (!session?.cdpClient) return [];
 
   try {
-    const result = await session.cdpClient.send("Runtime.evaluate", {
+    const result = (await session.cdpClient.send("Runtime.evaluate", {
       expression: `
         (function() {
           const elements = document.querySelectorAll("${selector.replace(/"/g, '\\"')}");
@@ -467,7 +506,7 @@ export async function querySelectorAll(
           });
         })()
       `,
-    }) as any;
+    })) as any;
 
     const items = result?.result?.value || [];
     return items.map((data: any, i: number) => ({
@@ -534,12 +573,15 @@ export async function findElementHybrid(
   return { element: null, strategy: "none" };
 }
 
-async function findElementByText(sessionId: string, text: string): Promise<BrowserElement | null> {
+async function findElementByText(
+  sessionId: string,
+  text: string,
+): Promise<BrowserElement | null> {
   const session = sessions.get(sessionId);
   if (!session?.cdpClient) return null;
 
   try {
-    const result = await session.cdpClient.send("Runtime.evaluate", {
+    const result = (await session.cdpClient.send("Runtime.evaluate", {
       expression: `
         (function() {
           const xpath = "//*[contains(text(), '${text.replace(/'/g, "\\'")}')]";
@@ -558,7 +600,7 @@ async function findElementByText(sessionId: string, text: string): Promise<Brows
           };
         })()
       `,
-    }) as any;
+    })) as any;
 
     const data = result?.result?.value;
     if (!data) return null;
@@ -578,16 +620,20 @@ async function findElementByText(sessionId: string, text: string): Promise<Brows
   }
 }
 
-async function findElementByUIA(sessionId: string, name: string): Promise<BrowserElement | null> {
+async function findElementByUIA(
+  sessionId: string,
+  name: string,
+): Promise<BrowserElement | null> {
   // Import native module for UIA fallback
   try {
     const native = require("../../native-bridge.js").loadNativeModule();
     if (!native?.getUiElements) return null;
 
     const elements = native.getUiElements(null);
-    const found = elements.find((e: any) => 
-      e.name?.toLowerCase().includes(name.toLowerCase()) ||
-      e.automationId?.toLowerCase().includes(name.toLowerCase())
+    const found = elements.find(
+      (e: any) =>
+        e.name?.toLowerCase().includes(name.toLowerCase()) ||
+        e.automationId?.toLowerCase().includes(name.toLowerCase()),
     );
 
     if (!found) return null;
@@ -597,9 +643,15 @@ async function findElementByUIA(sessionId: string, name: string): Promise<Browse
       selector: `[uia-name="${found.name}"]`,
       tagName: found.controlType || "UNKNOWN",
       text: found.name || "",
-      bounds: { x: found.x, y: found.y, width: found.width, height: found.height },
+      bounds: {
+        x: found.x,
+        y: found.y,
+        width: found.width,
+        height: found.height,
+      },
       visible: !found.isOffscreen,
-      clickable: found.controlType === "Button" || found.controlType === "Hyperlink",
+      clickable:
+        found.controlType === "Button" || found.controlType === "Hyperlink",
       attributes: { automationId: found.automationId },
     };
   } catch {
@@ -625,7 +677,11 @@ export async function clickElement(
     // Get element position
     const element = await querySelector(sessionId, selector);
     if (!element) {
-      return { success: false, error: `Element not found: ${selector}`, durationMs: 0 };
+      return {
+        success: false,
+        error: `Element not found: ${selector}`,
+        durationMs: 0,
+      };
     }
 
     // Click via CDP
@@ -712,14 +768,16 @@ export function destroyBrowserSession(sessionId: string): void {
 
   session.alive = false;
   session.cdpClient?.disconnect();
-  
+
   if (session.process) {
-    try { session.process.kill("SIGTERM"); } catch {}
+    try {
+      session.process.kill("SIGTERM");
+    } catch {}
   }
 
   // Cleanup user data (contains cookies - do not upload to GitHub)
   if (fs.existsSync(session.userDataDir)) {
-    try { 
+    try {
       fs.rmSync(session.userDataDir, { recursive: true, force: true });
       log.info(`Cleaned up session data: ${session.userDataDir}`);
     } catch {}
@@ -733,9 +791,7 @@ export function destroyBrowserSession(sessionId: string): void {
 // Comparison with External Browsers
 // ═══════════════════════════════════════════════════════════════════════════
 
-export async function compareWithExternalBrowser(
-  url: string,
-): Promise<{
+export async function compareWithExternalBrowser(url: string): Promise<{
   oxygen: { success: boolean; durationMs: number; elementsFound: number };
   external: { success: boolean; durationMs: number; elementsFound: number };
 }> {
@@ -749,15 +805,15 @@ export async function compareWithExternalBrowser(
     const start = nowMs();
     const session = await createBrowserSession({ headless: true });
     await navigate(session.id, url);
-    await new Promise(r => setTimeout(r, 2000));
-    
+    await new Promise((r) => setTimeout(r, 2000));
+
     const elements = await querySelectorAll(session.id, "*");
     results.oxygen = {
       success: true,
       durationMs: nowMs() - start,
       elementsFound: elements.length,
     };
-    
+
     destroyBrowserSession(session.id);
   } catch (e: any) {
     results.oxygen.success = false;
@@ -767,12 +823,12 @@ export async function compareWithExternalBrowser(
   try {
     const native = require("../../native-bridge.js").loadNativeModule();
     const start = nowMs();
-    
+
     // Launch Chrome via native
     const { execSync } = require("node:child_process");
     execSync(`start chrome "${url}" --new-window`);
-    await new Promise(r => setTimeout(r, 3000));
-    
+    await new Promise((r) => setTimeout(r, 3000));
+
     const elements = native.getUiElements(null);
     results.external = {
       success: true,

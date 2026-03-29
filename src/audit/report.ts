@@ -8,41 +8,99 @@
 export const AUDIT_REPORT = {
   version: "26w11aE_Phase1",
   generatedAt: new Date().toISOString(),
-  
+
   summary: {
     totalFiles: 26,
     openClawReferences: 47,
-    compatibilityLayerFiles: 1,  // src/compat/openclaw/ — 这是设计内的
-    coreArchitectureFiles: 12,   // 需要审计的非兼容层文件
-    
+    compatibilityLayerFiles: 1, // src/compat/openclaw/ — 这是设计内的
+    coreArchitectureFiles: 12, // 需要审计的非兼容层文件
+
     riskAssessment: {
-      low: 35,    // 注释/文档中的提及
+      low: 35, // 注释/文档中的提及
       medium: 10, // 配置/类型中的使用
-      high: 2,    // 核心逻辑中的依赖
+      high: 2, // 核心逻辑中的依赖
     },
   },
 
   // 按文件分类的 OpenClaw 引用
   filesByCategory: {
     // 兼容层（设计内，保留）
-    compatibility: [
-      "src/compat/openclaw/index.ts",
-    ],
-    
+    compatibility: ["src/compat/openclaw/index.ts"],
+
     // 核心架构文件（需要重构或文档澄清）
     coreArchitecture: [
-      { file: "src/entry.ts", refs: 7, action: "添加独立架构声明", priority: "high" },
-      { file: "src/index.ts", refs: 1, action: "清理导出命名", priority: "low" },
-      { file: "src/core/config/index.ts", refs: 1, action: "移除兼容注释", priority: "low" },
-      { file: "src/core/routing/index.ts", refs: 1, action: "添加协议来源说明", priority: "medium" },
-      { file: "src/core/runtime/index.ts", refs: 2, action: "重写说明文字", priority: "low" },
-      { file: "src/core/sessions/index.ts", refs: 2, action: "添加协议参考说明", priority: "low" },
-      { file: "src/logging/index.ts", refs: 1, action: "重写注释", priority: "low" },
-      { file: "src/memory/vector/index.ts", refs: 1, action: "重写注释", priority: "low" },
-      { file: "src/plugins/loader/index.ts", refs: 1, action: "添加协议溯源说明", priority: "medium" },
-      { file: "src/plugins/sdk/index.ts", refs: 1, action: "添加协议溯源说明", priority: "medium" },
-      { file: "src/security/hardening.ts", refs: 7, action: "添加威胁情报参考", priority: "high" },
-      { file: "src/types/index.ts", refs: 3, action: "重写类型说明", priority: "medium" },
+      {
+        file: "src/entry.ts",
+        refs: 7,
+        action: "添加独立架构声明",
+        priority: "high",
+      },
+      {
+        file: "src/index.ts",
+        refs: 1,
+        action: "清理导出命名",
+        priority: "low",
+      },
+      {
+        file: "src/core/config/index.ts",
+        refs: 1,
+        action: "移除兼容注释",
+        priority: "low",
+      },
+      {
+        file: "src/core/routing/index.ts",
+        refs: 1,
+        action: "添加协议来源说明",
+        priority: "medium",
+      },
+      {
+        file: "src/core/runtime/index.ts",
+        refs: 2,
+        action: "重写说明文字",
+        priority: "low",
+      },
+      {
+        file: "src/core/sessions/index.ts",
+        refs: 2,
+        action: "添加协议参考说明",
+        priority: "low",
+      },
+      {
+        file: "src/logging/index.ts",
+        refs: 1,
+        action: "重写注释",
+        priority: "low",
+      },
+      {
+        file: "src/memory/vector/index.ts",
+        refs: 1,
+        action: "重写注释",
+        priority: "low",
+      },
+      {
+        file: "src/plugins/loader/index.ts",
+        refs: 1,
+        action: "添加协议溯源说明",
+        priority: "medium",
+      },
+      {
+        file: "src/plugins/sdk/index.ts",
+        refs: 1,
+        action: "添加协议溯源说明",
+        priority: "medium",
+      },
+      {
+        file: "src/security/hardening.ts",
+        refs: 7,
+        action: "添加威胁情报参考",
+        priority: "high",
+      },
+      {
+        file: "src/types/index.ts",
+        refs: 3,
+        action: "重写类型说明",
+        priority: "medium",
+      },
     ],
   },
 
@@ -53,22 +111,10 @@ export const AUDIT_REPORT = {
       "添加明确的'超越而非平行'架构声明",
       "强化测试框架与日志系统",
     ],
-    phase2_architecture: [
-      "设计 AI 思考集群核心",
-      "实现异步多线程算力栈",
-    ],
-    phase3_persistence: [
-      "完成 RocksDB 集成",
-      "实现大规模向量持久化",
-    ],
-    phase4_distributed: [
-      "构建 Gateway 集群",
-      "实现模型负载均衡",
-    ],
-    phase5_ecosystem: [
-      "开发插件市场",
-      "构建 GUI 仪表盘",
-    ],
+    phase2_architecture: ["设计 AI 思考集群核心", "实现异步多线程算力栈"],
+    phase3_persistence: ["完成 RocksDB 集成", "实现大规模向量持久化"],
+    phase4_distributed: ["构建 Gateway 集群", "实现模型负载均衡"],
+    phase5_ecosystem: ["开发插件市场", "构建 GUI 仪表盘"],
   },
 
   // 技术护城河设计
@@ -84,7 +130,7 @@ export const AUDIT_REPORT = {
       feasibility: "high", // 基于现有 InferenceEngine 扩展
       timeline: "P2-P3",
     },
-    
+
     asyncComputeStack: {
       description: "异步多线程算力栈",
       components: [
@@ -96,7 +142,7 @@ export const AUDIT_REPORT = {
       feasibility: "high", // reqwest + tokio 已实现
       timeline: "P1-P2",
     },
-    
+
     visionLanguageFusion: {
       description: "视觉-语言深度融合",
       components: [
@@ -108,7 +154,7 @@ export const AUDIT_REPORT = {
       feasibility: "medium", // 依赖 qwen3-vl 能力
       timeline: "P3",
     },
-    
+
     distributedMemory: {
       description: "分布式向量记忆网络",
       components: [

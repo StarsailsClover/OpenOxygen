@@ -1,6 +1,6 @@
 /**
  * Performance Monitoring and Optimization
- * 
+ *
  * Performance metrics collection, benchmarking, and optimization
  */
 
@@ -60,7 +60,7 @@ export class PerformanceMonitor {
    */
   start(intervalMs: number = 5000): void {
     log.info(`Starting performance monitoring (interval: ${intervalMs}ms)`);
-    
+
     this.intervalId = setInterval(() => {
       this.collectMetrics();
     }, intervalMs);
@@ -82,7 +82,7 @@ export class PerformanceMonitor {
    */
   private collectMetrics(): void {
     const memUsage = process.memoryUsage();
-    
+
     const metrics: PerformanceMetrics = {
       timestamp: Date.now(),
       memory: {
@@ -118,7 +118,9 @@ export class PerformanceMonitor {
 
     // Log if memory is high
     if (metrics.memory.heapUsed > metrics.memory.heapTotal * 0.8) {
-      log.warn(`High memory usage: ${(metrics.memory.heapUsed / 1024 / 1024).toFixed(2)} MB`);
+      log.warn(
+        `High memory usage: ${(metrics.memory.heapUsed / 1024 / 1024).toFixed(2)} MB`,
+      );
     }
   }
 
@@ -126,7 +128,9 @@ export class PerformanceMonitor {
    * Get current metrics
    */
   getCurrentMetrics(): PerformanceMetrics | null {
-    return this.metrics.length > 0 ? this.metrics[this.metrics.length - 1] : null;
+    return this.metrics.length > 0
+      ? this.metrics[this.metrics.length - 1]
+      : null;
   }
 
   /**
@@ -138,7 +142,7 @@ export class PerformanceMonitor {
     }
 
     const cutoff = Date.now() - durationMs;
-    return this.metrics.filter(m => m.timestamp >= cutoff);
+    return this.metrics.filter((m) => m.timestamp >= cutoff);
   }
 
   /**
@@ -146,7 +150,7 @@ export class PerformanceMonitor {
    */
   getAverageMetrics(durationMs: number = 60000): Partial<PerformanceMetrics> {
     const recent = this.getHistory(durationMs);
-    
+
     if (recent.length === 0) {
       return {};
     }
@@ -155,14 +159,14 @@ export class PerformanceMonitor {
 
     return {
       memory: {
-        used: avg(recent.map(m => m.memory.used)),
-        total: avg(recent.map(m => m.memory.total)),
-        heapUsed: avg(recent.map(m => m.memory.heapUsed)),
-        heapTotal: avg(recent.map(m => m.memory.heapTotal)),
-        external: avg(recent.map(m => m.memory.external)),
+        used: avg(recent.map((m) => m.memory.used)),
+        total: avg(recent.map((m) => m.memory.total)),
+        heapUsed: avg(recent.map((m) => m.memory.heapUsed)),
+        heapTotal: avg(recent.map((m) => m.memory.heapTotal)),
+        external: avg(recent.map((m) => m.memory.external)),
       },
       cpu: {
-        usage: avg(recent.map(m => m.cpu.usage)),
+        usage: avg(recent.map((m) => m.cpu.usage)),
         loadAverage: recent[recent.length - 1]?.cpu.loadAverage || [0, 0, 0],
       },
     };
@@ -235,7 +239,11 @@ export class Benchmark {
     const results: BenchmarkResult[] = [];
 
     for (const [implName, fn] of Object.entries(implementations)) {
-      const result = await Benchmark.run(`${name} - ${implName}`, fn, iterations);
+      const result = await Benchmark.run(
+        `${name} - ${implName}`,
+        fn,
+        iterations,
+      );
       results.push(result);
     }
 
@@ -265,18 +273,22 @@ export class OptimizationTips {
     // Memory tips
     const memoryUsage = metrics.memory.heapUsed / metrics.memory.heapTotal;
     if (memoryUsage > 0.8) {
-      tips.push("High memory usage detected. Consider:",
+      tips.push(
+        "High memory usage detected. Consider:",
         "  - Enabling KV cache compression",
         "  - Reducing batch size",
-        "  - Implementing memory pooling");
+        "  - Implementing memory pooling",
+      );
     }
 
     // CPU tips
     if (metrics.cpu.loadAverage[0] > 0.8) {
-      tips.push("High CPU load detected. Consider:",
+      tips.push(
+        "High CPU load detected. Consider:",
         "  - Using async I/O",
         "  - Implementing worker threads",
-        "  - Optimizing hot paths");
+        "  - Optimizing hot paths",
+      );
     }
 
     return tips;

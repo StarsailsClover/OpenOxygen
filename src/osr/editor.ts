@@ -19,23 +19,23 @@ const log = createSubsystemLogger("osr/editor");
 export function insertStep(
   recording: RecordingSession,
   index: number,
-  step: Omit<RecordedStep, "id" | "timestamp">
+  step: Omit<RecordedStep, "id" | "timestamp">,
 ): RecordingSession {
   const { generateId, nowMs } = require("../utils/index.js");
-  
+
   const newStep: RecordedStep = {
     id: generateId("step"),
     timestamp: nowMs(),
     ...step,
   };
-  
+
   recording.steps.splice(index, 0, newStep);
-  
+
   // Re-timestamp subsequent steps
   for (let i = index + 1; i < recording.steps.length; i++) {
     recording.steps[i].timestamp += 100; // Add 100ms delay
   }
-  
+
   log.info(`Inserted step at index ${index}`);
   return recording;
 }
@@ -47,15 +47,15 @@ export function insertStep(
  */
 export function deleteStep(
   recording: RecordingSession,
-  index: number
+  index: number,
 ): RecordingSession {
   if (index < 0 || index >= recording.steps.length) {
     throw new Error(`Invalid step index: ${index}`);
   }
-  
+
   recording.steps.splice(index, 1);
   log.info(`Deleted step at index ${index}`);
-  
+
   return recording;
 }
 
@@ -68,15 +68,15 @@ export function deleteStep(
 export function modifyStep(
   recording: RecordingSession,
   index: number,
-  updates: Partial<RecordedStep>
+  updates: Partial<RecordedStep>,
 ): RecordingSession {
   if (index < 0 || index >= recording.steps.length) {
     throw new Error(`Invalid step index: ${index}`);
   }
-  
+
   const step = recording.steps[index];
   Object.assign(step, updates);
-  
+
   log.info(`Modified step at index ${index}`);
   return recording;
 }
@@ -90,7 +90,7 @@ export function modifyStep(
 export function applyCoordinateOffset(
   recording: RecordingSession,
   offsetX: number,
-  offsetY: number
+  offsetY: number,
 ): RecordingSession {
   for (const step of recording.steps) {
     switch (step.type) {
@@ -110,7 +110,7 @@ export function applyCoordinateOffset(
         break;
     }
   }
-  
+
   log.info(`Applied coordinate offset (${offsetX}, ${offsetY})`);
   return recording;
 }
@@ -124,7 +124,7 @@ export function applyCoordinateOffset(
 export function addDelay(
   recording: RecordingSession,
   index: number,
-  durationMs: number
+  durationMs: number,
 ): RecordingSession {
   return insertStep(recording, index, {
     type: "delay",
@@ -136,11 +136,13 @@ export function addDelay(
  * Remove all screenshots to reduce file size
  * @param recording - Recording session
  */
-export function removeScreenshots(recording: RecordingSession): RecordingSession {
+export function removeScreenshots(
+  recording: RecordingSession,
+): RecordingSession {
   for (const step of recording.steps) {
     delete step.screenshot;
   }
-  
+
   log.info("Removed all screenshots");
   return recording;
 }
@@ -149,29 +151,33 @@ export function removeScreenshots(recording: RecordingSession): RecordingSession
  * Optimize recording by removing redundant steps
  * @param recording - Recording session
  */
-export function optimizeRecording(recording: RecordingSession): RecordingSession {
+export function optimizeRecording(
+  recording: RecordingSession,
+): RecordingSession {
   const optimized: RecordedStep[] = [];
   let lastMousePos = { x: -1, y: -1 };
-  
+
   for (const step of recording.steps) {
     // Skip redundant mouse moves
     if (step.type === "mouse_move") {
       const dx = Math.abs(step.data.x - lastMousePos.x);
       const dy = Math.abs(step.data.y - lastMousePos.y);
-      
+
       if (dx < 5 && dy < 5) {
         continue; // Skip small movements
       }
-      
+
       lastMousePos = { x: step.data.x, y: step.data.y };
     }
-    
+
     optimized.push(step);
   }
-  
+
   recording.steps = optimized;
-  log.info(`Optimized recording: ${optimized.length} steps (removed ${recording.steps.length - optimized.length})`);
-  
+  log.info(
+    `Optimized recording: ${optimized.length} steps (removed ${recording.steps.length - optimized.length})`,
+  );
+
   return recording;
 }
 
@@ -182,23 +188,23 @@ export function optimizeRecording(recording: RecordingSession): RecordingSession
  */
 export function duplicateStep(
   recording: RecordingSession,
-  index: number
+  index: number,
 ): RecordingSession {
   if (index < 0 || index >= recording.steps.length) {
     throw new Error(`Invalid step index: ${index}`);
   }
-  
+
   const step = recording.steps[index];
   const { generateId, nowMs } = require("../utils/index.js");
-  
+
   const duplicated: RecordedStep = {
     ...step,
     id: generateId("step"),
     timestamp: nowMs(),
   };
-  
+
   recording.steps.splice(index + 1, 0, duplicated);
-  
+
   log.info(`Duplicated step at index ${index}`);
   return recording;
 }
@@ -212,19 +218,19 @@ export function duplicateStep(
 export function moveStep(
   recording: RecordingSession,
   fromIndex: number,
-  toIndex: number
+  toIndex: number,
 ): RecordingSession {
   if (fromIndex < 0 || fromIndex >= recording.steps.length) {
     throw new Error(`Invalid source index: ${fromIndex}`);
   }
-  
+
   if (toIndex < 0 || toIndex >= recording.steps.length) {
     throw new Error(`Invalid destination index: ${toIndex}`);
   }
-  
+
   const [step] = recording.steps.splice(fromIndex, 1);
   recording.steps.splice(toIndex, 0, step);
-  
+
   log.info(`Moved step from ${fromIndex} to ${toIndex}`);
   return recording;
 }

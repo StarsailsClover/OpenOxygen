@@ -23,16 +23,19 @@ export const DEFAULT_HOTKEYS = {
  * @param combination - Key combination (e.g., "Alt+Space")
  * @param callback - Callback function
  */
-export function registerHotkey(combination: string, callback: () => void): boolean {
+export function registerHotkey(
+  combination: string,
+  callback: () => void,
+): boolean {
   log.info(`Registering hotkey: ${combination}`);
-  
+
   try {
     // Parse combination
-    const keys = combination.split("+").map(k => k.trim().toLowerCase());
-    
+    const keys = combination.split("+").map((k) => k.trim().toLowerCase());
+
     // Store callback
     registeredHotkeys.set(combination.toLowerCase(), callback);
-    
+
     // Register with Windows (simplified)
     // In production, use native module or background process
     log.info(`Hotkey registered: ${combination}`);
@@ -95,15 +98,15 @@ export function setupDefaultHotkeys(handlers: {
   if (handlers.onQuickInput) {
     registerHotkey(DEFAULT_HOTKEYS.QUICK_INPUT, handlers.onQuickInput);
   }
-  
+
   if (handlers.onShowApp) {
     registerHotkey(DEFAULT_HOTKEYS.SHOW_APP, handlers.onShowApp);
   }
-  
+
   if (handlers.onHideApp) {
     registerHotkey(DEFAULT_HOTKEYS.HIDE_APP, handlers.onHideApp);
   }
-  
+
   if (handlers.onScreenshot) {
     registerHotkey(DEFAULT_HOTKEYS.SCREENSHOT, handlers.onScreenshot);
   }
@@ -119,4 +122,3 @@ export default {
   setupDefaultHotkeys,
   DEFAULT_HOTKEYS,
 };
-

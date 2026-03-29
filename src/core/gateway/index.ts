@@ -14,9 +14,16 @@ import type { Server as HttpServer, IncomingMessage } from "node:http";
 import { createServer } from "node:http";
 import process from "node:process";
 import { createSubsystemLogger } from "../../logging/index.js";
-import type { OxygenConfig, OxygenEvent, OxygenEventHandler } from "../../types/index.js";
+import type {
+  OxygenConfig,
+  OxygenEvent,
+  OxygenEventHandler,
+} from "../../types/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
-import type { InferenceEngine, ChatMessage } from "../../inference/engine/index.js";
+import type {
+  InferenceEngine,
+  ChatMessage,
+} from "../../inference/engine/index.js";
 import {
   RateLimiter,
   validateGatewayBinding,
@@ -77,7 +84,9 @@ function validateAuth(
   if (auth.mode === "password" && auth.password) {
     if (!authHeader.startsWith("Basic ")) return false;
     try {
-      const decoded = Buffer.from(authHeader.slice(6), "base64").toString("utf-8");
+      const decoded = Buffer.from(authHeader.slice(6), "base64").toString(
+        "utf-8",
+      );
       const [, password] = decoded.split(":");
       return password ? timingSafeEqual(password, auth.password) : false;
     } catch {
@@ -107,7 +116,9 @@ function respond(
 
 // ─── Server Factory ─────────────────────────────────────────────────────────
 
-export function createGatewayServer(options: GatewayServerOptions): GatewayServer {
+export function createGatewayServer(
+  options: GatewayServerOptions,
+): GatewayServer {
   const { config, inferenceEngine, onEvent } = options;
   let server: HttpServer | null = null;
   let running = false;
@@ -137,21 +148,34 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
     const rateCheck = rateLimiter.check(clientIp);
     if (!rateCheck.allowed) {
       log.warn(`Rate limited: ${clientIp} — ${rateCheck.reason}`);
-      respond(res, 429, { error: rateCheck.reason }, {
-        "Retry-After": String(Math.ceil((rateCheck.retryAfterMs ?? 60000) / 1000)),
-      });
+      respond(
+        res,
+        429,
+        { error: rateCheck.reason },
+        {
+          "Retry-After": String(
+            Math.ceil((rateCheck.retryAfterMs ?? 60000) / 1000),
+          ),
+        },
+      );
       return;
     }
 
     // ── CORS（严格模式）──────────────────────────────────────
-    const allowedOrigins = config.gateway.cors?.origins ?? ["http://127.0.0.1", "http://localhost"];
+    const allowedOrigins = config.gateway.cors?.origins ?? [
+      "http://127.0.0.1",
+      "http://localhost",
+    ];
     const requestOrigin = req.headers.origin;
     if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
       res.setHeader("Access-Control-Allow-Origin", requestOrigin);
     }
     // 不设置通配符 "*"，防止跨域攻击
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization",
+    );
     res.setHeader("Access-Control-Max-Age", "3600");
 
     // 安全响应头
@@ -205,7 +229,11 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
 
       // GET /health
       if (method === "GET" && path === "/health") {
-        respond(res, 200, { status: "ok", timestamp: nowMs(), version: "0.1.0" });
+        respond(res, 200, {
+          status: "ok",
+          timestamp: nowMs(),
+          version: "0.1.0",
+        });
         return;
       }
 
@@ -221,9 +249,20 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
         respond(res, 200, {
           gateway: { host: config.gateway.host, port: config.gateway.port },
           agents: config.agents.list.map((a) => ({ id: a.id, name: a.name })),
-          channels: config.channels.map((c) => ({ id: c.id, type: c.type, enabled: c.enabled })),
-          plugins: config.plugins.map((p) => ({ name: p.name, enabled: p.enabled })),
-          models: config.models.map((m) => ({ provider: m.provider, model: m.model, hasKey: !!m.apiKey })),
+          channels: config.channels.map((c) => ({
+            id: c.id,
+            type: c.type,
+            enabled: c.enabled,
+          })),
+          plugins: config.plugins.map((p) => ({
+            name: p.name,
+            enabled: p.enabled,
+          })),
+          models: config.models.map((m) => ({
+            provider: m.provider,
+            model: m.model,
+            hasKey: !!m.apiKey,
+          })),
           inferenceReady: !!inferenceEngine,
           uptime: process.uptime(),
         });
@@ -273,7 +312,9 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
         } else if (chatBody.message) {
           messages = [{ role: "user", content: chatBody.message }];
         } else {
-          respond(res, 400, { error: "Either 'message' or 'messages' field required" });
+          respond(res, 400, {
+            error: "Either 'message' or 'messages' field required",
+          });
           return;
         }
 
@@ -282,7 +323,9 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
           if (msg.role === "user" && msg.content) {
             const injection = detectPromptInjection(msg.content);
             if (injection.risk === "high") {
-              log.error(`Blocked high-risk prompt injection from ${clientIp}: ${injection.patterns.join(", ")}`);
+              log.error(
+                `Blocked high-risk prompt injection from ${clientIp}: ${injection.patterns.join(", ")}`,
+              );
               emitEvent({
                 type: "security.violation",
                 entry: {
@@ -305,7 +348,9 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
           }
         }
 
-        log.info(`Chat ${ctx.requestId} from ${clientIp}: ${messages.length} msgs, mode=${chatBody.mode ?? "auto"}`);
+        log.info(
+          `Chat ${ctx.requestId} from ${clientIp}: ${messages.length} msgs, mode=${chatBody.mode ?? "auto"}`,
+        );
 
         const inferenceResult = await inferenceEngine.infer({
           messages,
@@ -339,9 +384,13 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
           return;
         }
 
-        const { TaskPlanner } = await import("../../inference/planner/index.js");
+        const { TaskPlanner } =
+          await import("../../inference/planner/index.js");
         const planner = new TaskPlanner(inferenceEngine);
-        const plan = await planner.generatePlan(planBody.goal, planBody.context);
+        const plan = await planner.generatePlan(
+          planBody.goal,
+          planBody.context,
+        );
 
         emitEvent({ type: "plan.created", planId: plan.id });
         respond(res, 200, plan);
@@ -349,10 +398,18 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
       }
 
       // POST /api/v1/task/:id/cancel — Cancel running task
-      if (method === "POST" && path.startsWith("/api/v1/task/") && path.endsWith("/cancel")) {
+      if (
+        method === "POST" &&
+        path.startsWith("/api/v1/task/") &&
+        path.endsWith("/cancel")
+      ) {
         const taskId = path.split("/")[4];
         // 广播取消事件到 WebSocket
-        emitEvent({ type: "plan.failed", planId: taskId || "", error: "User cancelled" });
+        emitEvent({
+          type: "plan.failed",
+          planId: taskId || "",
+          error: "User cancelled",
+        });
         respond(res, 200, { cancelled: true, taskId });
         return;
       }
@@ -387,7 +444,10 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
     start: () =>
       new Promise<void>((resolve, reject) => {
         // 绑定地址安全检查
-        const bindCheck = validateGatewayBinding(config.gateway.host, config.gateway.port);
+        const bindCheck = validateGatewayBinding(
+          config.gateway.host,
+          config.gateway.port,
+        );
         if (!bindCheck.safe) {
           const err = new Error(`Unsafe gateway binding: ${bindCheck.reason}`);
           log.error(err.message);
@@ -398,7 +458,9 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
         httpServer.listen(config.gateway.port, config.gateway.host, () => {
           running = true;
           server = httpServer;
-          log.info(`Gateway started on ${config.gateway.host}:${config.gateway.port} (hardened)`);
+          log.info(
+            `Gateway started on ${config.gateway.host}:${config.gateway.port} (hardened)`,
+          );
           emitEvent({ type: "gateway.started", port: config.gateway.port });
           resolve();
         });
@@ -424,5 +486,3 @@ export function createGatewayServer(options: GatewayServerOptions): GatewayServe
       }),
   };
 }
-
-

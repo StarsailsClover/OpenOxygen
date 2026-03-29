@@ -12,7 +12,12 @@ import EventEmitter from "node:events";
 const log = createSubsystemLogger("multi-agent/communication");
 
 // Message types
-export type MessageType = "task" | "result" | "broadcast" | "heartbeat" | "error";
+export type MessageType =
+  | "task"
+  | "result"
+  | "broadcast"
+  | "heartbeat"
+  | "error";
 
 // Agent message
 export interface AgentMessage {
@@ -31,7 +36,7 @@ export type MessageHandler = (message: AgentMessage) => void | Promise<void>;
 // Communication hub
 class CommunicationHub extends EventEmitter {
   private handlers = new Map<string, MessageHandler[]>();
-  
+
   /**
    * Send message to specific agent
    */
@@ -41,12 +46,14 @@ class CommunicationHub extends EventEmitter {
       id: generateId("msg"),
       timestamp: nowMs(),
     };
-    
-    log.debug(`Message ${fullMessage.id} from ${fullMessage.from} to ${fullMessage.to || "broadcast"}`);
-    
+
+    log.debug(
+      `Message ${fullMessage.id} from ${fullMessage.from} to ${fullMessage.to || "broadcast"}`,
+    );
+
     // Emit for local handlers
     this.emit("message", fullMessage);
-    
+
     // Call specific handlers
     if (fullMessage.to) {
       const handlers = this.handlers.get(fullMessage.to) || [];
@@ -58,10 +65,10 @@ class CommunicationHub extends EventEmitter {
         }
       }
     }
-    
+
     return fullMessage;
   }
-  
+
   /**
    * Broadcast message to all agents
    */
@@ -72,7 +79,7 @@ class CommunicationHub extends EventEmitter {
       payload,
     });
   }
-  
+
   /**
    * Register message handler for agent
    */
@@ -82,7 +89,7 @@ class CommunicationHub extends EventEmitter {
     this.handlers.set(agentId, handlers);
     log.debug(`Handler registered for agent: ${agentId}`);
   }
-  
+
   /**
    * Unregister message handler
    */
@@ -106,7 +113,7 @@ export function sendMessage(
   from: string,
   to: string,
   type: MessageType,
-  payload: any
+  payload: any,
 ): AgentMessage {
   return hub.send({
     type,
@@ -122,7 +129,7 @@ export function sendMessage(
 export function broadcastMessage(
   from: string,
   type: MessageType,
-  payload: any
+  payload: any,
 ): AgentMessage {
   return hub.broadcast(from, type, payload);
 }
@@ -148,7 +155,7 @@ export function requestTask(
   from: string,
   to: string,
   instruction: string,
-  options?: any
+  options?: any,
 ): AgentMessage {
   return sendMessage(from, to, "task", {
     instruction,
@@ -162,7 +169,7 @@ export function requestTask(
 export function sendResult(
   from: string,
   to: string,
-  result: any
+  result: any,
 ): AgentMessage {
   return sendMessage(from, to, "result", result);
 }
@@ -173,7 +180,7 @@ export function sendResult(
 export function sendError(
   from: string,
   to: string,
-  error: string
+  error: string,
 ): AgentMessage {
   return sendMessage(from, to, "error", { error });
 }

@@ -103,10 +103,10 @@ export class GlobalMemory {
     this.dbPath = join(stateDir, "global-memory.db");
     this.db = new Database(this.dbPath);
     this.db.pragma("journal_mode = WAL");
-    
+
     // Initialize schema
     this.db.exec(SCHEMA);
-    
+
     log.info(`Global memory initialized: ${this.dbPath}`);
   }
 
@@ -125,9 +125,11 @@ export class GlobalMemory {
   }
 
   getPreference<T>(key: string, defaultValue?: T): T | undefined {
-    const stmt = this.db.prepare("SELECT value FROM user_preferences WHERE key = ?");
+    const stmt = this.db.prepare(
+      "SELECT value FROM user_preferences WHERE key = ?",
+    );
     const row = stmt.get(key) as { value: string } | undefined;
-    
+
     if (!row) return defaultValue;
     try {
       return JSON.parse(row.value) as T;
@@ -139,10 +141,12 @@ export class GlobalMemory {
   getAllPreferences(): Record<string, unknown> {
     const stmt = this.db.prepare("SELECT key, value FROM user_preferences");
     const rows = stmt.all() as Array<{ key: string; value: string }>;
-    
+
     const prefs: Record<string, unknown> = {};
     for (const { key, value } of rows) {
-      try { prefs[key] = JSON.parse(value); } catch {}
+      try {
+        prefs[key] = JSON.parse(value);
+      } catch {}
     }
     return prefs;
   }
@@ -157,12 +161,12 @@ export class GlobalMemory {
   recordTask(task: Omit<TaskRecord, "id" | "createdAt">): TaskRecord {
     const id = generateId("task");
     const createdAt = nowMs();
-    
+
     const stmt = this.db.prepare(`
       INSERT INTO task_history (id, instruction, mode, success, output, error, duration_ms, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    
+
     stmt.run(
       id,
       task.instruction,
@@ -171,7 +175,7 @@ export class GlobalMemory {
       task.output || null,
       task.error || null,
       task.durationMs,
-      createdAt
+      createdAt,
     );
 
     // Index context
@@ -184,21 +188,23 @@ export class GlobalMemory {
         id,
         task.metadata.app || null,
         task.metadata.url || null,
-        task.metadata.keywords ? JSON.stringify(task.metadata.keywords) : null
+        task.metadata.keywords ? JSON.stringify(task.metadata.keywords) : null,
       );
     }
 
     const record: TaskRecord = { ...task, id, createdAt };
-    log.debug(`Task recorded: ${id} (${task.mode}, ${task.success ? "success" : "failed"})`);
+    log.debug(
+      `Task recorded: ${id} (${task.mode}, ${task.success ? "success" : "failed"})`,
+    );
     return record;
   }
 
   getTask(id: string): TaskRecord | null {
     const stmt = this.db.prepare("SELECT * FROM task_history WHERE id = ?");
     const row = stmt.get(id) as any;
-    
+
     if (!row) return null;
-    
+
     return {
       id: row.id,
       instruction: row.instruction,
@@ -230,7 +236,7 @@ export class GlobalMemory {
       sql = `SELECT th.* FROM task_history th
              JOIN context_index ci ON th.id = ci.task_id
              WHERE 1=1`;
-      
+
       if (query.mode) {
         sql += " AND th.mode = ?";
         params.push(query.mode);
@@ -248,7 +254,7 @@ export class GlobalMemory {
     }
 
     sql += " ORDER BY created_at DESC";
-    
+
     if (query.limit) {
       sql += " LIMIT ?";
       params.push(query.limit);
@@ -256,8 +262,8 @@ export class GlobalMemory {
 
     const stmt = this.db.prepare(sql);
     const rows = stmt.all(...params) as any[];
-    
-    return rows.map(row => ({
+
+    return rows.map((row) => ({
       id: row.id,
       instruction: row.instruction,
       mode: row.mode,
@@ -284,15 +290,17 @@ export class GlobalMemory {
    */
   injectContext(instruction: string): string {
     const contexts: string[] = [];
-    
+
     // Extract keywords from instruction
     const keywords = this.extractKeywords(instruction);
-    
+
     // Find related tasks
     for (const keyword of keywords) {
       const related = this.queryTasks({ keyword, limit: 3 });
       for (const task of related) {
-        contexts.push(`[历史] ${task.instruction} → ${task.success ? "成功" : "失败"}`);
+        contexts.push(
+          `[历史] ${task.instruction} → ${task.success ? "成功" : "失败"}`,
+        );
       }
     }
 
@@ -312,15 +320,24 @@ export class GlobalMemory {
 
   private extractKeywords(instruction: string): string[] {
     const keywords: string[] = [];
-    
+
     // App names
-    const apps = ["chrome", "edge", "vscode", "wechat", "qq", "steam", "bilibili", "github"];
+    const apps = [
+      "chrome",
+      "edge",
+      "vscode",
+      "wechat",
+      "qq",
+      "steam",
+      "bilibili",
+      "github",
+    ];
     for (const app of apps) {
       if (instruction.toLowerCase().includes(app)) {
         keywords.push(app);
       }
     }
-    
+
     // Commands
     const commands = ["npm", "git", "docker", "python", "node"];
     for (const cmd of commands) {
@@ -328,7 +345,7 @@ export class GlobalMemory {
         keywords.push(cmd);
       }
     }
-    
+
     return [...new Set(keywords)];
   }
 
@@ -340,18 +357,26 @@ export class GlobalMemory {
     avgDuration: number;
     byMode: Record<string, number>;
   } {
-    const totalStmt = this.db.prepare("SELECT COUNT(*) as count FROM task_history");
+    const totalStmt = this.db.prepare(
+      "SELECT COUNT(*) as count FROM task_history",
+    );
     const { count: totalTasks } = totalStmt.get() as { count: number };
 
-    const successStmt = this.db.prepare("SELECT COUNT(*) as count FROM task_history WHERE success = 1");
+    const successStmt = this.db.prepare(
+      "SELECT COUNT(*) as count FROM task_history WHERE success = 1",
+    );
     const { count: successCount } = successStmt.get() as { count: number };
 
-    const durationStmt = this.db.prepare("SELECT AVG(duration_ms) as avg FROM task_history");
+    const durationStmt = this.db.prepare(
+      "SELECT AVG(duration_ms) as avg FROM task_history",
+    );
     const { avg: avgDuration } = durationStmt.get() as { avg: number };
 
-    const modeStmt = this.db.prepare("SELECT mode, COUNT(*) as count FROM task_history GROUP BY mode");
+    const modeStmt = this.db.prepare(
+      "SELECT mode, COUNT(*) as count FROM task_history GROUP BY mode",
+    );
     const modeRows = modeStmt.all() as Array<{ mode: string; count: number }>;
-    
+
     const byMode: Record<string, number> = {};
     for (const { mode, count } of modeRows) {
       byMode[mode] = count;

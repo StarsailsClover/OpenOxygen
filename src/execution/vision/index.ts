@@ -14,7 +14,10 @@ import path from "node:path";
 import { createSubsystemLogger } from "../../logging/index.js";
 import type { VisionConfig } from "../../types/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
-import type { InferenceEngine, ChatMessage } from "../../inference/engine/index.js";
+import type {
+  InferenceEngine,
+  ChatMessage,
+} from "../../inference/engine/index.js";
 
 const log = createSubsystemLogger("ouv");
 
@@ -22,7 +25,21 @@ const log = createSubsystemLogger("ouv");
 
 export type UIElement = {
   id: string;
-  type: "button" | "input" | "text" | "image" | "link" | "menu" | "window" | "icon" | "toolbar" | "panel" | "checkbox" | "list" | "tab" | "unknown";
+  type:
+    | "button"
+    | "input"
+    | "text"
+    | "image"
+    | "link"
+    | "menu"
+    | "window"
+    | "icon"
+    | "toolbar"
+    | "panel"
+    | "checkbox"
+    | "list"
+    | "tab"
+    | "unknown";
   label: string;
   bounds: { x: number; y: number; width: number; height: number };
   confidence: number;
@@ -36,7 +53,11 @@ export type ScreenAnalysis = {
   timestamp: number;
   screenshotPath: string;
   elements: UIElement[];
-  activeWindow?: { title: string; className: string; bounds: { x: number; y: number; width: number; height: number } };
+  activeWindow?: {
+    title: string;
+    className: string;
+    bounds: { x: number; y: number; width: number; height: number };
+  };
   description: string;
   durationMs: number;
   layers: { uia: number; vision: number; llm: number };
@@ -60,7 +81,11 @@ export type VisionResult = {
 
 // ─── Screenshot Manager ────────────────────────────────────────────────────
 
-const SCREENSHOT_DIR = path.join(process.env["TEMP"] ?? "C:\\Temp", "openoxygen", "screenshots");
+const SCREENSHOT_DIR = path.join(
+  process.env["TEMP"] ?? "C:\\Temp",
+  "openoxygen",
+  "screenshots",
+);
 
 async function ensureDir(dir: string): Promise<void> {
   await fs.mkdir(dir, { recursive: true });
@@ -70,18 +95,27 @@ async function ensureDir(dir: string): Promise<void> {
 
 function mapUiaControlType(controlType: string): UIElement["type"] {
   const mapping: Record<string, UIElement["type"]> = {
-    Button: "button", SplitButton: "button",
-    Edit: "input", ComboBox: "input",
-    Text: "text", Document: "text",
+    Button: "button",
+    SplitButton: "button",
+    Edit: "input",
+    ComboBox: "input",
+    Text: "text",
+    Document: "text",
     Image: "image",
     Hyperlink: "link",
-    Menu: "menu", MenuItem: "menu",
+    Menu: "menu",
+    MenuItem: "menu",
     Window: "window",
     ToolBar: "toolbar",
-    Tab: "tab", TabItem: "tab",
-    CheckBox: "checkbox", RadioButton: "checkbox",
-    List: "list", ListItem: "list", DataGrid: "list",
-    Pane: "panel", Group: "panel",
+    Tab: "tab",
+    TabItem: "tab",
+    CheckBox: "checkbox",
+    RadioButton: "checkbox",
+    List: "list",
+    ListItem: "list",
+    DataGrid: "list",
+    Pane: "panel",
+    Group: "panel",
   };
   return mapping[controlType] ?? "unknown";
 }
@@ -103,7 +137,8 @@ export class OxygenUltraVision {
 
   private tryLoadNative(): void {
     try {
-      const { loadNativeModule } = require("../../native-bridge.js") as typeof import("../../native-bridge.js");
+      const { loadNativeModule } =
+        require("../../native-bridge.js") as typeof import("../../native-bridge.js");
       this.native = loadNativeModule();
     } catch {
       log.warn("Native module not available for OUV");
@@ -162,7 +197,8 @@ export class OxygenUltraVision {
 
     // ── Layer 2: Image Processing (precise/full) ────────────────
     if (mode === "precise" || mode === "full") {
-      const screenshotPath = query.screenshotPath ?? await this.captureScreen();
+      const screenshotPath =
+        query.screenshotPath ?? (await this.captureScreen());
       analysis.screenshotPath = screenshotPath;
 
       const visionStart = nowMs();
@@ -171,23 +207,27 @@ export class OxygenUltraVision {
 
       // 去重：如果 UIA 已经检测到同位置元素，跳过视觉检测结果
       for (const ve of visionElements) {
-        const isDuplicate = analysis.elements.some((e) =>
-          Math.abs(e.bounds.x - ve.bounds.x) < 20 &&
-          Math.abs(e.bounds.y - ve.bounds.y) < 20 &&
-          Math.abs(e.bounds.width - ve.bounds.width) < 30,
+        const isDuplicate = analysis.elements.some(
+          (e) =>
+            Math.abs(e.bounds.x - ve.bounds.x) < 20 &&
+            Math.abs(e.bounds.y - ve.bounds.y) < 20 &&
+            Math.abs(e.bounds.width - ve.bounds.width) < 30,
         );
         if (!isDuplicate) {
           analysis.elements.push(ve);
         }
       }
 
-      log.debug(`Vision: ${visionElements.length} regions in ${nowMs() - visionStart}ms`);
+      log.debug(
+        `Vision: ${visionElements.length} regions in ${nowMs() - visionStart}ms`,
+      );
     }
 
     // ── Layer 3: LLM Understanding (full only) ──────────────────
     if (mode === "full" && this.inferenceEngine) {
       if (!analysis.screenshotPath) {
-        analysis.screenshotPath = query.screenshotPath ?? await this.captureScreen();
+        analysis.screenshotPath =
+          query.screenshotPath ?? (await this.captureScreen());
       }
 
       const llmStart = nowMs();
@@ -213,9 +253,14 @@ export class OxygenUltraVision {
       targetElement = this.findElement(analysis.elements, query.targetElement);
     }
 
-    const suggestedAction = this.suggestAction(query.instruction, targetElement);
+    const suggestedAction = this.suggestAction(
+      query.instruction,
+      targetElement,
+    );
 
-    log.info(`OUV [${mode}]: ${analysis.elements.length} elements, ${analysis.durationMs}ms`);
+    log.info(
+      `OUV [${mode}]: ${analysis.elements.length} elements, ${analysis.durationMs}ms`,
+    );
 
     return { analysis, targetElement, suggestedAction };
   }
@@ -228,7 +273,10 @@ export class OxygenUltraVision {
     try {
       const raw = this.native.getUiElements(null);
       return raw
-        .filter((e) => e.name.length > 0 && !e.isOffscreen && e.width > 0 && e.height > 0)
+        .filter(
+          (e) =>
+            e.name.length > 0 && !e.isOffscreen && e.width > 0 && e.height > 0,
+        )
         .map((e) => ({
           id: generateId("uia"),
           type: mapUiaControlType(e.controlType),
@@ -251,7 +299,9 @@ export class OxygenUltraVision {
 
   // ─── Layer 2: Image Processing ────────────────────────────────────────────
 
-  private async runImageProcessing(screenshotPath: string): Promise<UIElement[]> {
+  private async runImageProcessing(
+    screenshotPath: string,
+  ): Promise<UIElement[]> {
     if (!this.native) return [];
 
     try {
@@ -269,7 +319,8 @@ export class OxygenUltraVision {
         label: `${r.label} (${r.width}×${r.height})`,
         bounds: { x: r.x, y: r.y, width: r.width, height: r.height },
         confidence: 0.7,
-        interactable: r.label === "button" || r.label === "input" || r.label === "icon",
+        interactable:
+          r.label === "button" || r.label === "input" || r.label === "icon",
         source: "vision" as const,
       }));
     } catch (err) {
@@ -287,9 +338,13 @@ export class OxygenUltraVision {
   ): Promise<string> {
     if (!this.inferenceEngine) return "";
 
-    const elementSummary = elements.slice(0, 50).map((e) =>
-      `[${e.type}] "${e.label}" @ (${e.bounds.x},${e.bounds.y},${e.bounds.width}x${e.bounds.height}) ${e.interactable ? "✓" : "✗"}`,
-    ).join("\n");
+    const elementSummary = elements
+      .slice(0, 50)
+      .map(
+        (e) =>
+          `[${e.type}] "${e.label}" @ (${e.bounds.x},${e.bounds.y},${e.bounds.width}x${e.bounds.height}) ${e.interactable ? "✓" : "✗"}`,
+      )
+      .join("\n");
 
     const messages: ChatMessage[] = [
       {
@@ -311,7 +366,8 @@ Describe what you see and suggest the best action to fulfill the instruction. Be
       const response = await this.inferenceEngine.infer({
         messages,
         mode: "fast",
-        systemPrompt: "You are OxygenUltraVision, a screen analysis engine. Describe UI state concisely and suggest precise actions with coordinates.",
+        systemPrompt:
+          "You are OxygenUltraVision, a screen analysis engine. Describe UI state concisely and suggest precise actions with coordinates.",
         temperature: 0.3,
       });
       return response.content;
@@ -335,7 +391,10 @@ Describe what you see and suggest the best action to fulfill the instruction. Be
     return outputPath;
   }
 
-  private findElement(elements: UIElement[], description: string): UIElement | undefined {
+  private findElement(
+    elements: UIElement[],
+    description: string,
+  ): UIElement | undefined {
     const lower = description.toLowerCase();
     return (
       elements.find((e) => e.label.toLowerCase() === lower) ??
@@ -344,7 +403,10 @@ Describe what you see and suggest the best action to fulfill the instruction. Be
     );
   }
 
-  private suggestAction(instruction: string, target?: UIElement): VisionResult["suggestedAction"] {
+  private suggestAction(
+    instruction: string,
+    target?: UIElement,
+  ): VisionResult["suggestedAction"] {
     if (!target) return { type: "none", params: {} };
     const cx = target.bounds.x + target.bounds.width / 2;
     const cy = target.bounds.y + target.bounds.height / 2;
@@ -354,7 +416,14 @@ Describe what you see and suggest the best action to fulfill the instruction. Be
       return { type: "click", params: { x: cx, y: cy } };
     }
     if (/type|输入|enter|填/.test(lower)) {
-      return { type: "type", params: { x: cx, y: cy, text: instruction.replace(/^(type|输入|enter|填写?)\s*/i, "") } };
+      return {
+        type: "type",
+        params: {
+          x: cx,
+          y: cy,
+          text: instruction.replace(/^(type|输入|enter|填写?)\s*/i, ""),
+        },
+      };
     }
     if (/scroll|滚动/.test(lower)) {
       return { type: "scroll", params: { direction: "down", amount: 3 } };
@@ -368,7 +437,9 @@ Describe what you see and suggest the best action to fulfill the instruction. Be
     if (this.captureInterval) return;
     const interval = intervalMs ?? this.config.captureIntervalMs ?? 5000;
     this.captureInterval = setInterval(async () => {
-      try { await this.analyze({ instruction: "monitor", mode: "fast" }); } catch {}
+      try {
+        await this.analyze({ instruction: "monitor", mode: "fast" });
+      } catch {}
     }, interval);
     log.info(`OUV monitoring started (${interval}ms)`);
   }

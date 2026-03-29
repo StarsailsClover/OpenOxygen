@@ -1,6 +1,6 @@
 /**
  * WSL2 Control
- * 
+ *
  * Control and automation for Windows Subsystem for Linux
  */
 
@@ -42,7 +42,7 @@ export class WSLController {
     try {
       // Placeholder for actual WSL listing
       // Would execute: wsl --list --verbose
-      
+
       const distros: WSLDistribution[] = [
         { name: "Ubuntu", state: "Running", version: 2, default: true },
         { name: "Debian", state: "Stopped", version: 2, default: false },
@@ -72,7 +72,7 @@ export class WSLController {
 
     try {
       // Placeholder: wsl -d {name}
-      
+
       const distro = this.distributions.get(name);
       if (distro) {
         distro.state = "Running";
@@ -98,7 +98,7 @@ export class WSLController {
 
     try {
       // Placeholder: wsl -t {name}
-      
+
       const distro = this.distributions.get(name);
       if (distro) {
         distro.state = "Stopped";
@@ -127,7 +127,7 @@ export class WSLController {
 
     try {
       // Placeholder: wsl -d {distribution} {command}
-      
+
       return {
         success: true,
         data: {
@@ -152,7 +152,7 @@ export class WSLController {
 
     try {
       // Placeholder: Update .wslconfig
-      
+
       return {
         success: true,
         data: { configured: true },
@@ -173,7 +173,7 @@ export class WSLController {
 
     try {
       // Placeholder: wsl --install -d {name}
-      
+
       return {
         success: true,
         data: { name, installed: true },
@@ -197,7 +197,7 @@ export class WSLController {
 
     try {
       // Placeholder: wsl --export {name} {outputPath}
-      
+
       return {
         success: true,
         data: { name, outputPath },
@@ -222,7 +222,7 @@ export class WSLController {
 
     try {
       // Placeholder: wsl --import {name} {installLocation} {filePath}
-      
+
       return {
         success: true,
         data: { name, imported: true },

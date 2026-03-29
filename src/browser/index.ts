@@ -1,6 +1,6 @@
 /**
  * OxygenBrowser
- * 
+ *
  * Agent-optimized browser based on WebView2/Chromium
  * Features:
  * - CDP integration

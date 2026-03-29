@@ -8,7 +8,14 @@ import { createSubsystemLogger } from "../logging/index.js";
 import { generateId, nowMs } from "../utils/index.js";
 import type { ExecutionPlan, PlanStep } from "../types/index.js";
 import type { InferenceEngine } from "../inference/engine/index.js";
-import { TaskPlanner, getNextExecutableSteps, isPlanComplete, isPlanFailed, addReflection, updateStepStatus } from "../inference/planner/index.js";
+import {
+  TaskPlanner,
+  getNextExecutableSteps,
+  isPlanComplete,
+  isPlanFailed,
+  addReflection,
+  updateStepStatus,
+} from "../inference/planner/index.js";
 import { ReflectionEngine } from "../inference/reflection/index.js";
 
 const log = createSubsystemLogger("task-manager");
@@ -19,7 +26,13 @@ const log = createSubsystemLogger("task-manager");
 
 export interface ManagedTask {
   plan: ExecutionPlan;
-  status: "queued" | "running" | "paused" | "cancelled" | "completed" | "failed";
+  status:
+    | "queued"
+    | "running"
+    | "paused"
+    | "cancelled"
+    | "completed"
+    | "failed";
   createdAt: number;
   startedAt?: number;
   completedAt?: number;
@@ -97,7 +110,8 @@ export class TaskManager {
    */
   cancel(taskId: string): boolean {
     const task = this.tasks.get(taskId);
-    if (!task || task.status === "completed" || task.status === "cancelled") return false;
+    if (!task || task.status === "completed" || task.status === "cancelled")
+      return false;
 
     task.abortController.abort();
     task.status = "cancelled";
@@ -138,8 +152,13 @@ export class TaskManager {
   /**
    * 列出所有任务
    */
-  listTasks(): Array<{ id: string; goal: string; status: string; steps: number }> {
-    return [...this.tasks.values()].map(t => ({
+  listTasks(): Array<{
+    id: string;
+    goal: string;
+    status: string;
+    steps: number;
+  }> {
+    return [...this.tasks.values()].map((t) => ({
       id: t.plan.id,
       goal: t.plan.goal,
       status: t.status,
@@ -172,15 +191,24 @@ export class TaskManager {
 
         // 执行步骤
         updateStepStatus(task.plan, step.id, "running");
-        log.info(`Executing step: ${step.action} (${task.currentStepIndex + 1}/${task.plan.steps.length})`);
+        log.info(
+          `Executing step: ${step.action} (${task.currentStepIndex + 1}/${task.plan.steps.length})`,
+        );
 
         try {
           const result = await this.stepExecutor(step);
           updateStepStatus(task.plan, step.id, "completed", result);
 
           // 反思
-          const reflectionResult = await this.reflection.reflect(task.plan, step.id, result);
-          if (reflectionResult.shouldRetry && task.retryCount < task.maxRetries) {
+          const reflectionResult = await this.reflection.reflect(
+            task.plan,
+            step.id,
+            result,
+          );
+          if (
+            reflectionResult.shouldRetry &&
+            task.retryCount < task.maxRetries
+          ) {
             task.retryCount++;
             updateStepStatus(task.plan, step.id, "pending");
             addReflection(task.plan, step.id, "Retrying after reflection");
@@ -191,7 +219,12 @@ export class TaskManager {
           updateStepStatus(task.plan, step.id, "failed", undefined, errorMsg);
 
           // 反思失败
-          const { shouldContinue } = await this.planner.reflectOnStep(task.plan, step.id, null, errorMsg);
+          const { shouldContinue } = await this.planner.reflectOnStep(
+            task.plan,
+            step.id,
+            null,
+            errorMsg,
+          );
           if (!shouldContinue) {
             task.plan.status = "failed";
             break;
@@ -211,13 +244,19 @@ export class TaskManager {
     const result: TaskResult = {
       taskId: task.plan.id,
       status: task.status,
-      stepsCompleted: task.plan.steps.filter(s => s.status === "completed").length,
+      stepsCompleted: task.plan.steps.filter((s) => s.status === "completed")
+        .length,
       stepsTotal: task.plan.steps.length,
       durationMs: task.completedAt - (task.startedAt || task.createdAt),
-      error: task.status === "failed" ? task.plan.steps.find(s => s.status === "failed")?.error : undefined,
+      error:
+        task.status === "failed"
+          ? task.plan.steps.find((s) => s.status === "failed")?.error
+          : undefined,
     };
 
-    log.info(`Task ${result.taskId}: ${result.status} (${result.stepsCompleted}/${result.stepsTotal} steps, ${result.durationMs}ms)`);
+    log.info(
+      `Task ${result.taskId}: ${result.status} (${result.stepsCompleted}/${result.stepsTotal} steps, ${result.durationMs}ms)`,
+    );
     return result;
   }
 }

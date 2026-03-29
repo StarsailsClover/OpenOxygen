@@ -17,26 +17,26 @@ const log = createSubsystemLogger("output");
 export function showNotification(
   title: string,
   message: string,
-  type: "info" | "success" | "warning" | "error" = "info"
+  type: "info" | "success" | "warning" | "error" = "info",
 ): boolean {
   log.info(`Showing notification [${type}]: ${title}`);
-  
+
   try {
     const { execSync } = require("node:child_process");
-    
+
     // Escape special characters
     const escapedTitle = title.replace(/"/g, '""');
     const escapedMessage = message.replace(/"/g, '""');
-    
+
     const script = `
       Add-Type -AssemblyName System.Windows.Forms
       [System.Windows.Forms.MessageBox]::Show("${escapedMessage}", "${escapedTitle}")
     `;
-    
+
     // For non-blocking notifications, use Windows Toast or similar
     // This is a simplified implementation
     execSync(`powershell -Command "${script}"`, { encoding: "utf-8" });
-    
+
     return true;
   } catch (error) {
     log.error(`Failed to show notification: ${error.message}`);
@@ -53,10 +53,10 @@ export function showNotification(
 export function pushProgress(
   taskId: string,
   progress: number,
-  message: string
+  message: string,
 ): void {
   log.debug(`Progress [${taskId}]: ${progress}% - ${message}`);
-  
+
   // This would push to WebSocket clients or update UI
   // For now, just log it
   const progressData = {
@@ -65,7 +65,7 @@ export function pushProgress(
     message,
     timestamp: Date.now(),
   };
-  
+
   log.debug(`Progress data: ${JSON.stringify(progressData)}`);
 }
 
@@ -76,22 +76,22 @@ export function pushProgress(
  */
 export function showFriendlyError(
   error: Error | string,
-  context?: string
+  context?: string,
 ): void {
   const errorMessage = error instanceof Error ? error.message : error;
   const fullMessage = context ? `${context}: ${errorMessage}` : errorMessage;
-  
+
   log.error(`Friendly error: ${fullMessage}`);
-  
+
   // Map technical errors to user-friendly messages
   const friendlyMessages: Record<string, string> = {
-    "ENOENT": "找不到指定的文件或路径",
-    "EACCES": "权限不足，无法访问",
-    "ECONNREFUSED": "连接被拒绝，请检查服务是否运行",
-    "ETIMEDOUT": "连接超时，请检查网络",
-    "ENOTFOUND": "无法找到指定的地址",
+    ENOENT: "找不到指定的文件或路径",
+    EACCES: "权限不足，无法访问",
+    ECONNREFUSED: "连接被拒绝，请检查服务是否运行",
+    ETIMEDOUT: "连接超时，请检查网络",
+    ENOTFOUND: "无法找到指定的地址",
   };
-  
+
   let friendlyMessage = errorMessage;
   for (const [code, message] of Object.entries(friendlyMessages)) {
     if (errorMessage.includes(code)) {
@@ -99,7 +99,7 @@ export function showFriendlyError(
       break;
     }
   }
-  
+
   showNotification("错误", friendlyMessage, "error");
 }
 
@@ -109,10 +109,10 @@ export function showFriendlyError(
  */
 export function visualizeResult(result: any): void {
   log.info("Visualizing execution result");
-  
+
   // Format result for display
   const formatted = formatResultForDisplay(result);
-  
+
   // This would update UI with formatted result
   log.debug(`Formatted result: ${formatted}`);
 }
@@ -124,11 +124,11 @@ function formatResultForDisplay(result: any): string {
   if (typeof result === "string") {
     return result;
   }
-  
+
   if (result === null || result === undefined) {
     return "无结果";
   }
-  
+
   if (typeof result === "object") {
     // Format based on result type
     if (result.success !== undefined) {
@@ -137,10 +137,10 @@ function formatResultForDisplay(result: any): string {
       const error = result.error ? `\n错误: ${result.error}` : "";
       return `${status}\n${output}${error}`;
     }
-    
+
     return JSON.stringify(result, null, 2);
   }
-  
+
   return String(result);
 }
 
@@ -151,7 +151,7 @@ function formatResultForDisplay(result: any): string {
  */
 export function showToast(message: string, durationMs: number = 3000): void {
   log.debug(`Toast: ${message} (${durationMs}ms)`);
-  
+
   // This would show a non-blocking toast notification
   // For now, just log it
   console.log(`[Toast] ${message}`);
@@ -164,7 +164,7 @@ export function showToast(message: string, durationMs: number = 3000): void {
  */
 export function updateStatusBar(status: string, icon?: string): void {
   log.debug(`Status bar: ${icon || ""} ${status}`);
-  
+
   // This would update a status bar in the UI
   // For now, just log it
 }
@@ -173,12 +173,14 @@ export function updateStatusBar(status: string, icon?: string): void {
  * Play sound notification
  * @param type - Sound type
  */
-export function playSound(type: "success" | "error" | "warning" | "info" = "info"): void {
+export function playSound(
+  type: "success" | "error" | "warning" | "info" = "info",
+): void {
   log.debug(`Playing sound: ${type}`);
-  
+
   try {
     const { execSync } = require("node:child_process");
-    
+
     // Use Windows system sounds
     const soundMap: Record<string, string> = {
       success: "SystemAsterisk",
@@ -186,13 +188,13 @@ export function playSound(type: "success" | "error" | "warning" | "info" = "info
       warning: "SystemExclamation",
       info: "SystemDefault",
     };
-    
+
     const sound = soundMap[type] || "SystemDefault";
-    
+
     const script = `
       [System.Media.SystemSounds]::${sound}.Play()
     `;
-    
+
     execSync(`powershell -Command "${script}"`, { encoding: "utf-8" });
   } catch (error) {
     log.error(`Failed to play sound: ${error.message}`);

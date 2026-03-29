@@ -26,8 +26,8 @@ export type StructuredOutputConfig = {
   ollamaUrl: string;
   model: string;
   timeoutMs: number;
-  forceJsonFormat: boolean;   // Use Ollama format:"json"
-  useGenerateApi: boolean;    // Use /api/generate instead of /api/chat
+  forceJsonFormat: boolean; // Use Ollama format:"json"
+  useGenerateApi: boolean; // Use /api/generate instead of /api/chat
   maxRetries: number;
   temperature: number;
   numPredict: number;
@@ -45,7 +45,9 @@ export type StructuredResult<T> = {
 
 // ─── Default Config ─────────────────────────────────────────────────────────
 
-export function createDefaultConfig(overrides?: Partial<StructuredOutputConfig>): StructuredOutputConfig {
+export function createDefaultConfig(
+  overrides?: Partial<StructuredOutputConfig>,
+): StructuredOutputConfig {
   return {
     ollamaUrl: "http://127.0.0.1:11434",
     model: "qwen3:4b",
@@ -82,19 +84,26 @@ export function extractJSON(text: string): unknown | null {
       if (ch === "{") depth++;
       if (ch === "}") {
         depth--;
-        if (depth === 0) { end = i; break; }
+        if (depth === 0) {
+          end = i;
+          break;
+        }
       }
     }
     if (end >= 0) {
       const jsonStr = text.substring(braceStart, end + 1);
-      try { return JSON.parse(jsonStr); } catch {}
+      try {
+        return JSON.parse(jsonStr);
+      } catch {}
     }
   }
 
   // Strategy 3: Code block extraction
   const codeBlock = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (codeBlock && codeBlock[1]) {
-    try { return JSON.parse(codeBlock[1].trim()); } catch {}
+    try {
+      return JSON.parse(codeBlock[1].trim());
+    } catch {}
   }
 
   // Strategy 4: Array extraction
@@ -107,11 +116,16 @@ export function extractJSON(text: string): unknown | null {
       if (ch === "[") depth++;
       if (ch === "]") {
         depth--;
-        if (depth === 0) { end = i; break; }
+        if (depth === 0) {
+          end = i;
+          break;
+        }
       }
     }
     if (end >= 0) {
-      try { return JSON.parse(text.substring(arrStart, end + 1)); } catch {}
+      try {
+        return JSON.parse(text.substring(arrStart, end + 1));
+      } catch {}
     }
   }
 
@@ -122,7 +136,10 @@ export function extractJSON(text: string): unknown | null {
  * 正则 fallback：从文本中提取关键字段
  * 用于 JSON 完全无法解析时的最后手段
  */
-export function regexFallback(text: string, fields: string[]): Record<string, string> | null {
+export function regexFallback(
+  text: string,
+  fields: string[],
+): Record<string, string> | null {
   const result: Record<string, string> = {};
   let found = 0;
 
@@ -233,12 +250,18 @@ async function singleCall<T>(
   });
 
   clearTimeout(timer);
-  const data = await res.json() as Record<string, unknown>;
+  const data = (await res.json()) as Record<string, unknown>;
   const durationMs = nowMs() - startTime;
 
   // Extract response and thinking
-  const response: string = (data.response as string) || ((data.message as any)?.content as string) || "";
-  const thinking: string = (data.thinking as string) || ((data.message as any)?.thinking as string) || "";
+  const response: string =
+    (data.response as string) ||
+    ((data.message as any)?.content as string) ||
+    "";
+  const thinking: string =
+    (data.thinking as string) ||
+    ((data.message as any)?.thinking as string) ||
+    "";
 
   // Strategy 1: Parse from response field (standard models)
   if (response.trim().length > 0) {
@@ -276,7 +299,12 @@ async function singleCall<T>(
 
   // Strategy 3: Regex fallback from both fields
   const combined = `${response}\n${thinking}`;
-  const fallback = regexFallback(combined, ["action", "target", "prediction", "reasoning"]);
+  const fallback = regexFallback(combined, [
+    "action",
+    "target",
+    "prediction",
+    "reasoning",
+  ]);
   if (fallback && fallback.action) {
     log.debug(`Regex fallback extracted action: ${fallback.action}`);
     return {
@@ -309,13 +337,15 @@ async function singleCall<T>(
 export async function getAgentDecision(
   prompt: string,
   model: string = "qwen3:4b",
-): Promise<StructuredResult<{
-  action: string;
-  target?: string;
-  params?: Record<string, unknown>;
-  prediction?: string;
-  reasoning?: string;
-}>> {
+): Promise<
+  StructuredResult<{
+    action: string;
+    target?: string;
+    params?: Record<string, unknown>;
+    prediction?: string;
+    reasoning?: string;
+  }>
+> {
   return structuredLLMCall(prompt, {
     model,
     forceJsonFormat: true,
@@ -331,13 +361,15 @@ export async function getAgentDecision(
 export async function getAgentReflection(
   prompt: string,
   model: string = "qwen3:4b",
-): Promise<StructuredResult<{
-  predictionAccuracy: string;
-  issue?: string;
-  lesson?: string;
-  nextAction?: string;
-  confidence?: number;
-}>> {
+): Promise<
+  StructuredResult<{
+    predictionAccuracy: string;
+    issue?: string;
+    lesson?: string;
+    nextAction?: string;
+    confidence?: number;
+  }>
+> {
   return structuredLLMCall(prompt, {
     model,
     forceJsonFormat: true,

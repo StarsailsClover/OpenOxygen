@@ -16,19 +16,25 @@ export type DocumentOptions = {
   outputPath?: string;
 };
 
-export async function generateDocument(options: DocumentOptions): Promise<string> {
+export async function generateDocument(
+  options: DocumentOptions,
+): Promise<string> {
   log.info(`Generating ${options.type}: ${options.title}`);
-  
+
   const docId = generateId("doc");
-  const outputPath = options.outputPath || `./output/document-${docId}.${options.type}`;
-  
+  const outputPath =
+    options.outputPath || `./output/document-${docId}.${options.type}`;
+
   // TODO: Implement actual document generation
   log.info(`Document generated: ${outputPath}`);
-  
+
   return outputPath;
 }
 
-export async function generateSummary(content: string, maxLength?: number): Promise<string> {
+export async function generateSummary(
+  content: string,
+  maxLength?: number,
+): Promise<string> {
   const summary = content.substring(0, maxLength || 200);
   return summary;
 }
@@ -37,4 +43,3 @@ export async function generateReport(data: any): Promise<string> {
   const reportId = generateId("report");
   return `./reports/report-${reportId}.md`;
 }
-

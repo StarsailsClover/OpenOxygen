@@ -8,7 +8,12 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { createSubsystemLogger } from "../../logging/index.js";
-import type { MemoryChunk, MemoryConfig, MemorySearchResult, MemorySource } from "../../types/index.js";
+import type {
+  MemoryChunk,
+  MemoryConfig,
+  MemorySearchResult,
+  MemorySource,
+} from "../../types/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
 import { VectorStore } from "../vector/index.js";
 
@@ -16,7 +21,7 @@ const log = createSubsystemLogger("memory/lifecycle");
 
 // ─── Chunking ───────────────────────────────────────────────────────────────
 
-const DEFAULT_CHUNK_SIZE = 512;   // characters
+const DEFAULT_CHUNK_SIZE = 512; // characters
 const DEFAULT_CHUNK_OVERLAP = 64; // characters
 
 function chunkText(
@@ -33,7 +38,10 @@ function chunkText(
   let currentLine = 0;
 
   for (const line of lines) {
-    if (currentChunk.length + line.length > chunkSize && currentChunk.length > 0) {
+    if (
+      currentChunk.length + line.length > chunkSize &&
+      currentChunk.length > 0
+    ) {
       chunks.push({
         id: generateId("chunk"),
         content: currentChunk.trim(),
@@ -73,10 +81,34 @@ function chunkText(
 // ─── File Indexer ───────────────────────────────────────────────────────────
 
 const INDEXABLE_EXTENSIONS = new Set([
-  ".ts", ".js", ".py", ".md", ".txt", ".json", ".yaml", ".yml",
-  ".toml", ".cfg", ".ini", ".sh", ".ps1", ".bat", ".cmd",
-  ".html", ".css", ".xml", ".csv", ".log", ".env",
-  ".rs", ".go", ".java", ".c", ".cpp", ".h", ".hpp",
+  ".ts",
+  ".js",
+  ".py",
+  ".md",
+  ".txt",
+  ".json",
+  ".yaml",
+  ".yml",
+  ".toml",
+  ".cfg",
+  ".ini",
+  ".sh",
+  ".ps1",
+  ".bat",
+  ".cmd",
+  ".html",
+  ".css",
+  ".xml",
+  ".csv",
+  ".log",
+  ".env",
+  ".rs",
+  ".go",
+  ".java",
+  ".c",
+  ".cpp",
+  ".h",
+  ".hpp",
 ]);
 
 function isIndexable(filePath: string): boolean {
@@ -84,7 +116,10 @@ function isIndexable(filePath: string): boolean {
   return INDEXABLE_EXTENSIONS.has(ext);
 }
 
-async function indexFile(filePath: string, source: MemorySource): Promise<MemoryChunk[]> {
+async function indexFile(
+  filePath: string,
+  source: MemorySource,
+): Promise<MemoryChunk[]> {
   try {
     const stat = await fs.stat(filePath);
     if (stat.size > 1024 * 1024) {
@@ -111,12 +146,23 @@ async function indexDirectory(
     const entries = await fs.readdir(dirPath, { withFileTypes: true });
     for (const entry of entries) {
       // Skip hidden dirs and node_modules
-      if (entry.name.startsWith(".") || entry.name === "node_modules" || entry.name === "dist") {
+      if (
+        entry.name.startsWith(".") ||
+        entry.name === "node_modules" ||
+        entry.name === "dist"
+      ) {
         continue;
       }
       const fullPath = path.join(dirPath, entry.name);
       if (entry.isDirectory()) {
-        chunks.push(...(await indexDirectory(fullPath, source, maxDepth, currentDepth + 1)));
+        chunks.push(
+          ...(await indexDirectory(
+            fullPath,
+            source,
+            maxDepth,
+            currentDepth + 1,
+          )),
+        );
       } else if (isIndexable(fullPath)) {
         chunks.push(...(await indexFile(fullPath, source)));
       }
@@ -150,7 +196,11 @@ export class MemoryManager {
   async sync(opts?: {
     force?: boolean;
     paths?: string[];
-    progress?: (update: { completed: number; total: number; label?: string }) => void;
+    progress?: (update: {
+      completed: number;
+      total: number;
+      label?: string;
+    }) => void;
   }): Promise<{ indexed: number; chunks: number }> {
     const startTime = nowMs();
     const paths = opts?.paths ?? this.config.extraPaths ?? [];
@@ -188,7 +238,10 @@ export class MemoryManager {
         }
 
         // Enforce max chunks
-        if (this.config.maxChunks && totalChunks + chunks.length > this.config.maxChunks) {
+        if (
+          this.config.maxChunks &&
+          totalChunks + chunks.length > this.config.maxChunks
+        ) {
           chunks = chunks.slice(0, this.config.maxChunks - totalChunks);
         }
 
@@ -203,7 +256,9 @@ export class MemoryManager {
 
     this.lastSyncTime = nowMs();
     const duration = nowMs() - startTime;
-    log.info(`Memory sync completed: ${indexed} paths, ${totalChunks} chunks in ${duration}ms`);
+    log.info(
+      `Memory sync completed: ${indexed} paths, ${totalChunks} chunks in ${duration}ms`,
+    );
 
     return { indexed, chunks: totalChunks };
   }

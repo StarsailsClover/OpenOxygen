@@ -14,11 +14,11 @@ import type { InferenceEngine } from "../inference/engine/index.js";
 const log = createSubsystemLogger("phase1/multi-agent");
 
 // Agent types
-export type AgentType = 
-  | "planner"      // 任务规划
-  | "executor"     // 任务执行
-  | "reviewer"     // 结果审核
-  | "specialist"   // 领域专家
+export type AgentType =
+  | "planner" // 任务规划
+  | "executor" // 任务执行
+  | "reviewer" // 结果审核
+  | "specialist" // 领域专家
   | "coordinator"; // 协调员
 
 // Agent status
@@ -71,7 +71,7 @@ export interface SubTask {
 export interface CoordinationMessage {
   id: string;
   from: string; // Agent ID
-  to: string;   // Agent ID or "broadcast"
+  to: string; // Agent ID or "broadcast"
   type: "request" | "response" | "notification" | "conflict";
   content: any;
   timestamp: number;
@@ -105,7 +105,9 @@ export class MultiAgentCoordinator {
   /**
    * Register an agent
    */
-  registerAgent(agent: Omit<Agent, "id" | "lastActive" | "performance">): Agent {
+  registerAgent(
+    agent: Omit<Agent, "id" | "lastActive" | "performance">,
+  ): Agent {
     const id = generateId("agent");
     const newAgent: Agent = {
       ...agent,
@@ -139,11 +141,12 @@ export class MultiAgentCoordinator {
    * Get available agents
    */
   getAvailableAgents(type?: AgentType): Agent[] {
-    const agents = Array.from(this.agents.values())
-      .filter(a => a.status === "idle");
-    
+    const agents = Array.from(this.agents.values()).filter(
+      (a) => a.status === "idle",
+    );
+
     if (type) {
-      return agents.filter(a => a.type === type);
+      return agents.filter((a) => a.type === type);
     }
     return agents;
   }
@@ -156,7 +159,7 @@ export class MultiAgentCoordinator {
     options: {
       priority?: number;
       timeoutMs?: number;
-    } = {}
+    } = {},
   ): Promise<CoordinationResult> {
     const taskId = generateId("task");
     const startTime = nowMs();
@@ -183,9 +186,14 @@ export class MultiAgentCoordinator {
     await this.assignSubtasks(task);
 
     // Step 4: Execute and coordinate
-    const result = await this.executeCoordination(task, options.timeoutMs || 300000);
+    const result = await this.executeCoordination(
+      task,
+      options.timeoutMs || 300000,
+    );
 
-    log.info(`[${taskId}] Coordination completed: ${result.success ? "success" : "failed"}`);
+    log.info(
+      `[${taskId}] Coordination completed: ${result.success ? "success" : "failed"}`,
+    );
     return result;
   }
 
@@ -226,13 +234,15 @@ Respond in JSON format:
     } catch (error: any) {
       log.error(`Task decomposition failed: ${error.message}`);
       // Fallback: create single subtask
-      return [{
-        id: generateId("sub"),
-        instruction,
-        agentType: "executor",
-        dependencies: [],
-        status: "pending",
-      }];
+      return [
+        {
+          id: generateId("sub"),
+          instruction,
+          agentType: "executor",
+          dependencies: [],
+          status: "pending",
+        },
+      ];
     }
   }
 
@@ -242,14 +252,14 @@ Respond in JSON format:
   private async assignSubtasks(task: CoordinationTask): Promise<void> {
     for (const subtask of task.subtasks) {
       const availableAgents = this.getAvailableAgents(subtask.agentType);
-      
+
       if (availableAgents.length > 0) {
         // Select best agent (simple: first available)
         const agent = availableAgents[0];
         subtask.status = "assigned";
         agent.status = "busy";
         agent.currentTask = subtask.id;
-        
+
         this.sendMessage({
           from: "coordinator",
           to: agent.id,
@@ -257,10 +267,12 @@ Respond in JSON format:
           content: { action: "assign", subtask },
           taskId: task.id,
         });
-        
+
         log.info(`Subtask ${subtask.id} assigned to agent ${agent.name}`);
       } else {
-        log.warn(`No available agent for subtask ${subtask.id} (type: ${subtask.agentType})`);
+        log.warn(
+          `No available agent for subtask ${subtask.id} (type: ${subtask.agentType})`,
+        );
       }
     }
   }
@@ -270,7 +282,7 @@ Respond in JSON format:
    */
   private async executeCoordination(
     task: CoordinationTask,
-    timeoutMs: number
+    timeoutMs: number,
   ): Promise<CoordinationResult> {
     const startTime = nowMs();
     const subtaskResults = new Map<string, any>();
@@ -278,7 +290,7 @@ Respond in JSON format:
 
     // Execute subtasks with dependency resolution
     const pendingSubtasks = [...task.subtasks];
-    
+
     while (pendingSubtasks.length > 0) {
       // Check timeout
       if (nowMs() - startTime > timeoutMs) {
@@ -289,22 +301,25 @@ Respond in JSON format:
           durationMs: nowMs() - startTime,
           subtaskResults,
           agentUsage,
-          messages: this.messages.filter(m => m.taskId === task.id),
+          messages: this.messages.filter((m) => m.taskId === task.id),
         };
       }
 
       // Find subtasks with satisfied dependencies
-      const executable = pendingSubtasks.filter(st => 
-        st.status === "assigned" &&
-        st.dependencies.every(depId => {
-          const dep = task.subtasks.find(s => s.id === depId);
-          return dep?.status === "completed";
-        })
+      const executable = pendingSubtasks.filter(
+        (st) =>
+          st.status === "assigned" &&
+          st.dependencies.every((depId) => {
+            const dep = task.subtasks.find((s) => s.id === depId);
+            return dep?.status === "completed";
+          }),
       );
 
       if (executable.length === 0) {
         // Check for deadlocks
-        const stuck = pendingSubtasks.filter(st => st.status !== "completed" && st.status !== "failed");
+        const stuck = pendingSubtasks.filter(
+          (st) => st.status !== "completed" && st.status !== "failed",
+        );
         if (stuck.length === pendingSubtasks.length) {
           log.error(`[${task.id}] Deadlock detected`);
           return {
@@ -313,7 +328,7 @@ Respond in JSON format:
             durationMs: nowMs() - startTime,
             subtaskResults,
             agentUsage,
-            messages: this.messages.filter(m => m.taskId === task.id),
+            messages: this.messages.filter((m) => m.taskId === task.id),
           };
         }
         await sleep(100);
@@ -321,72 +336,81 @@ Respond in JSON format:
       }
 
       // Execute subtasks in parallel
-      await Promise.all(executable.map(async subtask => {
-        subtask.status = "in_progress";
-        task.startedAt = nowMs();
+      await Promise.all(
+        executable.map(async (subtask) => {
+          subtask.status = "in_progress";
+          task.startedAt = nowMs();
 
-        const agent = Array.from(this.agents.values()).find(a => a.currentTask === subtask.id);
-        if (!agent) {
-          subtask.status = "failed";
-          subtask.error = "Agent not found";
-          return;
-        }
+          const agent = Array.from(this.agents.values()).find(
+            (a) => a.currentTask === subtask.id,
+          );
+          if (!agent) {
+            subtask.status = "failed";
+            subtask.error = "Agent not found";
+            return;
+          }
 
-        try {
-          // Simulate subtask execution
-          log.info(`[${task.id}] Executing subtask ${subtask.id} with agent ${agent.name}`);
-          await sleep(1000); // Simulate work
+          try {
+            // Simulate subtask execution
+            log.info(
+              `[${task.id}] Executing subtask ${subtask.id} with agent ${agent.name}`,
+            );
+            await sleep(1000); // Simulate work
 
-          // Execute via inference
-          const result = await this.inferenceEngine.infer({
-            messages: [{ role: "user", content: subtask.instruction }],
-            mode: "balanced",
-          });
+            // Execute via inference
+            const result = await this.inferenceEngine.infer({
+              messages: [{ role: "user", content: subtask.instruction }],
+              mode: "balanced",
+            });
 
-          subtask.status = "completed";
-          subtask.result = result.content;
-          subtaskResults.set(subtask.id, result.content);
-          
-          // Update agent stats
-          agent.performance.tasksCompleted++;
-          agent.status = "idle";
-          agent.currentTask = undefined;
-          agent.lastActive = nowMs();
-          
-          agentUsage.set(agent.id, (agentUsage.get(agent.id) || 0) + 1);
+            subtask.status = "completed";
+            subtask.result = result.content;
+            subtaskResults.set(subtask.id, result.content);
 
-          this.sendMessage({
-            from: agent.id,
-            to: "coordinator",
-            type: "response",
-            content: { subtaskId: subtask.id, result: result.content },
-            taskId: task.id,
-          });
-        } catch (error: any) {
-          subtask.status = "failed";
-          subtask.error = error.message;
-          agent.status = "error";
-          
-          this.sendMessage({
-            from: agent.id,
-            to: "coordinator",
-            type: "notification",
-            content: { subtaskId: subtask.id, error: error.message },
-            taskId: task.id,
-          });
-        }
-      }));
+            // Update agent stats
+            agent.performance.tasksCompleted++;
+            agent.status = "idle";
+            agent.currentTask = undefined;
+            agent.lastActive = nowMs();
+
+            agentUsage.set(agent.id, (agentUsage.get(agent.id) || 0) + 1);
+
+            this.sendMessage({
+              from: agent.id,
+              to: "coordinator",
+              type: "response",
+              content: { subtaskId: subtask.id, result: result.content },
+              taskId: task.id,
+            });
+          } catch (error: any) {
+            subtask.status = "failed";
+            subtask.error = error.message;
+            agent.status = "error";
+
+            this.sendMessage({
+              from: agent.id,
+              to: "coordinator",
+              type: "notification",
+              content: { subtaskId: subtask.id, error: error.message },
+              taskId: task.id,
+            });
+          }
+        }),
+      );
 
       // Remove completed/failed from pending
       for (let i = pendingSubtasks.length - 1; i >= 0; i--) {
-        if (pendingSubtasks[i].status === "completed" || pendingSubtasks[i].status === "failed") {
+        if (
+          pendingSubtasks[i].status === "completed" ||
+          pendingSubtasks[i].status === "failed"
+        ) {
           pendingSubtasks.splice(i, 1);
         }
       }
     }
 
     // Check if all subtasks completed successfully
-    const allCompleted = task.subtasks.every(st => st.status === "completed");
+    const allCompleted = task.subtasks.every((st) => st.status === "completed");
     task.status = allCompleted ? "completed" : "failed";
     task.completedAt = nowMs();
 
@@ -396,21 +420,25 @@ Respond in JSON format:
       durationMs: nowMs() - startTime,
       subtaskResults,
       agentUsage,
-      messages: this.messages.filter(m => m.taskId === task.id),
+      messages: this.messages.filter((m) => m.taskId === task.id),
     };
   }
 
   /**
    * Send coordination message
    */
-  private sendMessage(message: Omit<CoordinationMessage, "id" | "timestamp">): void {
+  private sendMessage(
+    message: Omit<CoordinationMessage, "id" | "timestamp">,
+  ): void {
     const fullMessage: CoordinationMessage = {
       ...message,
       id: generateId("msg"),
       timestamp: nowMs(),
     };
     this.messages.push(fullMessage);
-    log.debug(`Message sent: ${fullMessage.from} -> ${fullMessage.to} (${fullMessage.type})`);
+    log.debug(
+      `Message sent: ${fullMessage.from} -> ${fullMessage.to} (${fullMessage.type})`,
+    );
   }
 
   /**

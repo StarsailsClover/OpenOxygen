@@ -97,7 +97,13 @@ export async function loadPlugins(
     if (!pluginConfig.enabled) {
       registry.register(pluginConfig.name, {
         manifest: { name: pluginConfig.name, version: "0.0.0", entryPoint: "" },
-        definition: { manifest: { name: pluginConfig.name, version: "0.0.0", entryPoint: "" } },
+        definition: {
+          manifest: {
+            name: pluginConfig.name,
+            version: "0.0.0",
+            entryPoint: "",
+          },
+        },
         config: pluginConfig,
         status: "disabled",
       });
@@ -122,7 +128,13 @@ export async function loadPlugins(
       log.error(`Failed to load plugin ${pluginConfig.name}: ${errorMsg}`);
       registry.register(pluginConfig.name, {
         manifest: { name: pluginConfig.name, version: "0.0.0", entryPoint: "" },
-        definition: { manifest: { name: pluginConfig.name, version: "0.0.0", entryPoint: "" } },
+        definition: {
+          manifest: {
+            name: pluginConfig.name,
+            version: "0.0.0",
+            entryPoint: "",
+          },
+        },
         config: pluginConfig,
         status: "error",
         error: errorMsg,
@@ -154,7 +166,9 @@ async function loadSinglePlugin(config: PluginConfig): Promise<LoadedPlugin> {
 
   // Load plugin module
   const entryPath = path.join(pluginPath, manifest.entryPoint);
-  const module = (await import(entryPath)) as { default?: OxygenPluginDefinition } & OxygenPluginDefinition;
+  const module = (await import(entryPath)) as {
+    default?: OxygenPluginDefinition;
+  } & OxygenPluginDefinition;
   const definition = module.default ?? module;
 
   return {

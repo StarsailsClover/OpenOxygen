@@ -24,7 +24,9 @@ export function resolveStateDir(env: NodeJS.ProcessEnv = process.env): string {
   return resolveUserPath(env["OPENOXYGEN_STATE_DIR"] ?? DEFAULT_STATE_DIR);
 }
 
-export function resolveConfigPath(env: NodeJS.ProcessEnv = process.env): string {
+export function resolveConfigPath(
+  env: NodeJS.ProcessEnv = process.env,
+): string {
   if (env["OPENOXYGEN_CONFIG_PATH"]) {
     return resolveUserPath(env["OPENOXYGEN_CONFIG_PATH"]);
   }
@@ -79,8 +81,10 @@ export async function loadDotEnv(opts?: { quiet?: boolean }): Promise<void> {
         const key = trimmed.slice(0, eqIdx).trim();
         let value = trimmed.slice(eqIdx + 1).trim();
         // Strip surrounding quotes
-        if ((value.startsWith('"') && value.endsWith('"')) ||
-            (value.startsWith("'") && value.endsWith("'"))) {
+        if (
+          (value.startsWith('"') && value.endsWith('"')) ||
+          (value.startsWith("'") && value.endsWith("'"))
+        ) {
           value = value.slice(1, -1);
         }
         // Don't override existing env vars
@@ -173,7 +177,10 @@ function applyEnvOverrides(config: OxygenConfig, env: NodeJS.ProcessEnv): void {
     config.gateway.host = env["OPENOXYGEN_GATEWAY_HOST"];
   }
   if (env["OPENOXYGEN_GATEWAY_TOKEN"]) {
-    config.gateway.auth = { mode: "token", token: env["OPENOXYGEN_GATEWAY_TOKEN"] };
+    config.gateway.auth = {
+      mode: "token",
+      token: env["OPENOXYGEN_GATEWAY_TOKEN"],
+    };
   }
 
   // Model API keys — auto-detect and populate
@@ -188,7 +195,9 @@ function applyEnvOverrides(config: OxygenConfig, env: NodeJS.ProcessEnv): void {
   for (const mapping of keyMappings) {
     const key = env[mapping.env];
     if (key) {
-      const existing = config.models.find((m) => m.provider === mapping.provider);
+      const existing = config.models.find(
+        (m) => m.provider === mapping.provider,
+      );
       if (existing) {
         existing.apiKey = key;
       }
@@ -203,7 +212,10 @@ function applyEnvOverrides(config: OxygenConfig, env: NodeJS.ProcessEnv): void {
 
 // ─── Config Write ───────────────────────────────────────────────────────────
 
-export async function writeConfig(config: OxygenConfig, configPath?: string): Promise<void> {
+export async function writeConfig(
+  config: OxygenConfig,
+  configPath?: string,
+): Promise<void> {
   const resolved = configPath ?? resolveConfigPath();
   const dir = path.dirname(resolved);
   await fs.mkdir(dir, { recursive: true });

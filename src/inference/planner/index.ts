@@ -6,9 +6,17 @@
  */
 
 import { createSubsystemLogger } from "../../logging/index.js";
-import type { ExecutionPlan, PlanStep, ReflectionEntry } from "../../types/index.js";
+import type {
+  ExecutionPlan,
+  PlanStep,
+  ReflectionEntry,
+} from "../../types/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
-import type { ChatMessage, InferenceEngine, InferenceResponse } from "../engine/index.js";
+import type {
+  ChatMessage,
+  InferenceEngine,
+  InferenceResponse,
+} from "../engine/index.js";
 
 const log = createSubsystemLogger("inference/planner");
 
@@ -129,7 +137,10 @@ export class TaskPlanner {
     const plan = createEmptyPlan(goal);
 
     const messages: ChatMessage[] = [
-      { role: "user", content: context ? `Context: ${context}\n\nGoal: ${goal}` : goal },
+      {
+        role: "user",
+        content: context ? `Context: ${context}\n\nGoal: ${goal}` : goal,
+      },
     ];
 
     try {
@@ -144,7 +155,9 @@ export class TaskPlanner {
       const stepIds: string[] = [];
 
       for (const raw of steps) {
-        const deps = (raw.dependencies ?? []).map((idx: number) => stepIds[idx]).filter(Boolean) as string[];
+        const deps = (raw.dependencies ?? [])
+          .map((idx: number) => stepIds[idx])
+          .filter(Boolean) as string[];
         const step = addStep(plan, raw.action, raw.params ?? {}, deps);
         stepIds.push(step.id);
       }
@@ -169,7 +182,11 @@ export class TaskPlanner {
     if (!step) return { shouldContinue: true };
 
     if (!error) {
-      addReflection(plan, stepId, `Step "${step.action}" completed successfully`);
+      addReflection(
+        plan,
+        stepId,
+        `Step "${step.action}" completed successfully`,
+      );
       return { shouldContinue: true };
     }
 
@@ -206,7 +223,12 @@ Respond with JSON: { "decision": "retry|skip|abort", "adjustment": "description 
         adjustment?: string;
       };
 
-      addReflection(plan, stepId, `Reflection: ${decision.decision}`, decision.adjustment);
+      addReflection(
+        plan,
+        stepId,
+        `Reflection: ${decision.decision}`,
+        decision.adjustment,
+      );
 
       if (decision.decision === "abort") {
         plan.status = "failed";
@@ -220,7 +242,11 @@ Respond with JSON: { "decision": "retry|skip|abort", "adjustment": "description 
 
       return { shouldContinue: true, adjustment: decision.adjustment };
     } catch {
-      addReflection(plan, stepId, `Reflection failed, continuing with default behavior`);
+      addReflection(
+        plan,
+        stepId,
+        `Reflection failed, continuing with default behavior`,
+      );
       return { shouldContinue: true };
     }
   }
@@ -230,7 +256,11 @@ Respond with JSON: { "decision": "retry|skip|abort", "adjustment": "description 
 
 function parsePlanSteps(
   content: string,
-): Array<{ action: string; params?: Record<string, unknown>; dependencies?: number[] }> {
+): Array<{
+  action: string;
+  params?: Record<string, unknown>;
+  dependencies?: number[];
+}> {
   try {
     // Extract JSON array from response (may be wrapped in markdown code block)
     const jsonMatch = content.match(/\[[\s\S]*\]/);

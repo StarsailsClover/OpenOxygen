@@ -12,7 +12,11 @@
 import { createSubsystemLogger } from "../../logging/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
 import { fork, type ChildProcess } from "node:child_process";
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type ServerResponse,
+} from "node:http";
 
 const log = createSubsystemLogger("cluster");
 
@@ -77,14 +81,14 @@ class LoadBalancer {
    * 选择下一个健康节点
    */
   select(strategy: BalancerStrategy, sessionKey?: string): ClusterNode | null {
-    const healthy = this.nodes.filter(n => n.status === "healthy");
+    const healthy = this.nodes.filter((n) => n.status === "healthy");
     if (healthy.length === 0) return null;
 
     // Sticky session
     if (strategy === "sticky" && sessionKey) {
       const stickyNodeId = this.sessionMap.get(sessionKey);
       if (stickyNodeId) {
-        const node = healthy.find(n => n.id === stickyNodeId);
+        const node = healthy.find((n) => n.id === stickyNodeId);
         if (node) return node;
       }
     }
@@ -93,7 +97,10 @@ class LoadBalancer {
 
     if (strategy === "least-connections") {
       // 选择请求数最少的节点
-      selected = healthy.reduce((min, n) => n.requestCount < min.requestCount ? n : min, healthy[0]!);
+      selected = healthy.reduce(
+        (min, n) => (n.requestCount < min.requestCount ? n : min),
+        healthy[0]!,
+      );
     } else {
       // Round-robin
       this.currentIndex = (this.currentIndex + 1) % healthy.length;
@@ -194,7 +201,9 @@ export class ClusterManager {
     this.startHealthChecks();
     await this.startLoadBalancerProxy();
 
-    log.info(`Cluster started: ${this.nodes.length} nodes on ports ${this.config.basePort}-${this.config.basePort + this.config.workerCount - 1}`);
+    log.info(
+      `Cluster started: ${this.nodes.length} nodes on ports ${this.config.basePort}-${this.config.basePort + this.config.workerCount - 1}`,
+    );
   }
 
   /**
@@ -220,12 +229,14 @@ export class ClusterManager {
    * 获取集群指标
    */
   getMetrics(): ClusterMetrics {
-    const activeNodes = this.nodes.filter(n => n.status === "healthy").length;
+    const activeNodes = this.nodes.filter((n) => n.status === "healthy").length;
     const uptime = (nowMs() - this.startTime) / 1000;
     const rps = uptime > 0 ? this.totalRequests / uptime : 0;
-    const avgLatency = this.nodes.length > 0
-      ? this.nodes.reduce((sum, n) => sum + n.avgLatencyMs, 0) / this.nodes.length
-      : 0;
+    const avgLatency =
+      this.nodes.length > 0
+        ? this.nodes.reduce((sum, n) => sum + n.avgLatencyMs, 0) /
+          this.nodes.length
+        : 0;
 
     return {
       totalRequests: this.totalRequests,
@@ -235,7 +246,7 @@ export class ClusterManager {
       avgLatencyMs: Math.round(avgLatency),
       requestsPerSecond: Math.round(rps * 100) / 100,
       uptime: Math.round(uptime),
-      nodeMetrics: this.nodes.map(n => ({
+      nodeMetrics: this.nodes.map((n) => ({
         id: n.id,
         port: n.port,
         status: n.status,
@@ -273,8 +284,12 @@ export class ClusterManager {
     ];
 
     for (const node of m.nodeMetrics) {
-      lines.push(`openoxygen_node_requests{node="${node.id}",port="${node.port}"} ${node.requests}`);
-      lines.push(`openoxygen_node_latency{node="${node.id}",port="${node.port}"} ${node.avgLatency}`);
+      lines.push(
+        `openoxygen_node_requests{node="${node.id}",port="${node.port}"} ${node.requests}`,
+      );
+      lines.push(
+        `openoxygen_node_latency{node="${node.id}",port="${node.port}"} ${node.avgLatency}`,
+      );
     }
 
     return lines.join("\n");
@@ -306,11 +321,16 @@ export class ClusterManager {
       for (const node of this.nodes) {
         if (node.status === "stopped") continue;
 
-        const healthy = await this.healthChecker.check(node, this.config.healthCheckTimeoutMs);
+        const healthy = await this.healthChecker.check(
+          node,
+          this.config.healthCheckTimeoutMs,
+        );
         const failures = this.healthChecker.getFailureCount(node.id);
 
         if (!healthy && failures >= this.config.maxFailures) {
-          log.error(`Node ${node.id} (port ${node.port}) marked unhealthy after ${failures} failures`);
+          log.error(
+            `Node ${node.id} (port ${node.port}) marked unhealthy after ${failures} failures`,
+          );
           node.status = "unhealthy";
         } else if (healthy) {
           node.status = "healthy";
@@ -325,21 +345,25 @@ export class ClusterManager {
 
   private async startLoadBalancerProxy(): Promise<void> {
     // 指标端点
-    const metricsServer = createServer((req: IncomingMessage, res: ServerResponse) => {
-      if (req.url === "/metrics") {
-        res.writeHead(200, { "Content-Type": "text/plain" });
-        res.end(this.getPrometheusMetrics());
-      } else if (req.url === "/cluster/status") {
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify(this.getMetrics()));
-      } else {
-        res.writeHead(404);
-        res.end("Not found");
-      }
-    });
+    const metricsServer = createServer(
+      (req: IncomingMessage, res: ServerResponse) => {
+        if (req.url === "/metrics") {
+          res.writeHead(200, { "Content-Type": "text/plain" });
+          res.end(this.getPrometheusMetrics());
+        } else if (req.url === "/cluster/status") {
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify(this.getMetrics()));
+        } else {
+          res.writeHead(404);
+          res.end("Not found");
+        }
+      },
+    );
 
     metricsServer.listen(this.config.metricsPort, "127.0.0.1", () => {
-      log.info(`Metrics endpoint on :${this.config.metricsPort} (/metrics, /cluster/status)`);
+      log.info(
+        `Metrics endpoint on :${this.config.metricsPort} (/metrics, /cluster/status)`,
+      );
     });
   }
 }

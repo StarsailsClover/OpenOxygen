@@ -1,6 +1,6 @@
 /**
  * Windows UWP Automation
- * 
+ *
  * Automation for Universal Windows Platform apps
  * Uses Windows UI Automation API
  */
@@ -51,7 +51,7 @@ export class UWPAutomation {
     try {
       // Placeholder for actual UWP launch
       // Would use Windows APIs or PowerShell
-      
+
       const app: UWPApp = {
         appId,
         name: appId,

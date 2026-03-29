@@ -1,6 +1,6 @@
 /**
  * Skills Tests
- * 
+ *
  * Test suite for skill library
  */
 
@@ -51,7 +51,7 @@ describe("Skill Registry", () => {
 
     test("should list all skills", () => {
       const skills = skillRegistry.list();
-      
+
       expect(Array.isArray(skills)).toBe(true);
     });
 
@@ -67,9 +67,9 @@ describe("Skill Registry", () => {
       skillRegistry.register(skill);
 
       const results = skillRegistry.search("searchable");
-      
+
       expect(results.length).toBeGreaterThan(0);
-      expect(results.some(s => s.id === "searchable.skill")).toBe(true);
+      expect(results.some((s) => s.id === "searchable.skill")).toBe(true);
     });
   });
 
@@ -80,15 +80,18 @@ describe("Skill Registry", () => {
         name: "Executable Skill",
         description: "Can be executed",
         category: "test",
-        handler: async (param: string) => ({ 
-          success: true, 
-          data: param 
+        handler: async (param: string) => ({
+          success: true,
+          data: param,
         }),
       };
 
       skillRegistry.register(skill);
 
-      const result = await skillRegistry.execute("executable.skill", "test-param");
+      const result = await skillRegistry.execute(
+        "executable.skill",
+        "test-param",
+      );
 
       expect(result.success).toBe(true);
       expect(result.data).toBe("test-param");
@@ -152,15 +155,15 @@ describe("Skill Registry", () => {
       skillRegistry.register(skill3);
 
       const cat1Skills = skillRegistry.listByCategory("category1");
-      
+
       expect(cat1Skills.length).toBe(2);
-      expect(cat1Skills.some(s => s.id === "cat1.skill1")).toBe(true);
-      expect(cat1Skills.some(s => s.id === "cat1.skill2")).toBe(true);
+      expect(cat1Skills.some((s) => s.id === "cat1.skill1")).toBe(true);
+      expect(cat1Skills.some((s) => s.id === "cat1.skill2")).toBe(true);
     });
 
     test("should get all categories", () => {
       const categories = skillRegistry.getCategories();
-      
+
       expect(Array.isArray(categories)).toBe(true);
     });
   });

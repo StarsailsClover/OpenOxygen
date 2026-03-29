@@ -47,12 +47,19 @@ export async function fileRead(filePath: string): Promise<ToolResult> {
   }
 }
 
-export async function fileWrite(filePath: string, content: string): Promise<ToolResult> {
+export async function fileWrite(
+  filePath: string,
+  content: string,
+): Promise<ToolResult> {
   const start = nowMs();
   try {
     await fs.mkdir(path.dirname(filePath), { recursive: true });
     await fs.writeFile(filePath, content, "utf-8");
-    return { success: true, output: { path: filePath, bytes: Buffer.byteLength(content) }, durationMs: nowMs() - start };
+    return {
+      success: true,
+      output: { path: filePath, bytes: Buffer.byteLength(content) },
+      durationMs: nowMs() - start,
+    };
   } catch (err) {
     return { success: false, error: String(err), durationMs: nowMs() - start };
   }
@@ -62,13 +69,20 @@ export async function fileDelete(filePath: string): Promise<ToolResult> {
   const start = nowMs();
   try {
     await fs.unlink(filePath);
-    return { success: true, output: { deleted: filePath }, durationMs: nowMs() - start };
+    return {
+      success: true,
+      output: { deleted: filePath },
+      durationMs: nowMs() - start,
+    };
   } catch (err) {
     return { success: false, error: String(err), durationMs: nowMs() - start };
   }
 }
 
-export async function fileList(dirPath: string, recursive = false): Promise<ToolResult> {
+export async function fileList(
+  dirPath: string,
+  recursive = false,
+): Promise<ToolResult> {
   const start = nowMs();
   try {
     if (recursive) {
@@ -115,7 +129,11 @@ export async function processStart(
     const output = await runPowerShell(
       `Start-Process -FilePath '${command}' -ArgumentList '${args.join("','")}' ${cwd ? `-WorkingDirectory '${cwd}'` : ""} -PassThru | Select-Object Id, ProcessName | ConvertTo-Json`,
     );
-    return { success: true, output: JSON.parse(output || "{}"), durationMs: nowMs() - start };
+    return {
+      success: true,
+      output: JSON.parse(output || "{}"),
+      durationMs: nowMs() - start,
+    };
   } catch (err) {
     return { success: false, error: String(err), durationMs: nowMs() - start };
   }
@@ -126,7 +144,11 @@ export async function processKill(pid: number): Promise<ToolResult> {
   try {
     assertWindows("processKill");
     await runPowerShell(`Stop-Process -Id ${pid} -Force`);
-    return { success: true, output: { killed: pid }, durationMs: nowMs() - start };
+    return {
+      success: true,
+      output: { killed: pid },
+      durationMs: nowMs() - start,
+    };
   } catch (err) {
     return { success: false, error: String(err), durationMs: nowMs() - start };
   }
@@ -140,7 +162,11 @@ export async function processList(filter?: string): Promise<ToolResult> {
       ? `Get-Process -Name '${filter}' -ErrorAction SilentlyContinue | Select-Object Id, ProcessName, CPU, WorkingSet64 | ConvertTo-Json`
       : `Get-Process | Select-Object Id, ProcessName, CPU, WorkingSet64 | ConvertTo-Json`;
     const output = await runPowerShell(cmd);
-    return { success: true, output: JSON.parse(output || "[]"), durationMs: nowMs() - start };
+    return {
+      success: true,
+      output: JSON.parse(output || "[]"),
+      durationMs: nowMs() - start,
+    };
   } catch (err) {
     return { success: false, error: String(err), durationMs: nowMs() - start };
   }
@@ -148,7 +174,10 @@ export async function processList(filter?: string): Promise<ToolResult> {
 
 // ─── Registry Operations ───────────────────────────────────────────────────
 
-export async function registryRead(keyPath: string, valueName?: string): Promise<ToolResult> {
+export async function registryRead(
+  keyPath: string,
+  valueName?: string,
+): Promise<ToolResult> {
   const start = nowMs();
   try {
     assertWindows("registryRead");
@@ -174,7 +203,11 @@ export async function registryWrite(
     await runPowerShell(
       `Set-ItemProperty -Path '${keyPath}' -Name '${valueName}' -Value '${value}' -Type ${type}`,
     );
-    return { success: true, output: { keyPath, valueName, value }, durationMs: nowMs() - start };
+    return {
+      success: true,
+      output: { keyPath, valueName, value },
+      durationMs: nowMs() - start,
+    };
   } catch (err) {
     return { success: false, error: String(err), durationMs: nowMs() - start };
   }
@@ -198,7 +231,11 @@ export async function clipboardWrite(text: string): Promise<ToolResult> {
   try {
     assertWindows("clipboardWrite");
     await runPowerShell(`Set-Clipboard -Value '${text.replace(/'/g, "''")}'`);
-    return { success: true, output: { written: true }, durationMs: nowMs() - start };
+    return {
+      success: true,
+      output: { written: true },
+      durationMs: nowMs() - start,
+    };
   } catch (err) {
     return { success: false, error: String(err), durationMs: nowMs() - start };
   }
@@ -221,7 +258,11 @@ export async function screenCapture(outputPath: string): Promise<ToolResult> {
       $graphics.Dispose()
       $bitmap.Dispose()
     `);
-    return { success: true, output: { path: outputPath }, durationMs: nowMs() - start };
+    return {
+      success: true,
+      output: { path: outputPath },
+      durationMs: nowMs() - start,
+    };
   } catch (err) {
     return { success: false, error: String(err), durationMs: nowMs() - start };
   }
@@ -243,7 +284,11 @@ export async function sendKeys(keys: string): Promise<ToolResult> {
   }
 }
 
-export async function mouseClick(x: number, y: number, button: "left" | "right" = "left"): Promise<ToolResult> {
+export async function mouseClick(
+  x: number,
+  y: number,
+  button: "left" | "right" = "left",
+): Promise<ToolResult> {
   const start = nowMs();
   try {
     assertWindows("mouseClick");
@@ -261,7 +306,11 @@ export async function mouseClick(x: number, y: number, button: "left" | "right" 
       [MouseOps]::mouse_event(${button === "right" ? "0x0008" : "0x0002"}, 0, 0, 0, 0)
       [MouseOps]::mouse_event(${button === "right" ? "0x0010" : "0x0004"}, 0, 0, 0, 0)
     `);
-    return { success: true, output: { x, y, button }, durationMs: nowMs() - start };
+    return {
+      success: true,
+      output: { x, y, button },
+      durationMs: nowMs() - start,
+    };
   } catch (err) {
     return { success: false, error: String(err), durationMs: nowMs() - start };
   }
@@ -309,15 +358,26 @@ export async function executeSystemOperation(
     case "file.list":
       return fileList(params["path"] as string, params["recursive"] as boolean);
     case "process.start":
-      return processStart(params["command"] as string, params["args"] as string[], params["cwd"] as string);
+      return processStart(
+        params["command"] as string,
+        params["args"] as string[],
+        params["cwd"] as string,
+      );
     case "process.kill":
       return processKill(params["pid"] as number);
     case "process.list":
       return processList(params["filter"] as string);
     case "registry.read":
-      return registryRead(params["keyPath"] as string, params["valueName"] as string);
+      return registryRead(
+        params["keyPath"] as string,
+        params["valueName"] as string,
+      );
     case "registry.write":
-      return registryWrite(params["keyPath"] as string, params["valueName"] as string, params["value"] as string);
+      return registryWrite(
+        params["keyPath"] as string,
+        params["valueName"] as string,
+        params["value"] as string,
+      );
     case "clipboard.read":
       return clipboardRead();
     case "clipboard.write":
@@ -327,10 +387,22 @@ export async function executeSystemOperation(
     case "input.keyboard":
       return sendKeys(params["keys"] as string);
     case "input.mouse":
-      return mouseClick(params["x"] as number, params["y"] as number, params["button"] as "left" | "right");
+      return mouseClick(
+        params["x"] as number,
+        params["y"] as number,
+        params["button"] as "left" | "right",
+      );
     case "network.request":
-      return networkRequest(params["url"] as string, params["method"] as string, params["body"] as string);
+      return networkRequest(
+        params["url"] as string,
+        params["method"] as string,
+        params["body"] as string,
+      );
     default:
-      return { success: false, error: `Unknown operation: ${operation}`, durationMs: 0 };
+      return {
+        success: false,
+        error: `Unknown operation: ${operation}`,
+        durationMs: 0,
+      };
   }
 }

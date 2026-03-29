@@ -5,7 +5,10 @@
  */
 
 import { createSubsystemLogger } from "../../logging/index.js";
-import type { InferenceEngine, ChatMessage } from "../../inference/engine/index.js";
+import type {
+  InferenceEngine,
+  ChatMessage,
+} from "../../inference/engine/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
 import type { NativeModule } from "../../native-bridge.js";
 
@@ -49,7 +52,10 @@ export class VisionLanguageFusion {
   private native: NativeModule | null = null;
   private screenshotDir: string;
 
-  constructor(inferenceEngine: InferenceEngine, screenshotDir = "D:\\Coding\\OpenOxygen\\.state\\screenshots") {
+  constructor(
+    inferenceEngine: InferenceEngine,
+    screenshotDir = "D:\\Coding\\OpenOxygen\\.state\\screenshots",
+  ) {
     this.inferenceEngine = inferenceEngine;
     this.screenshotDir = screenshotDir;
     this.loadNative();
@@ -77,7 +83,8 @@ export class VisionLanguageFusion {
     const mode = params.mode ?? "fast";
 
     // 1. 获取截图
-    const screenshotPath = params.screenshotPath ?? await this.captureScreenshot();
+    const screenshotPath =
+      params.screenshotPath ?? (await this.captureScreenshot());
 
     // 2. 获取 UI 元素（UIA）
     const uiaElements = this.getUIAElements();
@@ -86,7 +93,11 @@ export class VisionLanguageFusion {
     const compressed = this.compressImage(screenshotPath);
 
     // 4. 构建多模态提示
-    const prompt = this.buildMultimodalPrompt(params.instruction, uiaElements, compressed);
+    const prompt = this.buildMultimodalPrompt(
+      params.instruction,
+      uiaElements,
+      compressed,
+    );
 
     // 5. 调用视觉模型
     const response = await this.callVisionModel(prompt, mode);
@@ -105,7 +116,9 @@ export class VisionLanguageFusion {
       latencyMs: nowMs() - startTime,
     };
 
-    log.info(`Vision-Language fusion completed in ${result.latencyMs}ms, found ${grounding.length} elements`);
+    log.info(
+      `Vision-Language fusion completed in ${result.latencyMs}ms, found ${grounding.length} elements`,
+    );
 
     return result;
   }
@@ -177,7 +190,11 @@ export class VisionLanguageFusion {
     }
 
     try {
-      const compressed = (this.native as any).compressScreenshot(screenshotPath, 896, 85);
+      const compressed = (this.native as any).compressScreenshot(
+        screenshotPath,
+        896,
+        85,
+      );
       const base64 = (this.native as any).imageToBase64(compressed.data);
       return {
         base64,
@@ -195,7 +212,7 @@ export class VisionLanguageFusion {
   private buildMultimodalPrompt(
     instruction: string,
     elements: Array<{ id: string; type: string; label: string; bounds: any }>,
-    compressed: { base64: string; width: number; height: number }
+    compressed: { base64: string; width: number; height: number },
   ): string {
     const parts: string[] = [];
 
@@ -208,13 +225,17 @@ export class VisionLanguageFusion {
     if (elements.length > 0) {
       parts.push("\nUI Elements:");
       for (const elem of elements.slice(0, 30)) {
-        parts.push(`  [${elem.type}] "${elem.label}" at (${elem.bounds.x},${elem.bounds.y})`);
+        parts.push(
+          `  [${elem.type}] "${elem.label}" at (${elem.bounds.x},${elem.bounds.y})`,
+        );
       }
     }
 
     // 用户指令
     parts.push(`\nInstruction: ${instruction}`);
-    parts.push("\nRespond with: 1) Description of what you see, 2) Target element ID if applicable");
+    parts.push(
+      "\nRespond with: 1) Description of what you see, 2) Target element ID if applicable",
+    );
 
     return parts.join("\n");
   }
@@ -242,7 +263,13 @@ export class VisionLanguageFusion {
    */
   private parseGrounding(
     response: string,
-    elements: Array<{ id: string; type: string; label: string; bounds: any; confidence: number }>
+    elements: Array<{
+      id: string;
+      type: string;
+      label: string;
+      bounds: any;
+      confidence: number;
+    }>,
   ): VisualGroundingResult[] {
     const results: VisualGroundingResult[] = [];
 
@@ -252,7 +279,10 @@ export class VisionLanguageFusion {
       const responseLower = response.toLowerCase();
 
       // 检查响应中是否提到该元素
-      if (responseLower.includes(labelLower) || responseLower.includes(elem.id.toLowerCase())) {
+      if (
+        responseLower.includes(labelLower) ||
+        responseLower.includes(elem.id.toLowerCase())
+      ) {
         results.push({
           elementId: elem.id,
           elementType: elem.type,
@@ -275,7 +305,7 @@ export class VisionLanguageFusion {
    */
   private inferAction(
     instruction: string,
-    grounding: VisualGroundingResult[]
+    grounding: VisualGroundingResult[],
   ): VisionLanguageResult["suggestedAction"] {
     const lower = instruction.toLowerCase();
 
@@ -296,7 +326,9 @@ export class VisionLanguageFusion {
 
     // 输入操作
     if (/type|input|enter|输入/.test(lower)) {
-      const target = grounding.find(g => g.elementType === "Edit" || g.elementType === "input");
+      const target = grounding.find(
+        (g) => g.elementType === "Edit" || g.elementType === "input",
+      );
       if (target) {
         return {
           type: "type",
@@ -315,7 +347,8 @@ export class VisionLanguageFusion {
       return {
         type: "scroll",
         params: {
-          direction: lower.includes("down") || lower.includes("下") ? "down" : "up",
+          direction:
+            lower.includes("down") || lower.includes("下") ? "down" : "up",
           amount: 3,
         },
       };

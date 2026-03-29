@@ -6,7 +6,11 @@
  */
 
 import { createSubsystemLogger } from "../../logging/index.js";
-import type { InferenceRequest, InferenceResult, ModelConfig } from "../../types/index.js";
+import type {
+  InferenceRequest,
+  InferenceResult,
+  ModelConfig,
+} from "../../types/index.js";
 
 const log = createSubsystemLogger("core/ai-cluster");
 
@@ -95,7 +99,12 @@ export class AICluster {
   /**
    * Register a new model node
    */
-  registerNode(node: Omit<ClusterNode, "status" | "performance" | "lastUsed" | "errorCount" | "successCount">): ClusterNode {
+  registerNode(
+    node: Omit<
+      ClusterNode,
+      "status" | "performance" | "lastUsed" | "errorCount" | "successCount"
+    >,
+  ): ClusterNode {
     const fullNode: ClusterNode = {
       ...node,
       status: "active",
@@ -164,7 +173,10 @@ export class AICluster {
   /**
    * Update node performance metrics
    */
-  updateNodeMetrics(nodeId: string, metrics: Partial<PerformanceMetrics>): void {
+  updateNodeMetrics(
+    nodeId: string,
+    metrics: Partial<PerformanceMetrics>,
+  ): void {
     const node = this.nodes.get(nodeId);
     if (node) {
       node.performance = {
@@ -193,7 +205,9 @@ export class AICluster {
       const total = node.successCount + node.errorCount;
       node.performance.successRate = node.successCount / total;
 
-      log.debug(`Node ${nodeId} success recorded: ${latencyMs}ms, ${tokensUsed} tokens`);
+      log.debug(
+        `Node ${nodeId} success recorded: ${latencyMs}ms, ${tokensUsed} tokens`,
+      );
     }
   }
 
@@ -250,7 +264,9 @@ export class AICluster {
     };
 
     this.addToHistory(decision);
-    log.info(`Request routed to ${bestNode.node.name} (score: ${bestNode.score.toFixed(2)})`);
+    log.info(
+      `Request routed to ${bestNode.node.name} (score: ${bestNode.score.toFixed(2)})`,
+    );
 
     return decision;
   }
@@ -307,7 +323,10 @@ export class AICluster {
 
     const distribution = new Map<string, number>();
     for (const decision of this.requestHistory) {
-      distribution.set(decision.nodeId, (distribution.get(decision.nodeId) || 0) + 1);
+      distribution.set(
+        decision.nodeId,
+        (distribution.get(decision.nodeId) || 0) + 1,
+      );
     }
 
     return {
@@ -343,7 +362,10 @@ export class AICluster {
     });
   }
 
-  private calculateNodeScore(node: ClusterNode, request: InferenceRequest): number {
+  private calculateNodeScore(
+    node: ClusterNode,
+    request: InferenceRequest,
+  ): number {
     let score = 0;
 
     // Capability match
@@ -369,7 +391,9 @@ export class AICluster {
     return Math.max(0, Math.min(1, score));
   }
 
-  private inferCapabilities(request: InferenceRequest): ModelCapability["type"][] {
+  private inferCapabilities(
+    request: InferenceRequest,
+  ): ModelCapability["type"][] {
     const capabilities: ModelCapability["type"][] = ["text"];
 
     if (request.messages?.some((m) => m.content?.includes("image"))) {
@@ -380,7 +404,11 @@ export class AICluster {
       capabilities.push("code");
     }
 
-    if (request.messages?.some((m) => m.content?.includes("think") || m.content?.includes("reason"))) {
+    if (
+      request.messages?.some(
+        (m) => m.content?.includes("think") || m.content?.includes("reason"),
+      )
+    ) {
       capabilities.push("reasoning");
     }
 
@@ -388,7 +416,8 @@ export class AICluster {
   }
 
   private estimateCost(node: ClusterNode, request: InferenceRequest): number {
-    const estimatedTokens = (request.maxTokens || 2048) + this.estimateInputTokens(request);
+    const estimatedTokens =
+      (request.maxTokens || 2048) + this.estimateInputTokens(request);
     return (estimatedTokens / 1000) * node.performance.costPer1KTokens;
   }
 
@@ -400,7 +429,9 @@ export class AICluster {
     return tokens;
   }
 
-  private async executeSingle(request: InferenceRequest): Promise<FusionResult> {
+  private async executeSingle(
+    request: InferenceRequest,
+  ): Promise<FusionResult> {
     const decision = this.routeRequest(request);
     const node = this.nodes.get(decision.nodeId)!;
 
@@ -446,10 +477,15 @@ export class AICluster {
     const maxNodes = (config.maxNodes as number) || 3;
 
     const activeNodes = this.getActiveNodes();
-    const selectedNodes = activeNodes.slice(0, Math.min(maxNodes, activeNodes.length));
+    const selectedNodes = activeNodes.slice(
+      0,
+      Math.min(maxNodes, activeNodes.length),
+    );
 
     if (selectedNodes.length < minNodes) {
-      throw new Error(`Not enough nodes for ensemble: ${selectedNodes.length} < ${minNodes}`);
+      throw new Error(
+        `Not enough nodes for ensemble: ${selectedNodes.length} < ${minNodes}`,
+      );
     }
 
     // Execute on all selected nodes in parallel
@@ -506,7 +542,10 @@ export class AICluster {
       strategy: "ensemble",
       metadata: {
         totalLatencyMs: totalLatency,
-        totalCost: selectedNodes.reduce((sum, n) => sum + this.estimateCost(n, request), 0),
+        totalCost: selectedNodes.reduce(
+          (sum, n) => sum + this.estimateCost(n, request),
+          0,
+        ),
         tokenUsage: totalTokens,
         nodeResults: results.map((r) => ({
           nodeId: r.nodeId,
@@ -593,19 +632,28 @@ export class AICluster {
     throw new Error(`Cascade execution failed after ${maxAttempts} attempts`);
   }
 
-  private async executeAdaptive(request: InferenceRequest): Promise<FusionResult> {
+  private async executeAdaptive(
+    request: InferenceRequest,
+  ): Promise<FusionResult> {
     // Analyze request complexity
     const complexity = this.estimateComplexity(request);
 
     if (complexity > 0.7) {
       // Complex request: use ensemble for better quality
-      return this.executeEnsemble(request, { minNodes: 2, maxNodes: 3, votingMethod: "weighted" });
+      return this.executeEnsemble(request, {
+        minNodes: 2,
+        maxNodes: 3,
+        votingMethod: "weighted",
+      });
     } else if (complexity < 0.3) {
       // Simple request: use single node for efficiency
       return this.executeSingle(request);
     } else {
       // Medium complexity: use cascade for reliability
-      return this.executeCascade(request, { maxAttempts: 2, fallbackOnError: true });
+      return this.executeCascade(request, {
+        maxAttempts: 2,
+        fallbackOnError: true,
+      });
     }
   }
 
@@ -613,7 +661,9 @@ export class AICluster {
     let complexity = 0.5;
 
     // Factor 1: Message length
-    const totalLength = request.messages?.reduce((sum, m) => sum + (m.content?.length || 0), 0) || 0;
+    const totalLength =
+      request.messages?.reduce((sum, m) => sum + (m.content?.length || 0), 0) ||
+      0;
     complexity += Math.min(totalLength / 10000, 0.2);
 
     // Factor 2: Number of messages
@@ -621,7 +671,13 @@ export class AICluster {
     complexity += Math.min(messageCount / 10, 0.1);
 
     // Factor 3: Presence of complex keywords
-    const complexKeywords = ["analyze", "compare", "evaluate", "synthesize", "reason"];
+    const complexKeywords = [
+      "analyze",
+      "compare",
+      "evaluate",
+      "synthesize",
+      "reason",
+    ];
     const hasComplexKeywords = request.messages?.some((m) =>
       complexKeywords.some((kw) => m.content?.toLowerCase().includes(kw)),
     );
@@ -645,7 +701,12 @@ export class AICluster {
 export const aiCluster = new AICluster();
 
 // Convenience functions
-export function registerNode(node: Omit<ClusterNode, "status" | "performance" | "lastUsed" | "errorCount" | "successCount">): ClusterNode {
+export function registerNode(
+  node: Omit<
+    ClusterNode,
+    "status" | "performance" | "lastUsed" | "errorCount" | "successCount"
+  >,
+): ClusterNode {
   return aiCluster.registerNode(node);
 }
 

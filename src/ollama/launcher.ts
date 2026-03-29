@@ -20,7 +20,8 @@ const execAsync = promisify(exec);
 
 // Ollama configuration
 const OLLAMA_DEFAULT_PORT = 11434;
-const OLLAMA_HOST = process.env.OLLAMA_HOST || `http://localhost:${OLLAMA_DEFAULT_PORT}`;
+const OLLAMA_HOST =
+  process.env.OLLAMA_HOST || `http://localhost:${OLLAMA_DEFAULT_PORT}`;
 const OLLAMA_STARTUP_TIMEOUT = 30000; // 30 seconds
 const OLLAMA_STARTUP_CHECK_INTERVAL = 1000; // 1 second
 
@@ -66,7 +67,9 @@ export async function findOllamaExecutable(): Promise<string | null> {
 
   // Check PATH
   try {
-    const { stdout } = await execAsync("where ollama 2>nul || which ollama 2>/dev/null");
+    const { stdout } = await execAsync(
+      "where ollama 2>nul || which ollama 2>/dev/null",
+    );
     const pathFromEnv = stdout.trim().split("\n")[0];
     if (pathFromEnv) {
       possiblePaths.unshift(pathFromEnv);
@@ -77,7 +80,10 @@ export async function findOllamaExecutable(): Promise<string | null> {
 
   // Check each path
   for (const exePath of possiblePaths) {
-    const expandedPath = exePath.replace(/^~/, process.env.HOME || process.env.USERPROFILE || "");
+    const expandedPath = exePath.replace(
+      /^~/,
+      process.env.HOME || process.env.USERPROFILE || "",
+    );
     if (fs.existsSync(expandedPath)) {
       log.info(`Found Ollama at: ${expandedPath}`);
       return expandedPath;
@@ -92,9 +98,11 @@ export async function findOllamaExecutable(): Promise<string | null> {
  */
 export async function startOllama(executablePath?: string): Promise<boolean> {
   const exePath = executablePath || (await findOllamaExecutable());
-  
+
   if (!exePath) {
-    log.error("Ollama executable not found. Please install Ollama from https://ollama.com");
+    log.error(
+      "Ollama executable not found. Please install Ollama from https://ollama.com",
+    );
     return false;
   }
 
@@ -124,10 +132,10 @@ export async function startOllama(executablePath?: string): Promise<boolean> {
  */
 export async function waitForOllama(
   timeoutMs: number = OLLAMA_STARTUP_TIMEOUT,
-  checkIntervalMs: number = OLLAMA_STARTUP_CHECK_INTERVAL
+  checkIntervalMs: number = OLLAMA_STARTUP_CHECK_INTERVAL,
 ): Promise<boolean> {
   const startTime = Date.now();
-  
+
   log.info("Waiting for Ollama to be ready...");
 
   while (Date.now() - startTime < timeoutMs) {
@@ -135,9 +143,9 @@ export async function waitForOllama(
       log.info("Ollama is ready!");
       return true;
     }
-    
+
     await sleep(checkIntervalMs);
-    
+
     const elapsed = Math.floor((Date.now() - startTime) / 1000);
     if (elapsed % 5 === 0) {
       log.debug(`Still waiting for Ollama... (${elapsed}s elapsed)`);
@@ -180,7 +188,7 @@ export async function getOllamaStatus(): Promise<{
   error?: string;
 }> {
   const running = await isOllamaRunning();
-  
+
   if (!running) {
     return { running: false, models: [], error: "Ollama is not running" };
   }
@@ -190,18 +198,20 @@ export async function getOllamaStatus(): Promise<{
     const versionResponse = await fetch(`${OLLAMA_HOST}/api/version`, {
       signal: AbortSignal.timeout(5000),
     });
-    const versionData = await versionResponse.json() as { version: string };
+    const versionData = (await versionResponse.json()) as { version: string };
 
     // Get models
     const tagsResponse = await fetch(`${OLLAMA_HOST}/api/tags`, {
       signal: AbortSignal.timeout(5000),
     });
-    const tagsData = await tagsResponse.json() as { models: Array<{ name: string }> };
+    const tagsData = (await tagsResponse.json()) as {
+      models: Array<{ name: string }>;
+    };
 
     return {
       running: true,
       version: versionData.version,
-      models: tagsData.models?.map(m => m.name) || [],
+      models: tagsData.models?.map((m) => m.name) || [],
     };
   } catch (error: any) {
     return {
@@ -217,16 +227,17 @@ export async function getOllamaStatus(): Promise<{
  */
 export async function isModelAvailable(modelName: string): Promise<boolean> {
   const status = await getOllamaStatus();
-  
+
   if (!status.running) {
     return false;
   }
 
   // Check exact match or partial match
-  return status.models.some(model => 
-    model === modelName || 
-    model.startsWith(modelName + ":") ||
-    modelName.startsWith(model.split(":")[0])
+  return status.models.some(
+    (model) =>
+      model === modelName ||
+      model.startsWith(modelName + ":") ||
+      modelName.startsWith(model.split(":")[0]),
   );
 }
 

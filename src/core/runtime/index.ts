@@ -105,7 +105,10 @@ export function createTestRuntime(): OxygenRuntimeEnv {
 
 export function installGlobalErrorHandlers(runtime: OxygenRuntimeEnv): void {
   process.on("uncaughtException", (err) => {
-    runtime.error("Uncaught exception:", err instanceof Error ? err.stack ?? err.message : err);
+    runtime.error(
+      "Uncaught exception:",
+      err instanceof Error ? (err.stack ?? err.message) : err,
+    );
     restoreTerminalState("uncaught exception");
     runtime.exit(1);
   });

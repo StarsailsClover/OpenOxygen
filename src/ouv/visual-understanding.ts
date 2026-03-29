@@ -30,7 +30,12 @@ export type VisualElementType =
   | "unknown";
 
 // Visual state
-export type VisualState = "visible" | "hidden" | "disabled" | "focused" | "hovered";
+export type VisualState =
+  | "visible"
+  | "hidden"
+  | "disabled"
+  | "focused"
+  | "hovered";
 
 // Visual element
 export interface VisualElement {
@@ -148,7 +153,7 @@ export class OUVVisualUnderstandingController {
    */
   async understandScreen(
     screenshot: string,
-    options: UnderstandingOptions = {}
+    options: UnderstandingOptions = {},
   ): Promise<ScreenUnderstanding> {
     const timestamp = nowMs();
     log.info("Analyzing screen content...");
@@ -163,14 +168,19 @@ export class OUVVisualUnderstandingController {
     };
 
     // Detect elements
-    const elements = await this.detectElements(screenshot, opts.confidenceThreshold);
+    const elements = await this.detectElements(
+      screenshot,
+      opts.confidenceThreshold,
+    );
 
     // Analyze layout
-    const layout = opts.analyzeLayout ? await this.analyzeLayout(elements) : {
-      type: "unknown",
-      regions: [],
-      hierarchy: { root: "", levels: 0, maxWidth: 0, maxDepth: 0 },
-    };
+    const layout = opts.analyzeLayout
+      ? await this.analyzeLayout(elements)
+      : {
+          type: "unknown",
+          regions: [],
+          hierarchy: { root: "", levels: 0, maxWidth: 0, maxDepth: 0 },
+        };
 
     // Build hierarchy
     if (opts.detectHierarchy) {
@@ -219,7 +229,7 @@ export class OUVVisualUnderstandingController {
    */
   private async detectElements(
     screenshot: string,
-    confidenceThreshold: number
+    confidenceThreshold: number,
   ): Promise<VisualElement[]> {
     // Use LLM for element detection
     const prompt = `Analyze this screenshot and identify all UI elements.
@@ -246,7 +256,10 @@ Respond in JSON format:
       const response = await this.inferenceEngine.infer({
         messages: [
           { role: "system", content: "You are a UI analysis expert." },
-          { role: "user", content: `${prompt}\n\nScreenshot: data:image/png;base64,${screenshot}` },
+          {
+            role: "user",
+            content: `${prompt}\n\nScreenshot: data:image/png;base64,${screenshot}`,
+          },
         ],
         mode: "balanced",
       });
@@ -291,11 +304,13 @@ Respond in JSON format:
   /**
    * Analyze layout
    */
-  private async analyzeLayout(elements: VisualElement[]): Promise<LayoutAnalysis> {
+  private async analyzeLayout(
+    elements: VisualElement[],
+  ): Promise<LayoutAnalysis> {
     // Determine layout type based on element distribution
-    const buttons = elements.filter(e => e.type === "button").length;
-    const inputs = elements.filter(e => e.type === "input").length;
-    const lists = elements.filter(e => e.type === "list").length;
+    const buttons = elements.filter((e) => e.type === "button").length;
+    const inputs = elements.filter((e) => e.type === "input").length;
+    const lists = elements.filter((e) => e.type === "list").length;
 
     let type: any = "unknown";
     if (inputs > 2 && buttons > 0) {
@@ -315,8 +330,8 @@ Respond in JSON format:
     const hierarchy: ElementHierarchy = {
       root: elements[0]?.id || "",
       levels: this.calculateHierarchyLevels(elements),
-      maxWidth: Math.max(...elements.map(e => e.bounds.width)),
-      maxDepth: Math.max(...elements.map(e => e.bounds.height)),
+      maxWidth: Math.max(...elements.map((e) => e.bounds.width)),
+      maxDepth: Math.max(...elements.map((e) => e.bounds.height)),
     };
 
     return { type, regions, hierarchy };
@@ -329,16 +344,16 @@ Respond in JSON format:
     const regions: Region[] = [];
 
     // Simple region detection based on element clustering
-    const header = elements.filter(e => e.bounds.y < 20);
-    const sidebar = elements.filter(e => e.bounds.x < 20);
-    const main = elements.filter(e => e.bounds.x >= 20 && e.bounds.y >= 20);
-    const footer = elements.filter(e => e.bounds.y > 80);
+    const header = elements.filter((e) => e.bounds.y < 20);
+    const sidebar = elements.filter((e) => e.bounds.x < 20);
+    const main = elements.filter((e) => e.bounds.x >= 20 && e.bounds.y >= 20);
+    const footer = elements.filter((e) => e.bounds.y > 80);
 
     if (header.length > 0) {
       regions.push({
         name: "header",
         bounds: { x: 0, y: 0, width: 100, height: 20 },
-        elements: header.map(e => e.id),
+        elements: header.map((e) => e.id),
         purpose: "Navigation and branding",
       });
     }
@@ -347,7 +362,7 @@ Respond in JSON format:
       regions.push({
         name: "sidebar",
         bounds: { x: 0, y: 20, width: 20, height: 60 },
-        elements: sidebar.map(e => e.id),
+        elements: sidebar.map((e) => e.id),
         purpose: "Menu and tools",
       });
     }
@@ -356,7 +371,7 @@ Respond in JSON format:
       regions.push({
         name: "main",
         bounds: { x: 20, y: 20, width: 80, height: 60 },
-        elements: main.map(e => e.id),
+        elements: main.map((e) => e.id),
         purpose: "Main content",
       });
     }
@@ -365,7 +380,7 @@ Respond in JSON format:
       regions.push({
         name: "footer",
         bounds: { x: 0, y: 80, width: 100, height: 20 },
-        elements: footer.map(e => e.id),
+        elements: footer.map((e) => e.id),
         purpose: "Footer information",
       });
     }
@@ -378,7 +393,9 @@ Respond in JSON format:
    */
   private calculateHierarchyLevels(elements: VisualElement[]): number {
     // Simplified: count unique y positions
-    const yPositions = new Set(elements.map(e => Math.round(e.bounds.y / 10) * 10));
+    const yPositions = new Set(
+      elements.map((e) => Math.round(e.bounds.y / 10) * 10),
+    );
     return yPositions.size;
   }
 
@@ -394,8 +411,10 @@ Respond in JSON format:
         if (
           other.bounds.x <= element.bounds.x &&
           other.bounds.y <= element.bounds.y &&
-          other.bounds.x + other.bounds.width >= element.bounds.x + element.bounds.width &&
-          other.bounds.y + other.bounds.height >= element.bounds.y + element.bounds.height
+          other.bounds.x + other.bounds.width >=
+            element.bounds.x + element.bounds.width &&
+          other.bounds.y + other.bounds.height >=
+            element.bounds.y + element.bounds.height
         ) {
           element.parent = other.id;
           other.children.push(element.id);
@@ -410,18 +429,21 @@ Respond in JSON format:
    */
   private async generateDescription(
     elements: VisualElement[],
-    layout: LayoutAnalysis
+    layout: LayoutAnalysis,
   ): Promise<string> {
     const prompt = `Generate a concise description of this UI based on the following information:
 
 Layout type: ${layout.type}
 Elements: ${elements.length} total
-- Buttons: ${elements.filter(e => e.type === "button").length}
-- Inputs: ${elements.filter(e => e.type === "input").length}
-- Text: ${elements.filter(e => e.type === "text").length}
+- Buttons: ${elements.filter((e) => e.type === "button").length}
+- Inputs: ${elements.filter((e) => e.type === "input").length}
+- Text: ${elements.filter((e) => e.type === "text").length}
 
 Key elements:
-${elements.slice(0, 5).map(e => `- ${e.type}: "${e.text || e.description}"`).join("\n")}
+${elements
+  .slice(0, 5)
+  .map((e) => `- ${e.type}: "${e.text || e.description}"`)
+  .join("\n")}
 
 Provide a 1-2 sentence description.`;
 
@@ -440,7 +462,9 @@ Provide a 1-2 sentence description.`;
   /**
    * Identify possible interactions
    */
-  private identifyInteractions(elements: VisualElement[]): PossibleInteraction[] {
+  private identifyInteractions(
+    elements: VisualElement[],
+  ): PossibleInteraction[] {
     const interactions: PossibleInteraction[] = [];
 
     for (const element of elements) {
@@ -483,7 +507,7 @@ Provide a 1-2 sentence description.`;
    */
   private async detectContext(
     screenshot: string,
-    elements: VisualElement[]
+    elements: VisualElement[],
   ): Promise<ScreenContext> {
     // Try to identify application from elements
     const context: ScreenContext = {
@@ -491,16 +515,16 @@ Provide a 1-2 sentence description.`;
     };
 
     // Look for URL bar or title
-    const urlElement = elements.find(e =>
-      e.type === "input" && e.description.toLowerCase().includes("url")
+    const urlElement = elements.find(
+      (e) => e.type === "input" && e.description.toLowerCase().includes("url"),
     );
     if (urlElement) {
       context.url = urlElement.text;
     }
 
     // Look for window title
-    const titleElement = elements.find(e =>
-      e.type === "text" && e.bounds.y < 10
+    const titleElement = elements.find(
+      (e) => e.type === "text" && e.bounds.y < 10,
     );
     if (titleElement) {
       context.windowTitle = titleElement.text;
@@ -514,11 +538,11 @@ Provide a 1-2 sentence description.`;
    */
   private trackChanges(
     previous: VisualElement[],
-    current: VisualElement[]
+    current: VisualElement[],
   ): void {
     const timestamp = nowMs();
-    const previousIds = new Set(previous.map(e => e.id));
-    const currentIds = new Set(current.map(e => e.id));
+    const previousIds = new Set(previous.map((e) => e.id));
+    const currentIds = new Set(current.map((e) => e.id));
 
     // Detect removed elements
     for (const element of previous) {
@@ -546,7 +570,7 @@ Provide a 1-2 sentence description.`;
 
     // Detect modified elements
     for (const curr of current) {
-      const prev = previous.find(e => e.id === curr.id);
+      const prev = previous.find((e) => e.id === curr.id);
       if (prev) {
         const changed =
           prev.text !== curr.text ||

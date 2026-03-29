@@ -213,7 +213,9 @@ export class ProductionDeploymentController {
     const freeMemory = require("os").freemem() / 1024 / 1024;
 
     if (freeMemory < requiredMemory) {
-      throw new Error(`Insufficient memory: ${freeMemory}MB available, ${requiredMemory}MB required`);
+      throw new Error(
+        `Insufficient memory: ${freeMemory}MB available, ${requiredMemory}MB required`,
+      );
     }
 
     log.info("Pre-deployment checks passed");
@@ -224,7 +226,7 @@ export class ProductionDeploymentController {
    */
   private async executeDeployment(): Promise<void> {
     // Simulate deployment
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise((resolve) => setTimeout(resolve, 2000));
     log.info(`Deployed ${this.config.replicas} replica(s)`);
   }
 
@@ -236,7 +238,7 @@ export class ProductionDeploymentController {
 
     if (this.config.healthCheck.enabled) {
       // Simulate health check
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       log.info("Health check passed");
     }
   }
@@ -309,7 +311,9 @@ export class ProductionDeploymentController {
         log.warn(`[ALERT] ${alert.message}`);
         break;
       case "console":
-        console.error(`[ALERT] ${alert.severity.toUpperCase()}: ${alert.message}`);
+        console.error(
+          `[ALERT] ${alert.severity.toUpperCase()}: ${alert.message}`,
+        );
         break;
     }
   }
@@ -344,16 +348,16 @@ export class ProductionDeploymentController {
     let results = [...this.logs];
 
     if (filters.level) {
-      results = results.filter(l => l.level === filters.level);
+      results = results.filter((l) => l.level === filters.level);
     }
     if (filters.subsystem) {
-      results = results.filter(l => l.subsystem === filters.subsystem);
+      results = results.filter((l) => l.subsystem === filters.subsystem);
     }
     if (filters.startTime) {
-      results = results.filter(l => l.timestamp >= filters.startTime!);
+      results = results.filter((l) => l.timestamp >= filters.startTime!);
     }
     if (filters.endTime) {
-      results = results.filter(l => l.timestamp <= filters.endTime!);
+      results = results.filter((l) => l.timestamp <= filters.endTime!);
     }
 
     const limit = filters.limit || 100;
@@ -368,22 +372,47 @@ export class ProductionDeploymentController {
     const startTime = endTime - duration;
 
     // Get metrics in time range
-    const cpuMetrics = this.metrics.get("cpu_usage")?.filter(m => m.timestamp >= startTime) || [];
-    const memoryMetrics = this.metrics.get("memory_usage")?.filter(m => m.timestamp >= startTime) || [];
-    const responseMetrics = this.metrics.get("response_time")?.filter(m => m.timestamp >= startTime) || [];
-    const errorMetrics = this.metrics.get("error_rate")?.filter(m => m.timestamp >= startTime) || [];
+    const cpuMetrics =
+      this.metrics.get("cpu_usage")?.filter((m) => m.timestamp >= startTime) ||
+      [];
+    const memoryMetrics =
+      this.metrics
+        .get("memory_usage")
+        ?.filter((m) => m.timestamp >= startTime) || [];
+    const responseMetrics =
+      this.metrics
+        .get("response_time")
+        ?.filter((m) => m.timestamp >= startTime) || [];
+    const errorMetrics =
+      this.metrics.get("error_rate")?.filter((m) => m.timestamp >= startTime) ||
+      [];
 
-    const avgCpu = cpuMetrics.length > 0 ? cpuMetrics.reduce((a, b) => a + b.value, 0) / cpuMetrics.length : 0;
-    const avgMemory = memoryMetrics.length > 0 ? memoryMetrics.reduce((a, b) => a + b.value, 0) / memoryMetrics.length : 0;
-    const avgResponse = responseMetrics.length > 0 ? responseMetrics.reduce((a, b) => a + b.value, 0) / responseMetrics.length : 0;
-    const avgError = errorMetrics.length > 0 ? errorMetrics.reduce((a, b) => a + b.value, 0) / errorMetrics.length : 0;
+    const avgCpu =
+      cpuMetrics.length > 0
+        ? cpuMetrics.reduce((a, b) => a + b.value, 0) / cpuMetrics.length
+        : 0;
+    const avgMemory =
+      memoryMetrics.length > 0
+        ? memoryMetrics.reduce((a, b) => a + b.value, 0) / memoryMetrics.length
+        : 0;
+    const avgResponse =
+      responseMetrics.length > 0
+        ? responseMetrics.reduce((a, b) => a + b.value, 0) /
+          responseMetrics.length
+        : 0;
+    const avgError =
+      errorMetrics.length > 0
+        ? errorMetrics.reduce((a, b) => a + b.value, 0) / errorMetrics.length
+        : 0;
 
     const bottlenecks: string[] = [];
     const recommendations: string[] = [];
 
     if (avgCpu > 70) {
       bottlenecks.push("High CPU usage");
-      recommendations.push("Consider scaling up or optimizing CPU-intensive operations");
+      recommendations.push(
+        "Consider scaling up or optimizing CPU-intensive operations",
+      );
     }
     if (avgMemory > 80) {
       bottlenecks.push("High memory usage");
@@ -417,7 +446,11 @@ export class ProductionDeploymentController {
    * Calculate throughput
    */
   private calculateThroughput(startTime: number, endTime: number): number {
-    const requestMetrics = this.metrics.get("requests")?.filter(m => m.timestamp >= startTime && m.timestamp <= endTime) || [];
+    const requestMetrics =
+      this.metrics
+        .get("requests")
+        ?.filter((m) => m.timestamp >= startTime && m.timestamp <= endTime) ||
+      [];
     const duration = (endTime - startTime) / 1000; // seconds
     return duration > 0 ? requestMetrics.length / duration : 0;
   }
@@ -438,7 +471,7 @@ export class ProductionDeploymentController {
       environment: this.config.environment,
       version: this.config.version,
       metrics: this.metrics.size,
-      alerts: this.alerts.filter(a => !a.acknowledged).length,
+      alerts: this.alerts.filter((a) => !a.acknowledged).length,
       logs: this.logs.length,
     };
   }
@@ -447,7 +480,7 @@ export class ProductionDeploymentController {
    * Acknowledge alert
    */
   acknowledgeAlert(alertId: string): boolean {
-    const alert = this.alerts.find(a => a.id === alertId);
+    const alert = this.alerts.find((a) => a.id === alertId);
     if (!alert) return false;
 
     alert.acknowledged = true;
@@ -459,7 +492,7 @@ export class ProductionDeploymentController {
    * Get unacknowledged alerts
    */
   getActiveAlerts(): Alert[] {
-    return this.alerts.filter(a => !a.acknowledged);
+    return this.alerts.filter((a) => !a.acknowledged);
   }
 }
 

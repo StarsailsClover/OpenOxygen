@@ -17,7 +17,11 @@
 
 import process from "node:process";
 import { enableConsoleCapture, initLogLevelFromEnv } from "./logging/index.js";
-import { assertSupportedRuntime, defaultRuntime, installGlobalErrorHandlers } from "./core/runtime/index.js";
+import {
+  assertSupportedRuntime,
+  defaultRuntime,
+  installGlobalErrorHandlers,
+} from "./core/runtime/index.js";
 import { loadConfig, loadDotEnv } from "./core/config/index.js";
 import { createGatewayServer } from "./core/gateway/index.js";
 import { RealtimeChannel } from "./core/ws/index.js";
@@ -39,13 +43,25 @@ const log = createSubsystemLogger("main");
 
 function printBanner(): void {
   defaultRuntime.log("");
-  defaultRuntime.log("  ╔═══════════════════════════════════════════════════════╗");
-  defaultRuntime.log("  ║           O P E N  O X Y G E N  v26w11aE            ║");
-  defaultRuntime.log("  ║   The Next-Generation Windows-Native AI Agent      ║");
-  defaultRuntime.log("  ║   Beyond OpenClaw · Fused Inference · Secure       ║");
-  defaultRuntime.log("  ╚═══════════════════════════════════════════════════════╝");
+  defaultRuntime.log(
+    "  ╔═══════════════════════════════════════════════════════╗",
+  );
+  defaultRuntime.log(
+    "  ║           O P E N  O X Y G E N  v26w11aE            ║",
+  );
+  defaultRuntime.log(
+    "  ║   The Next-Generation Windows-Native AI Agent      ║",
+  );
+  defaultRuntime.log(
+    "  ║   Beyond OpenClaw · Fused Inference · Secure       ║",
+  );
+  defaultRuntime.log(
+    "  ╚═══════════════════════════════════════════════════════╝",
+  );
   defaultRuntime.log("");
-  defaultRuntime.log("  [Architecture] Rust Core + TypeScript · SIMD + NAPI-RS");
+  defaultRuntime.log(
+    "  [Architecture] Rust Core + TypeScript · SIMD + NAPI-RS",
+  );
   defaultRuntime.log("  [Security]   Zero-Trust · CVE Hardened · Audit Trail");
   defaultRuntime.log("  [AI Stack]   Multi-Model Fusion · Vision-Language");
   defaultRuntime.log("  [Scale]      Distributed · TB-Scale Vector DB");
@@ -71,7 +87,9 @@ async function bootstrap(): Promise<void> {
   // 3. OpenClaw compatibility: merge openclaw.json if enabled
   if (config.compat?.openclaw?.enabled && config.compat.openclaw.configPath) {
     log.info("OpenClaw compatibility mode enabled");
-    const clawOverrides = await translateOpenClawConfig(config.compat.openclaw.configPath);
+    const clawOverrides = await translateOpenClawConfig(
+      config.compat.openclaw.configPath,
+    );
     config = deepMergeConfig(config, clawOverrides);
   }
 
@@ -105,9 +123,12 @@ async function bootstrap(): Promise<void> {
   };
 
   // 6. Start Gateway
-  const gateway = createGatewayServer({ config, inferenceEngine, onEvent: handleEvent });
+  const gateway = createGatewayServer({
+    config,
+    inferenceEngine,
+    onEvent: handleEvent,
+  });
   await gateway.start();
-
 
   // 6b. WebSocket realtime channel
   const wsChannel = new RealtimeChannel(inferenceEngine);
@@ -124,7 +145,9 @@ async function bootstrap(): Promise<void> {
   log.info(`Gateway: http://${config.gateway.host}:${config.gateway.port}`);
   log.info(`Agents: ${config.agents.list.length} configured`);
   log.info(`Plugins: ${pluginRegistry.getActive().length} active`);
-  log.info(`Models: ${inferenceEngine.getAvailableProviders().join(", ") || "none configured"}`);
+  log.info(
+    `Models: ${inferenceEngine.getAvailableProviders().join(", ") || "none configured"}`,
+  );
   log.info(`Memory: ${memory.status().chunks} chunks indexed`);
 
   // Keep process alive
@@ -176,7 +199,9 @@ switch (command) {
     defaultRuntime.log("  OPENOXYGEN_STATE_DIR      State directory path");
     defaultRuntime.log("  OPENOXYGEN_GATEWAY_PORT   Gateway port");
     defaultRuntime.log("  OPENOXYGEN_GATEWAY_TOKEN  Auth token");
-    defaultRuntime.log("  OPENOXYGEN_LOG_LEVEL      Log level (debug/info/warn/error)");
+    defaultRuntime.log(
+      "  OPENOXYGEN_LOG_LEVEL      Log level (debug/info/warn/error)",
+    );
     process.exit(0);
     break;
 
@@ -191,7 +216,10 @@ switch (command) {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function deepMergeConfig(base: OxygenConfig, overrides: Partial<OxygenConfig>): OxygenConfig {
+function deepMergeConfig(
+  base: OxygenConfig,
+  overrides: Partial<OxygenConfig>,
+): OxygenConfig {
   return {
     ...base,
     ...overrides,
@@ -208,4 +236,3 @@ function deepMergeConfig(base: OxygenConfig, overrides: Partial<OxygenConfig>): 
     plugins: [...base.plugins, ...(overrides.plugins ?? [])],
   };
 }
-

@@ -1,6 +1,6 @@
 # OpenOxygen
 
-[![Version](https://img.shields.io/badge/Version-26w13a--main--26.103.0-blue)]()
+[![Version](https://img.shields.io/badge/Version-26w14a--dev--26.111.0-blue)]()
 [![License](https://img.shields.io/badge/License-Apache%202.0-green)]()
 [![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)]()
 

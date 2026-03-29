@@ -10,11 +10,7 @@ export {
   type SummaryResult,
 } from "./impl.js";
 
-import {
-  summarize,
-  summarizeWebpage,
-  translateSummary,
-} from "./impl.js";
+import { summarize, summarizeWebpage, translateSummary } from "./impl.js";
 
 export default {
   summarize,

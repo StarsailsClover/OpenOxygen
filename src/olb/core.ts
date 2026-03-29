@@ -14,7 +14,15 @@ import { generateId, nowMs } from "../utils/index.js";
 const log = createSubsystemLogger("olb/core");
 
 // SIMD operations supported
-export type SIMDOps = "add" | "sub" | "mul" | "div" | "min" | "max" | "sqrt" | "abs";
+export type SIMDOps =
+  | "add"
+  | "sub"
+  | "mul"
+  | "div"
+  | "min"
+  | "max"
+  | "sqrt"
+  | "abs";
 
 // Data types for SIMD
 export type SIMDDataType = "float32" | "float64" | "int32" | "int64";
@@ -83,7 +91,9 @@ export class SIMDArrayEngine {
    * Create SIMD vector
    */
   createVector(data: number[]): SIMDVector {
-    const elements = this.dimension / (this.type === "float64" || this.type === "int64" ? 64 : 32);
+    const elements =
+      this.dimension /
+      (this.type === "float64" || this.type === "int64" ? 64 : 32);
 
     let typedArray: Float32Array | Float64Array | Int32Array | any;
 
@@ -203,7 +213,7 @@ export class SIMDArrayEngine {
   batchOperation(
     vectors: SIMDVector[],
     operation: SIMDOps,
-    scalar?: number
+    scalar?: number,
   ): OperationResult {
     const startTime = nowMs();
 
@@ -272,7 +282,8 @@ export class SIMDArrayEngine {
   private updateMetrics(elements: number, duration: number): void {
     this.metrics.totalOps += elements;
     this.metrics.totalDurationMs += duration;
-    this.metrics.avgThroughput = this.metrics.totalOps / (this.metrics.totalDurationMs / 1000);
+    this.metrics.avgThroughput =
+      this.metrics.totalOps / (this.metrics.totalDurationMs / 1000);
 
     const currentThroughput = elements / (duration / 1000);
     if (currentThroughput > this.metrics.peakThroughput) {
@@ -310,7 +321,9 @@ export class MemoryPoolManager {
       this.pool.push(this.createBlock());
     }
 
-    log.info(`Memory Pool initialized: ${this.config.initialBlocks} blocks of ${this.config.blockSize} bytes`);
+    log.info(
+      `Memory Pool initialized: ${this.config.initialBlocks} blocks of ${this.config.blockSize} bytes`,
+    );
   }
 
   /**
@@ -325,7 +338,9 @@ export class MemoryPoolManager {
    */
   allocate(size: number): ArrayBuffer | null {
     if (size > this.config.blockSize) {
-      log.warn(`Allocation size ${size} exceeds block size ${this.config.blockSize}`);
+      log.warn(
+        `Allocation size ${size} exceeds block size ${this.config.blockSize}`,
+      );
       return null;
     }
 
@@ -469,7 +484,8 @@ export class OLBCoreEngine {
     const memSpeed = 100 / (memDuration / 1000);
 
     // Overall score (normalized)
-    const overallScore = (simdThroughput / 1000000) * 0.7 + (memSpeed / 1000) * 0.3;
+    const overallScore =
+      (simdThroughput / 1000000) * 0.7 + (memSpeed / 1000) * 0.3;
 
     return {
       simdThroughput,

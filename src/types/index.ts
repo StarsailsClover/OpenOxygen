@@ -300,7 +300,10 @@ export type OxygenPluginDefinition = {
     name: string;
     description: string;
     parameters: Record<string, unknown>;
-    execute: (params: Record<string, unknown>, ctx: PluginContext) => Promise<ToolResult>;
+    execute: (
+      params: Record<string, unknown>,
+      ctx: PluginContext,
+    ) => Promise<ToolResult>;
   }>;
   activate?: (ctx: PluginContext) => Promise<void>;
   deactivate?: (ctx: PluginContext) => Promise<void>;
@@ -326,7 +329,12 @@ export type AuditEntry = {
 export type OxygenEvent =
   | { type: "gateway.started"; port: number }
   | { type: "gateway.stopped" }
-  | { type: "agent.message"; agentId: string; sessionKey: string; content: string }
+  | {
+      type: "agent.message";
+      agentId: string;
+      sessionKey: string;
+      content: string;
+    }
   | { type: "agent.tool-call"; agentId: string; tool: string }
   | { type: "plan.created"; planId: string }
   | { type: "plan.step-completed"; planId: string; stepId: string }

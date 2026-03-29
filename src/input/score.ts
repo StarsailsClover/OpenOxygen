@@ -14,7 +14,7 @@ const log = createSubsystemLogger("input/score");
 // ═══════════════════════════════════════════════════════════════════════════
 
 export interface HumanLikenessReport {
-  overall: number;               // 0-100
+  overall: number; // 0-100
   timing: TimingScore;
   movement: MovementScore;
   pattern: PatternScore;
@@ -22,26 +22,26 @@ export interface HumanLikenessReport {
 }
 
 export interface TimingScore {
-  score: number;                  // 0-100
+  score: number; // 0-100
   meanIntervalMs: number;
   stdDevMs: number;
-  hasNaturalVariance: boolean;    // 人类有 10-30% 的时间波动
-  hasMicroPauses: boolean;        // 思考暂停 (200-2000ms)
+  hasNaturalVariance: boolean; // 人类有 10-30% 的时间波动
+  hasMicroPauses: boolean; // 思考暂停 (200-2000ms)
 }
 
 export interface MovementScore {
   score: number;
-  pathSmoothness: number;        // 0-1，贝塞尔适配度
-  hasAcceleration: boolean;      // 加速→匀速→减速模式
-  hasOvershoot: boolean;         // 轻微过冲
-  straightLineRatio: number;     // 直线比例（太高不自然）
+  pathSmoothness: number; // 0-1，贝塞尔适配度
+  hasAcceleration: boolean; // 加速→匀速→减速模式
+  hasOvershoot: boolean; // 轻微过冲
+  straightLineRatio: number; // 直线比例（太高不自然）
 }
 
 export interface PatternScore {
   score: number;
-  isRepetitive: boolean;         // 高重复性 = 机器人
-  hasHesitation: boolean;        // 犹豫停顿
-  clickPrecision: number;        // 0-1，太精确不自然
+  isRepetitive: boolean; // 高重复性 = 机器人
+  hasHesitation: boolean; // 犹豫停顿
+  clickPrecision: number; // 0-1，太精确不自然
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -52,21 +52,21 @@ export class HumanLikenessScorer {
   /**
    * 评估输入序列的人类行为相似度
    */
-  score(actions: Array<{
-    type: string;
-    x?: number;
-    y?: number;
-    timestamp: number;
-    duration?: number;
-  }>): HumanLikenessReport {
+  score(
+    actions: Array<{
+      type: string;
+      x?: number;
+      y?: number;
+      timestamp: number;
+      duration?: number;
+    }>,
+  ): HumanLikenessReport {
     const timing = this.scoreTiming(actions);
     const movement = this.scoreMovement(actions);
     const pattern = this.scorePattern(actions);
 
     const overall = Math.round(
-      timing.score * 0.35 +
-      movement.score * 0.40 +
-      pattern.score * 0.25
+      timing.score * 0.35 + movement.score * 0.4 + pattern.score * 0.25,
     );
 
     const suggestions = this.generateSuggestions(timing, movement, pattern);
@@ -76,7 +76,13 @@ export class HumanLikenessScorer {
 
   private scoreTiming(actions: Array<{ timestamp: number }>): TimingScore {
     if (actions.length < 2) {
-      return { score: 50, meanIntervalMs: 0, stdDevMs: 0, hasNaturalVariance: false, hasMicroPauses: false };
+      return {
+        score: 50,
+        meanIntervalMs: 0,
+        stdDevMs: 0,
+        hasNaturalVariance: false,
+        hasMicroPauses: false,
+      };
     }
 
     const intervals: number[] = [];
@@ -86,13 +92,14 @@ export class HumanLikenessScorer {
 
     const mean = intervals.reduce((a, b) => a + b, 0) / intervals.length;
     const stdDev = Math.sqrt(
-      intervals.reduce((sum, x) => sum + Math.pow(x - mean, 2), 0) / intervals.length
+      intervals.reduce((sum, x) => sum + Math.pow(x - mean, 2), 0) /
+        intervals.length,
     );
 
     // 人类行为特征
     const cv = mean > 0 ? stdDev / mean : 0; // 变异系数
     const hasNaturalVariance = cv > 0.1 && cv < 0.5; // 10%-50% 变异
-    const hasMicroPauses = intervals.some(i => i > 200 && i < 3000);
+    const hasMicroPauses = intervals.some((i) => i > 200 && i < 3000);
 
     // 评分
     let score = 50;
@@ -113,14 +120,24 @@ export class HumanLikenessScorer {
     };
   }
 
-  private scoreMovement(actions: Array<{ type: string; x?: number; y?: number }>): MovementScore {
-    const moves = actions.filter(a => 
-      (a.type === "move" || a.type === "click" || a.type === "smooth_move") && 
-      a.x !== undefined && a.y !== undefined
+  private scoreMovement(
+    actions: Array<{ type: string; x?: number; y?: number }>,
+  ): MovementScore {
+    const moves = actions.filter(
+      (a) =>
+        (a.type === "move" || a.type === "click" || a.type === "smooth_move") &&
+        a.x !== undefined &&
+        a.y !== undefined,
     );
 
     if (moves.length < 2) {
-      return { score: 50, pathSmoothness: 0.5, hasAcceleration: false, hasOvershoot: false, straightLineRatio: 0 };
+      return {
+        score: 50,
+        pathSmoothness: 0.5,
+        hasAcceleration: false,
+        hasOvershoot: false,
+        straightLineRatio: 0,
+      };
     }
 
     // 计算路径特征
@@ -134,7 +151,7 @@ export class HumanLikenessScorer {
       const dy = (moves[i]!.y ?? 0) - (moves[i - 1]!.y ?? 0);
       const dist = Math.sqrt(dx * dx + dy * dy);
       distances.push(dist);
-      
+
       if (i > 1) {
         const prevDx = (moves[i - 1]!.x ?? 0) - (moves[i - 2]!.x ?? 0);
         const prevDy = (moves[i - 1]!.y ?? 0) - (moves[i - 2]!.y ?? 0);
@@ -149,19 +166,24 @@ export class HumanLikenessScorer {
       }
     }
 
-    const straightLineRatio = totalSegments > 0 ? straightSegments / totalSegments : 0;
-    
+    const straightLineRatio =
+      totalSegments > 0 ? straightSegments / totalSegments : 0;
+
     // 路径平滑度 = 角度变化不应太大也不应太小
-    const meanAngle = angles.length > 0 ? angles.reduce((a, b) => a + b, 0) / angles.length : 0;
+    const meanAngle =
+      angles.length > 0 ? angles.reduce((a, b) => a + b, 0) / angles.length : 0;
     const pathSmoothness = meanAngle > 0.01 && meanAngle < 0.5 ? 0.8 : 0.3;
 
     // 加速→减速模式
-    const hasAcceleration = distances.length >= 3 &&
+    const hasAcceleration =
+      distances.length >= 3 &&
       distances[0]! < distances[Math.floor(distances.length / 2)]! &&
-      distances[Math.floor(distances.length / 2)]! > distances[distances.length - 1]!;
+      distances[Math.floor(distances.length / 2)]! >
+        distances[distances.length - 1]!;
 
     // 过冲检测（最后几个点距离增大后减小）
-    const hasOvershoot = distances.length >= 4 &&
+    const hasOvershoot =
+      distances.length >= 4 &&
       distances[distances.length - 2]! > distances[distances.length - 1]!;
 
     let score = 50;
@@ -180,17 +202,25 @@ export class HumanLikenessScorer {
     };
   }
 
-  private scorePattern(actions: Array<{ type: string; x?: number; y?: number; timestamp: number }>): PatternScore {
+  private scorePattern(
+    actions: Array<{ type: string; x?: number; y?: number; timestamp: number }>,
+  ): PatternScore {
     // 重复性检测
-    const typeSequence = actions.map(a => a.type).join(",");
+    const typeSequence = actions.map((a) => a.type).join(",");
     const chunks = [];
     for (let len = 2; len <= 5; len++) {
       for (let i = 0; i <= actions.length - len; i++) {
-        chunks.push(actions.slice(i, i + len).map(a => a.type).join(","));
+        chunks.push(
+          actions
+            .slice(i, i + len)
+            .map((a) => a.type)
+            .join(","),
+        );
       }
     }
     const uniqueChunks = new Set(chunks);
-    const isRepetitive = chunks.length > 0 && uniqueChunks.size / chunks.length < 0.3;
+    const isRepetitive =
+      chunks.length > 0 && uniqueChunks.size / chunks.length < 0.3;
 
     // 犹豫检测
     const hasHesitation = actions.some((a, i) => {
@@ -200,13 +230,20 @@ export class HumanLikenessScorer {
     });
 
     // 点击精确度（像素级精确不自然）
-    const clickActions = actions.filter(a => a.type === "click" && a.x !== undefined);
-    const clickPrecision = clickActions.length > 1 ? (() => {
-      const xValues = clickActions.map(a => a.x!);
-      const yValues = clickActions.map(a => a.y!);
-      const allRound = xValues.every(x => x % 5 === 0) && yValues.every(y => y % 5 === 0);
-      return allRound ? 1.0 : 0.5;
-    })() : 0.5;
+    const clickActions = actions.filter(
+      (a) => a.type === "click" && a.x !== undefined,
+    );
+    const clickPrecision =
+      clickActions.length > 1
+        ? (() => {
+            const xValues = clickActions.map((a) => a.x!);
+            const yValues = clickActions.map((a) => a.y!);
+            const allRound =
+              xValues.every((x) => x % 5 === 0) &&
+              yValues.every((y) => y % 5 === 0);
+            return allRound ? 1.0 : 0.5;
+          })()
+        : 0.5;
 
     let score = 60;
     if (!isRepetitive) score += 15;
@@ -233,16 +270,24 @@ export class HumanLikenessScorer {
       suggestions.push("Add 10-30% random variation to action intervals");
     }
     if (!timing.hasMicroPauses) {
-      suggestions.push("Insert occasional 200-2000ms pauses between action groups");
+      suggestions.push(
+        "Insert occasional 200-2000ms pauses between action groups",
+      );
     }
     if (movement.straightLineRatio > 0.6) {
-      suggestions.push("Use bezier curve interpolation instead of linear movement");
+      suggestions.push(
+        "Use bezier curve interpolation instead of linear movement",
+      );
     }
     if (!movement.hasAcceleration) {
-      suggestions.push("Add acceleration/deceleration pattern to mouse movements");
+      suggestions.push(
+        "Add acceleration/deceleration pattern to mouse movements",
+      );
     }
     if (pattern.isRepetitive) {
-      suggestions.push("Vary action sequences to reduce pattern predictability");
+      suggestions.push(
+        "Vary action sequences to reduce pattern predictability",
+      );
     }
     if (pattern.clickPrecision > 0.9) {
       suggestions.push("Add ±2-5px jitter to click coordinates");

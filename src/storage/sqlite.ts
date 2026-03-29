@@ -35,7 +35,8 @@ export class SQLiteStore {
       fs.mkdirSync(dir, { recursive: true });
     }
 
-    const BetterSqlite3 = require("better-sqlite3") as typeof import("better-sqlite3");
+    const BetterSqlite3 =
+      require("better-sqlite3") as typeof import("better-sqlite3");
     this.db = new BetterSqlite3(this.dbPath);
 
     // WAL 模式：并发读 + 崩溃安全
@@ -141,17 +142,21 @@ export class SQLiteStore {
     lastActiveAt: number;
     metadata?: Record<string, unknown>;
   }): void {
-    this.db.prepare(`
+    this.db
+      .prepare(
+        `
       INSERT OR REPLACE INTO sessions (key, agent_id, channel_id, created_at, last_active_at, metadata)
       VALUES (?, ?, ?, ?, ?, ?)
-    `).run(
-      session.key,
-      session.agentId,
-      session.channelId || null,
-      session.createdAt,
-      session.lastActiveAt,
-      JSON.stringify(session.metadata || {}),
-    );
+    `,
+      )
+      .run(
+        session.key,
+        session.agentId,
+        session.channelId || null,
+        session.createdAt,
+        session.lastActiveAt,
+        JSON.stringify(session.metadata || {}),
+      );
   }
 
   getSession(key: string): any {
@@ -159,12 +164,16 @@ export class SQLiteStore {
   }
 
   touchSession(key: string): void {
-    this.db.prepare("UPDATE sessions SET last_active_at = ? WHERE key = ?").run(Date.now(), key);
+    this.db
+      .prepare("UPDATE sessions SET last_active_at = ? WHERE key = ?")
+      .run(Date.now(), key);
   }
 
   listSessions(agentId?: string): any[] {
     if (agentId) {
-      return this.db.prepare("SELECT * FROM sessions WHERE agent_id = ?").all(agentId);
+      return this.db
+        .prepare("SELECT * FROM sessions WHERE agent_id = ?")
+        .all(agentId);
     }
     return this.db.prepare("SELECT * FROM sessions").all();
   }
@@ -185,19 +194,23 @@ export class SQLiteStore {
     details?: Record<string, unknown>;
     rollbackable?: boolean;
   }): void {
-    this.db.prepare(`
+    this.db
+      .prepare(
+        `
       INSERT INTO audit_log (id, timestamp, operation, actor, target, severity, details, rollbackable)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      entry.id,
-      entry.timestamp,
-      entry.operation,
-      entry.actor,
-      entry.target || null,
-      entry.severity || "info",
-      JSON.stringify(entry.details || {}),
-      entry.rollbackable ? 1 : 0,
-    );
+    `,
+      )
+      .run(
+        entry.id,
+        entry.timestamp,
+        entry.operation,
+        entry.actor,
+        entry.target || null,
+        entry.severity || "info",
+        JSON.stringify(entry.details || {}),
+        entry.rollbackable ? 1 : 0,
+      );
   }
 
   queryAudit(params?: {
@@ -209,18 +222,32 @@ export class SQLiteStore {
     let sql = "SELECT * FROM audit_log WHERE 1=1";
     const args: unknown[] = [];
 
-    if (params?.operation) { sql += " AND operation = ?"; args.push(params.operation); }
-    if (params?.severity) { sql += " AND severity = ?"; args.push(params.severity); }
-    if (params?.since) { sql += " AND timestamp >= ?"; args.push(params.since); }
+    if (params?.operation) {
+      sql += " AND operation = ?";
+      args.push(params.operation);
+    }
+    if (params?.severity) {
+      sql += " AND severity = ?";
+      args.push(params.severity);
+    }
+    if (params?.since) {
+      sql += " AND timestamp >= ?";
+      args.push(params.since);
+    }
 
     sql += " ORDER BY timestamp DESC";
-    if (params?.limit) { sql += " LIMIT ?"; args.push(params.limit); }
+    if (params?.limit) {
+      sql += " LIMIT ?";
+      args.push(params.limit);
+    }
 
     return this.db.prepare(sql).all(...args);
   }
 
   getAuditCount(): number {
-    const row = this.db.prepare("SELECT COUNT(*) as count FROM audit_log").get() as any;
+    const row = this.db
+      .prepare("SELECT COUNT(*) as count FROM audit_log")
+      .get() as any;
     return row?.count || 0;
   }
 
@@ -238,30 +265,47 @@ export class SQLiteStore {
     expiresAt?: number;
     embeddingDim?: number;
   }): void {
-    this.db.prepare(`
+    this.db
+      .prepare(
+        `
       INSERT OR REPLACE INTO vector_chunks
       (id, source, file_path, start_line, end_line, content_hash, chunk_size, created_at, expires_at, embedding_dim)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      chunk.id, chunk.source, chunk.filePath,
-      chunk.startLine, chunk.endLine,
-      chunk.contentHash, chunk.chunkSize,
-      chunk.createdAt, chunk.expiresAt || null,
-      chunk.embeddingDim || 0,
-    );
+    `,
+      )
+      .run(
+        chunk.id,
+        chunk.source,
+        chunk.filePath,
+        chunk.startLine,
+        chunk.endLine,
+        chunk.contentHash,
+        chunk.chunkSize,
+        chunk.createdAt,
+        chunk.expiresAt || null,
+        chunk.embeddingDim || 0,
+      );
   }
 
   getChunksByPath(filePath: string): any[] {
-    return this.db.prepare("SELECT * FROM vector_chunks WHERE file_path = ?").all(filePath);
+    return this.db
+      .prepare("SELECT * FROM vector_chunks WHERE file_path = ?")
+      .all(filePath);
   }
 
   deleteExpiredChunks(): number {
-    const result = this.db.prepare("DELETE FROM vector_chunks WHERE expires_at IS NOT NULL AND expires_at < ?").run(Date.now());
+    const result = this.db
+      .prepare(
+        "DELETE FROM vector_chunks WHERE expires_at IS NOT NULL AND expires_at < ?",
+      )
+      .run(Date.now());
     return result.changes;
   }
 
   getChunkCount(): number {
-    const row = this.db.prepare("SELECT COUNT(*) as count FROM vector_chunks").get() as any;
+    const row = this.db
+      .prepare("SELECT COUNT(*) as count FROM vector_chunks")
+      .get() as any;
     return row?.count || 0;
   }
 
@@ -276,24 +320,38 @@ export class SQLiteStore {
     mode?: string;
     success?: boolean;
   }): void {
-    this.db.prepare(`
+    this.db
+      .prepare(
+        `
       INSERT INTO model_stats (model, provider, prompt_tokens, completion_tokens, duration_ms, timestamp, mode, success)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      stats.model, stats.provider,
-      stats.promptTokens, stats.completionTokens,
-      stats.durationMs, Date.now(),
-      stats.mode || null,
-      stats.success !== false ? 1 : 0,
-    );
+    `,
+      )
+      .run(
+        stats.model,
+        stats.provider,
+        stats.promptTokens,
+        stats.completionTokens,
+        stats.durationMs,
+        Date.now(),
+        stats.mode || null,
+        stats.success !== false ? 1 : 0,
+      );
   }
 
   getModelStats(model?: string, since?: number): any[] {
-    let sql = "SELECT model, provider, COUNT(*) as requests, SUM(prompt_tokens) as total_prompt, SUM(completion_tokens) as total_completion, AVG(duration_ms) as avg_duration, SUM(CASE WHEN success=1 THEN 1 ELSE 0 END) as successes FROM model_stats WHERE 1=1";
+    let sql =
+      "SELECT model, provider, COUNT(*) as requests, SUM(prompt_tokens) as total_prompt, SUM(completion_tokens) as total_completion, AVG(duration_ms) as avg_duration, SUM(CASE WHEN success=1 THEN 1 ELSE 0 END) as successes FROM model_stats WHERE 1=1";
     const args: unknown[] = [];
 
-    if (model) { sql += " AND model = ?"; args.push(model); }
-    if (since) { sql += " AND timestamp >= ?"; args.push(since); }
+    if (model) {
+      sql += " AND model = ?";
+      args.push(model);
+    }
+    if (since) {
+      sql += " AND timestamp >= ?";
+      args.push(since);
+    }
 
     sql += " GROUP BY model, provider";
     return this.db.prepare(sql).all(...args);
@@ -303,14 +361,20 @@ export class SQLiteStore {
 
   kvSet(key: string, value: unknown, ttlMs?: number): void {
     const expiresAt = ttlMs ? Date.now() + ttlMs : null;
-    this.db.prepare(`
+    this.db
+      .prepare(
+        `
       INSERT OR REPLACE INTO kv_store (key, value, updated_at, expires_at)
       VALUES (?, ?, ?, ?)
-    `).run(key, JSON.stringify(value), Date.now(), expiresAt);
+    `,
+      )
+      .run(key, JSON.stringify(value), Date.now(), expiresAt);
   }
 
   kvGet<T = unknown>(key: string): T | null {
-    const row = this.db.prepare("SELECT value, expires_at FROM kv_store WHERE key = ?").get(key) as any;
+    const row = this.db
+      .prepare("SELECT value, expires_at FROM kv_store WHERE key = ?")
+      .get(key) as any;
     if (!row) return null;
     if (row.expires_at && row.expires_at < Date.now()) {
       this.db.prepare("DELETE FROM kv_store WHERE key = ?").run(key);
@@ -333,16 +397,35 @@ export class SQLiteStore {
     modelRequests: number;
     dbSizeBytes: number;
   } {
-    const sessions = (this.db.prepare("SELECT COUNT(*) as c FROM sessions").get() as any)?.c || 0;
-    const audit = (this.db.prepare("SELECT COUNT(*) as c FROM audit_log").get() as any)?.c || 0;
-    const chunks = (this.db.prepare("SELECT COUNT(*) as c FROM vector_chunks").get() as any)?.c || 0;
-    const kv = (this.db.prepare("SELECT COUNT(*) as c FROM kv_store").get() as any)?.c || 0;
-    const stats = (this.db.prepare("SELECT COUNT(*) as c FROM model_stats").get() as any)?.c || 0;
+    const sessions =
+      (this.db.prepare("SELECT COUNT(*) as c FROM sessions").get() as any)?.c ||
+      0;
+    const audit =
+      (this.db.prepare("SELECT COUNT(*) as c FROM audit_log").get() as any)
+        ?.c || 0;
+    const chunks =
+      (this.db.prepare("SELECT COUNT(*) as c FROM vector_chunks").get() as any)
+        ?.c || 0;
+    const kv =
+      (this.db.prepare("SELECT COUNT(*) as c FROM kv_store").get() as any)?.c ||
+      0;
+    const stats =
+      (this.db.prepare("SELECT COUNT(*) as c FROM model_stats").get() as any)
+        ?.c || 0;
 
     let dbSize = 0;
-    try { dbSize = fs.statSync(this.dbPath).size; } catch {}
+    try {
+      dbSize = fs.statSync(this.dbPath).size;
+    } catch {}
 
-    return { sessions, auditEntries: audit, vectorChunks: chunks, kvEntries: kv, modelRequests: stats, dbSizeBytes: dbSize };
+    return {
+      sessions,
+      auditEntries: audit,
+      vectorChunks: chunks,
+      kvEntries: kv,
+      modelRequests: stats,
+      dbSizeBytes: dbSize,
+    };
   }
 
   vacuum(): void {

@@ -24,10 +24,9 @@ export function createRuntime(config?: RuntimeConfig): Runtime {
     id: generateId("runtime"),
     name: config?.name || "OpenOxygen",
     version: config?.version || "26w15aD",
-    startTime: Date.now()
+    startTime: Date.now(),
   };
 
   log.info(`Runtime created: ${runtime.name} v${runtime.version}`);
   return runtime;
 }
-

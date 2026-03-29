@@ -11,7 +11,10 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { createSubsystemLogger } from "../../logging/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
-import type { InferenceEngine, ChatMessage } from "../../inference/engine/index.js";
+import type {
+  InferenceEngine,
+  ChatMessage,
+} from "../../inference/engine/index.js";
 
 const log = createSubsystemLogger("ws");
 
@@ -20,18 +23,18 @@ const log = createSubsystemLogger("ws");
 // ═══════════════════════════════════════════════════════════════════════════
 
 export type WSMessageType =
-  | "chat"           // 用户发送消息
-  | "chat.stream"    // 流式推理响应
-  | "chat.done"      // 推理完成
-  | "task.start"     // 任务开始
-  | "task.step"      // 任务步骤更新
-  | "task.cancel"    // 用户取消任务
-  | "task.done"      // 任务完成
-  | "task.error"     // 任务错误
-  | "task.modify"    // 用户修改执行参数
-  | "system.status"  // 系统状态推送
-  | "ping"           // 心跳
-  | "pong";          // 心跳响应
+  | "chat" // 用户发送消息
+  | "chat.stream" // 流式推理响应
+  | "chat.done" // 推理完成
+  | "task.start" // 任务开始
+  | "task.step" // 任务步骤更新
+  | "task.cancel" // 用户取消任务
+  | "task.done" // 任务完成
+  | "task.error" // 任务错误
+  | "task.modify" // 用户修改执行参数
+  | "system.status" // 系统状态推送
+  | "ping" // 心跳
+  | "pong"; // 心跳响应
 
 export interface WSMessage {
   type: WSMessageType;
@@ -74,7 +77,9 @@ export class RealtimeChannel {
     this.wss.on("connection", (ws, req) => {
       const clientId = generateId("ws");
       this.clients.set(clientId, ws);
-      log.info(`WebSocket client connected: ${clientId} from ${req.socket.remoteAddress}`);
+      log.info(
+        `WebSocket client connected: ${clientId} from ${req.socket.remoteAddress}`,
+      );
 
       // 发送欢迎消息
       this.send(ws, {
@@ -124,7 +129,11 @@ export class RealtimeChannel {
     this.heartbeatInterval = setInterval(() => {
       for (const [id, ws] of this.clients) {
         if (ws.readyState === WebSocket.OPEN) {
-          this.send(ws, { type: "ping", id: generateId("hb"), timestamp: nowMs() });
+          this.send(ws, {
+            type: "ping",
+            id: generateId("hb"),
+            timestamp: nowMs(),
+          });
         }
       }
     }, 30000);
@@ -135,7 +144,11 @@ export class RealtimeChannel {
   /**
    * 处理客户端消息
    */
-  private async handleMessage(clientId: string, ws: WebSocket, msg: WSMessage): Promise<void> {
+  private async handleMessage(
+    clientId: string,
+    ws: WebSocket,
+    msg: WSMessage,
+  ): Promise<void> {
     switch (msg.type) {
       case "chat":
         await this.handleChat(clientId, ws, msg);
@@ -166,7 +179,11 @@ export class RealtimeChannel {
   /**
    * 处理聊天消息（流式推送）
    */
-  private async handleChat(clientId: string, ws: WebSocket, msg: WSMessage): Promise<void> {
+  private async handleChat(
+    clientId: string,
+    ws: WebSocket,
+    msg: WSMessage,
+  ): Promise<void> {
     if (!this.inferenceEngine) {
       this.send(ws, {
         type: "task.error",
@@ -200,8 +217,14 @@ export class RealtimeChannel {
     });
 
     try {
-      const chatData = msg.data as { message?: string; messages?: ChatMessage[]; mode?: string } | null;
-      const messages: ChatMessage[] = chatData?.messages || [{ role: "user", content: chatData?.message || "" }];
+      const chatData = msg.data as {
+        message?: string;
+        messages?: ChatMessage[];
+        mode?: string;
+      } | null;
+      const messages: ChatMessage[] = chatData?.messages || [
+        { role: "user", content: chatData?.message || "" },
+      ];
 
       const result = await this.inferenceEngine.infer({
         messages,
@@ -269,7 +292,10 @@ export class RealtimeChannel {
   /**
    * 修改执行参数
    */
-  private handleModify(taskId?: string, params?: Record<string, unknown>): void {
+  private handleModify(
+    taskId?: string,
+    params?: Record<string, unknown>,
+  ): void {
     if (!taskId || !params) return;
     const task = this.activeTasks.get(taskId);
     if (task) {

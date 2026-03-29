@@ -1,6 +1,6 @@
 /**
  * Encryption Module
- * 
+ *
  * Data encryption for sensitive information
  * Uses AES-256-GCM for symmetric encryption
  */
@@ -45,11 +45,15 @@ export class EncryptionService {
   initialize(masterKey: string | Buffer): void {
     if (typeof masterKey === "string") {
       // Derive key from string using SHA-256
-      this.masterKey = crypto.scryptSync(masterKey, "salt", this.config.keySize);
+      this.masterKey = crypto.scryptSync(
+        masterKey,
+        "salt",
+        this.config.keySize,
+      );
     } else {
       this.masterKey = masterKey;
     }
-    
+
     log.info("Encryption service initialized");
   }
 
@@ -69,11 +73,15 @@ export class EncryptionService {
     }
 
     const iv = crypto.randomBytes(this.config.ivSize);
-    const cipher = crypto.createCipheriv(this.config.algorithm, this.masterKey, iv);
-    
+    const cipher = crypto.createCipheriv(
+      this.config.algorithm,
+      this.masterKey,
+      iv,
+    );
+
     let ciphertext = cipher.update(plaintext, "utf8", "base64");
     ciphertext += cipher.final("base64");
-    
+
     const tag = cipher.getAuthTag();
 
     return {
@@ -95,23 +103,25 @@ export class EncryptionService {
     const decipher = crypto.createDecipheriv(
       encrypted.algorithm,
       this.masterKey,
-      Buffer.from(encrypted.iv, "base64")
+      Buffer.from(encrypted.iv, "base64"),
     );
-    
+
     decipher.setAuthTag(Buffer.from(encrypted.tag, "base64"));
-    
+
     let plaintext = decipher.update(encrypted.ciphertext, "base64", "utf8");
     plaintext += decipher.final("utf8");
-    
+
     return plaintext;
   }
 
   /**
    * Encrypt object
    */
-  encryptObject(obj: Record<string, unknown>): Record<string, EncryptedData | unknown> {
+  encryptObject(
+    obj: Record<string, unknown>,
+  ): Record<string, EncryptedData | unknown> {
     const result: Record<string, EncryptedData | unknown> = {};
-    
+
     for (const [key, value] of Object.entries(obj)) {
       if (typeof value === "string" && this.shouldEncrypt(key)) {
         result[key] = this.encrypt(value);
@@ -119,16 +129,18 @@ export class EncryptionService {
         result[key] = value;
       }
     }
-    
+
     return result;
   }
 
   /**
    * Decrypt object
    */
-  decryptObject(obj: Record<string, EncryptedData | unknown>): Record<string, unknown> {
+  decryptObject(
+    obj: Record<string, EncryptedData | unknown>,
+  ): Record<string, unknown> {
     const result: Record<string, unknown> = {};
-    
+
     for (const [key, value] of Object.entries(obj)) {
       if (this.isEncryptedData(value)) {
         result[key] = this.decrypt(value);
@@ -136,7 +148,7 @@ export class EncryptionService {
         result[key] = value;
       }
     }
-    
+
     return result;
   }
 
@@ -145,12 +157,18 @@ export class EncryptionService {
    */
   private shouldEncrypt(fieldName: string): boolean {
     const sensitiveFields = [
-      "password", "secret", "key", "token", "apiKey",
-      "privateKey", "credential", "auth",
+      "password",
+      "secret",
+      "key",
+      "token",
+      "apiKey",
+      "privateKey",
+      "credential",
+      "auth",
     ];
-    
-    return sensitiveFields.some(f => 
-      fieldName.toLowerCase().includes(f.toLowerCase())
+
+    return sensitiveFields.some((f) =>
+      fieldName.toLowerCase().includes(f.toLowerCase()),
     );
   }
 
@@ -186,10 +204,7 @@ export class EncryptionService {
    */
   compareHash(data: string, hash: string, algorithm?: string): boolean {
     const computed = this.hash(data, algorithm);
-    return crypto.timingSafeEqual(
-      Buffer.from(computed),
-      Buffer.from(hash)
-    );
+    return crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(hash));
   }
 }
 

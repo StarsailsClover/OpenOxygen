@@ -7,7 +7,12 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { createSubsystemLogger } from "../../logging/index.js";
-import type { AuditEntry, AuditSeverity, SecurityConfig, SystemOperation } from "../../types/index.js";
+import type {
+  AuditEntry,
+  AuditSeverity,
+  SecurityConfig,
+  SystemOperation,
+} from "../../types/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
 import { resolveStateDir } from "../../core/config/index.js";
 
@@ -68,7 +73,9 @@ export class AuditTrail {
 
     // Alert on critical entries
     if (entry.severity === "critical") {
-      log.error(`CRITICAL AUDIT: ${entry.operation} by ${entry.actor} on ${entry.target}`);
+      log.error(
+        `CRITICAL AUDIT: ${entry.operation} by ${entry.actor} on ${entry.target}`,
+      );
     }
 
     return entry;

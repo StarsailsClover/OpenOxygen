@@ -6,9 +6,17 @@
  */
 
 import { createSubsystemLogger } from "../../logging/index.js";
-import type { InferenceMode, ModelConfig, ModelProvider } from "../../types/index.js";
+import type {
+  InferenceMode,
+  ModelConfig,
+  ModelProvider,
+} from "../../types/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
-import type { InferenceEngine, ChatMessage, InferenceResponse } from "../../inference/engine/index.js";
+import type {
+  InferenceEngine,
+  ChatMessage,
+  InferenceResponse,
+} from "../../inference/engine/index.js";
 
 const log = createSubsystemLogger("routing");
 
@@ -19,12 +27,12 @@ const log = createSubsystemLogger("routing");
 type ModelProfile = {
   model: string;
   provider: ModelProvider;
-  reasoning: number;      // 1-10: deep reasoning capability
-  speed: number;          // 1-10: inference speed
-  vision: boolean;        // Supports image input
+  reasoning: number; // 1-10: deep reasoning capability
+  speed: number; // 1-10: inference speed
+  vision: boolean; // Supports image input
   contextWindow: number; // Max tokens
-  sizeGB: number;        // Memory footprint
-  bestFor: string[];      // Task types
+  sizeGB: number; // Memory footprint
+  bestFor: string[]; // Task types
 };
 
 const MODEL_PROFILES: Record<string, ModelProfile> = {
@@ -56,7 +64,13 @@ const MODEL_PROFILES: Record<string, ModelProfile> = {
     vision: false,
     contextWindow: 32768,
     sizeGB: 13,
-    bestFor: ["planning", "reasoning", "analysis", "deep-thinking", "optimization"],
+    bestFor: [
+      "planning",
+      "reasoning",
+      "analysis",
+      "deep-thinking",
+      "optimization",
+    ],
   },
 };
 
@@ -74,7 +88,10 @@ function detectTaskType(instruction: string): string[] {
   }
 
   // Planning tasks
-  if (/规划|plan|步骤|steps|strategy|analyze|分析|optimize|优化/.test(lower) && instruction.length > 100) {
+  if (
+    /规划|plan|步骤|steps|strategy|analyze|分析|optimize|优化/.test(lower) &&
+    instruction.length > 100
+  ) {
     tasks.push("planning", "reasoning");
   }
 
@@ -113,12 +130,14 @@ export class DynamicModelRouter {
   constructor(models: ModelConfig[]) {
     this.models = models;
     // Set default: prefer qwen3:4b, fallback to first available
-    this.defaultModel = models.find(m => m.model.includes("qwen3:4b")) ?? models[0]!;
+    this.defaultModel =
+      models.find((m) => m.model.includes("qwen3:4b")) ?? models[0]!;
   }
 
   updateModels(models: ModelConfig[]): void {
     this.models = models;
-    this.defaultModel = models.find(m => m.model.includes("qwen3:4b")) ?? models[0]!;
+    this.defaultModel =
+      models.find((m) => m.model.includes("qwen3:4b")) ?? models[0]!;
   }
 
   /**
@@ -134,7 +153,7 @@ export class DynamicModelRouter {
 
     // 1. Vision requirement → must use vision model
     if (needsVision) {
-      const visionModel = this.models.find(m => this.hasVision(m.model));
+      const visionModel = this.models.find((m) => this.hasVision(m.model));
       if (visionModel) {
         return {
           model: visionModel,
@@ -147,28 +166,36 @@ export class DynamicModelRouter {
 
     // 2. Mode-based routing
     if (mode === "deep") {
-      const deepModel = this.models.find(m => m.model.includes("gpt-oss:20b"));
-      if (deepModel) return {
-        model: deepModel,
-        reason: "Deep mode — selected gpt-oss:20b for reasoning",
-        confidence: 0.9,
-        alternatives: this.models.filter(m => !m.model.includes("gpt-oss:20b")),
-      };
+      const deepModel = this.models.find((m) =>
+        m.model.includes("gpt-oss:20b"),
+      );
+      if (deepModel)
+        return {
+          model: deepModel,
+          reason: "Deep mode — selected gpt-oss:20b for reasoning",
+          confidence: 0.9,
+          alternatives: this.models.filter(
+            (m) => !m.model.includes("gpt-oss:20b"),
+          ),
+        };
     }
 
     if (mode === "fast") {
-      const fastModel = this.models.find(m => m.model.includes("qwen3:4b") && !m.model.includes("vl"));
-      if (fastModel) return {
-        model: fastModel,
-        reason: "Fast mode — selected qwen3:4b for speed",
-        confidence: 0.9,
-        alternatives: this.models.filter(m => m.model !== fastModel.model),
-      };
+      const fastModel = this.models.find(
+        (m) => m.model.includes("qwen3:4b") && !m.model.includes("vl"),
+      );
+      if (fastModel)
+        return {
+          model: fastModel,
+          reason: "Fast mode — selected qwen3:4b for speed",
+          confidence: 0.9,
+          alternatives: this.models.filter((m) => m.model !== fastModel.model),
+        };
     }
 
     // 3. Task-based routing
     const tasks = detectTaskType(instruction);
-    const scored = this.models.map(m => {
+    const scored = this.models.map((m) => {
       const profile = MODEL_PROFILES[m.model];
       let score = 0;
 
@@ -180,7 +207,8 @@ export class DynamicModelRouter {
         // Bonus for speed on simple tasks
         if (tasks.includes("fast-query") && profile.speed >= 8) score += 1;
         // Penalize large models for simple tasks
-        if (tasks.length === 1 && tasks[0] === "chat" && profile.sizeGB > 5) score -= 1;
+        if (tasks.length === 1 && tasks[0] === "chat" && profile.sizeGB > 5)
+          score -= 1;
       }
 
       return { model: m, score };
@@ -193,7 +221,10 @@ export class DynamicModelRouter {
       model: best.model,
       reason: `Task analysis [${tasks.join(", ")}] → selected ${best.model.model} (score: ${best.score})`,
       confidence: Math.min(0.7 + best.score * 0.1, 0.95),
-      alternatives: (best.model === this.defaultModel && scored.length > 1) ? [scored[1]!.model] : [],
+      alternatives:
+        best.model === this.defaultModel && scored.length > 1
+          ? [scored[1]!.model]
+          : [],
     };
   }
 
@@ -227,11 +258,11 @@ export class DynamicModelRouter {
   }
 
   private getVisionCapable(): ModelConfig[] {
-    return this.models.filter(m => this.hasVision(m.model));
+    return this.models.filter((m) => this.hasVision(m.model));
   }
 
   getAvailableModels(): { name: string; sizeGB: number; vision: boolean }[] {
-    return this.models.map(m => {
+    return this.models.map((m) => {
       const profile = MODEL_PROFILES[m.model];
       return {
         name: m.model,

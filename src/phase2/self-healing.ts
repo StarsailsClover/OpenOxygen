@@ -215,7 +215,10 @@ export class SelfHealingController {
     if (message.includes("timeout") || message.includes("etimedout")) {
       return "network_timeout";
     }
-    if (message.includes("element not found") || message.includes("no such element")) {
+    if (
+      message.includes("element not found") ||
+      message.includes("no such element")
+    ) {
       return "element_not_found";
     }
     if (message.includes("permission") || message.includes("access denied")) {
@@ -227,7 +230,10 @@ export class SelfHealingController {
     if (message.includes("state") || message.includes("inconsistent")) {
       return "state_inconsistent";
     }
-    if (message.includes("dependency") || message.includes("module not found")) {
+    if (
+      message.includes("dependency") ||
+      message.includes("module not found")
+    ) {
       return "dependency_missing";
     }
     if (message.includes("config") || message.includes("configuration")) {
@@ -242,7 +248,7 @@ export class SelfHealingController {
    */
   async heal(
     error: Error,
-    context: Omit<ErrorContext, "error" | "type" | "timestamp">
+    context: Omit<ErrorContext, "error" | "type" | "timestamp">,
   ): Promise<HealingResult> {
     if (this.healingInProgress) {
       log.warn("Healing already in progress, skipping");
@@ -276,7 +282,7 @@ export class SelfHealingController {
 
       // Find applicable strategies
       const strategies = Array.from(this.strategies.values())
-        .filter(s => s.applicableTypes.includes(errorType))
+        .filter((s) => s.applicableTypes.includes(errorType))
         .sort((a, b) => a.priority - b.priority);
 
       if (strategies.length === 0) {
@@ -299,10 +305,10 @@ export class SelfHealingController {
         for (let attempt = 1; attempt <= strategy.maxRetries; attempt++) {
           try {
             const success = await strategy.action();
-            
+
             if (success) {
               log.info(`Healing successful with strategy: ${strategy.name}`);
-              
+
               // Apply prevention
               await this.applyPrevention(errorType, context.component);
 
@@ -316,7 +322,9 @@ export class SelfHealingController {
               };
             }
           } catch (healError: any) {
-            log.error(`Healing attempt ${attempt} failed: ${healError.message}`);
+            log.error(
+              `Healing attempt ${attempt} failed: ${healError.message}`,
+            );
           }
 
           if (attempt < strategy.maxRetries) {
@@ -345,10 +353,10 @@ export class SelfHealingController {
    */
   private async applyPrevention(
     errorType: HealableErrorType,
-    component: string
+    component: string,
   ): Promise<void> {
     log.info(`Applying prevention for ${errorType} in ${component}`);
-    
+
     // Update component health
     const health = this.componentHealth.get(component);
     if (health) {
@@ -397,7 +405,10 @@ Respond in JSON format:
       if (componentHealth.status === "error") {
         health.overall = "critical";
         health.issues.push(`Component ${name} is in error state`);
-      } else if (componentHealth.status === "warning" && health.overall !== "critical") {
+      } else if (
+        componentHealth.status === "warning" &&
+        health.overall !== "critical"
+      ) {
         health.overall = "degraded";
         health.issues.push(`Component ${name} has warnings`);
       }
@@ -411,13 +422,16 @@ Respond in JSON format:
    */
   monitorComponent(
     name: string,
-    checkFn: () => Promise<{ healthy: boolean; metrics: Record<string, number> }>,
-    intervalMs: number = 60000
+    checkFn: () => Promise<{
+      healthy: boolean;
+      metrics: Record<string, number>;
+    }>,
+    intervalMs: number = 60000,
   ): void {
     const check = async () => {
       try {
         const result = await checkFn();
-        
+
         const health: ComponentHealth = {
           name,
           status: result.healthy ? "healthy" : "error",
@@ -472,11 +486,16 @@ Respond in JSON format:
   } {
     return {
       totalErrors: this.errorHistory.length,
-      healedErrors: this.errorHistory.filter(e => 
-        this.errorHistory.some(h => h.timestamp > e.timestamp && h.type === e.type)
+      healedErrors: this.errorHistory.filter((e) =>
+        this.errorHistory.some(
+          (h) => h.timestamp > e.timestamp && h.type === e.type,
+        ),
       ).length,
-      failedHealings: this.errorHistory.filter(e => 
-        !this.errorHistory.some(h => h.timestamp > e.timestamp && h.type === e.type)
+      failedHealings: this.errorHistory.filter(
+        (e) =>
+          !this.errorHistory.some(
+            (h) => h.timestamp > e.timestamp && h.type === e.type,
+          ),
       ).length,
       strategiesAvailable: this.strategies.size,
     };

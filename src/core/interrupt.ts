@@ -1,6 +1,6 @@
 /**
  * Interrupt System
- * 
+ *
  * Real-time task interruption and execution adjustment
  * Allows users to pause, resume, or cancel running tasks
  */
@@ -44,7 +44,13 @@ export interface InterruptResponse {
   message: string;
 }
 
-export type TaskState = "pending" | "running" | "paused" | "cancelled" | "completed" | "failed";
+export type TaskState =
+  | "pending"
+  | "running"
+  | "paused"
+  | "cancelled"
+  | "completed"
+  | "failed";
 
 // ============================================================================
 // Task State Machine
@@ -93,7 +99,7 @@ export class InterruptManager extends EventEmitter {
 
     this.tasks.set(taskId, task);
     log.info(`Task registered: ${name} (${taskId})`);
-    
+
     this.emit("taskRegistered", task);
     return task;
   }
@@ -115,10 +121,10 @@ export class InterruptManager extends EventEmitter {
 
     task.state = "running";
     task.startTime = Date.now();
-    
+
     log.info(`Task started: ${task.name}`);
     this.emit("taskStarted", task);
-    
+
     return true;
   }
 
@@ -132,7 +138,10 @@ export class InterruptManager extends EventEmitter {
     }
 
     if (task.state !== "running") {
-      return this.createErrorResponse(taskId, `Task is not running: ${task.state}`);
+      return this.createErrorResponse(
+        taskId,
+        `Task is not running: ${task.state}`,
+      );
     }
 
     const previousState = task.state;
@@ -162,11 +171,14 @@ export class InterruptManager extends EventEmitter {
     }
 
     if (task.state !== "paused") {
-      return this.createErrorResponse(taskId, `Task is not paused: ${task.state}`);
+      return this.createErrorResponse(
+        taskId,
+        `Task is not paused: ${task.state}`,
+      );
     }
 
     const previousState = task.state;
-    
+
     // Calculate pause duration
     if (task.pauseTime) {
       task.totalPauseDuration += Date.now() - task.pauseTime;
@@ -227,11 +239,14 @@ export class InterruptManager extends EventEmitter {
     }
 
     if (task.state !== "running" && task.state !== "paused") {
-      return this.createErrorResponse(taskId, `Cannot adjust task in state: ${task.state}`);
+      return this.createErrorResponse(
+        taskId,
+        `Cannot adjust task in state: ${task.state}`,
+      );
     }
 
     const previousState = task.state;
-    
+
     // Apply adjustments
     if (adjustments.priority !== undefined) {
       task.priority = adjustments.priority;
@@ -262,7 +277,7 @@ export class InterruptManager extends EventEmitter {
 
     task.progress = Math.max(0, Math.min(100, progress));
     this.emit("progressUpdated", task);
-    
+
     return true;
   }
 
@@ -281,7 +296,7 @@ export class InterruptManager extends EventEmitter {
 
     log.info(`Task completed: ${task.name}`);
     this.emit("taskCompleted", task);
-    
+
     return true;
   }
 
@@ -300,7 +315,7 @@ export class InterruptManager extends EventEmitter {
 
     log.error(`Task failed: ${task.name} - ${error}`);
     this.emit("taskFailed", task, error);
-    
+
     return true;
   }
 
@@ -322,14 +337,14 @@ export class InterruptManager extends EventEmitter {
    * Get running tasks
    */
   getRunningTasks(): Task[] {
-    return this.getAllTasks().filter(t => t.state === "running");
+    return this.getAllTasks().filter((t) => t.state === "running");
   }
 
   /**
    * Get paused tasks
    */
   getPausedTasks(): Task[] {
-    return this.getAllTasks().filter(t => t.state === "paused");
+    return this.getAllTasks().filter((t) => t.state === "paused");
   }
 
   /**
@@ -355,14 +370,20 @@ export class InterruptManager extends EventEmitter {
         }
         return this.adjustTask(taskId, adjustments);
       default:
-        return this.createErrorResponse(taskId, `Unknown interrupt type: ${type}`);
+        return this.createErrorResponse(
+          taskId,
+          `Unknown interrupt type: ${type}`,
+        );
     }
   }
 
   /**
    * Create error response
    */
-  private createErrorResponse(taskId: string, message: string): InterruptResponse {
+  private createErrorResponse(
+    taskId: string,
+    message: string,
+  ): InterruptResponse {
     return {
       success: false,
       taskId,
@@ -380,8 +401,13 @@ export class InterruptManager extends EventEmitter {
     let cleaned = 0;
 
     for (const [taskId, task] of this.tasks) {
-      if ((task.state === "completed" || task.state === "cancelled" || task.state === "failed") &&
-          task.startTime && task.startTime < cutoff) {
+      if (
+        (task.state === "completed" ||
+          task.state === "cancelled" ||
+          task.state === "failed") &&
+        task.startTime &&
+        task.startTime < cutoff
+      ) {
         this.tasks.delete(taskId);
         cleaned++;
       }

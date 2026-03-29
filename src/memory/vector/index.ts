@@ -67,7 +67,9 @@ function computeBM25(
 
     const df = docFrequencies.get(term) ?? 0;
     const idf = Math.log((totalDocs - df + 0.5) / (df + 0.5) + 1);
-    const tfNorm = (tf * (BM25_K1 + 1)) / (tf + BM25_K1 * (1 - BM25_B + BM25_B * (docLength / avgDocLength)));
+    const tfNorm =
+      (tf * (BM25_K1 + 1)) /
+      (tf + BM25_K1 * (1 - BM25_B + BM25_B * (docLength / avgDocLength)));
     score += idf * tfNorm;
   }
 
@@ -99,8 +101,12 @@ export class VectorStore {
       this.docFrequencies.set(token, (this.docFrequencies.get(token) ?? 0) + 1);
     }
     // Recalculate average document length
-    const totalTokens = this.chunks.reduce((sum, c) => sum + tokenize(c.content).length, 0);
-    this.avgDocLength = this.chunks.length > 0 ? totalTokens / this.chunks.length : 0;
+    const totalTokens = this.chunks.reduce(
+      (sum, c) => sum + tokenize(c.content).length,
+      0,
+    );
+    this.avgDocLength =
+      this.chunks.length > 0 ? totalTokens / this.chunks.length : 0;
   }
 
   /**

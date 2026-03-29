@@ -104,7 +104,10 @@ export function computePluginHash(pluginDir: string): string {
   return hash.digest("hex");
 }
 
-export function generateSigningKeys(): { publicKey: string; privateKey: string } {
+export function generateSigningKeys(): {
+  publicKey: string;
+  privateKey: string;
+} {
   const { publicKey, privateKey } = generateKeyPairSync("ed25519");
   return {
     publicKey: publicKey.export({ type: "spki", format: "pem" }).toString(),
@@ -113,14 +116,31 @@ export function generateSigningKeys(): { publicKey: string; privateKey: string }
 }
 
 export function signPlugin(hash: string, privateKeyPem: string): string {
-  const privateKey = { key: privateKeyPem, format: "pem" as const, type: "pkcs8" as const };
+  const privateKey = {
+    key: privateKeyPem,
+    format: "pem" as const,
+    type: "pkcs8" as const,
+  };
   return sign(null, Buffer.from(hash), privateKey).toString("base64");
 }
 
-export function verifyPluginSignature(hash: string, signature: string, publicKeyPem: string): boolean {
+export function verifyPluginSignature(
+  hash: string,
+  signature: string,
+  publicKeyPem: string,
+): boolean {
   try {
-    const publicKey = { key: publicKeyPem, format: "pem" as const, type: "spki" as const };
-    return verify(null, Buffer.from(hash), publicKey, Buffer.from(signature, "base64"));
+    const publicKey = {
+      key: publicKeyPem,
+      format: "pem" as const,
+      type: "spki" as const,
+    };
+    return verify(
+      null,
+      Buffer.from(hash),
+      publicKey,
+      Buffer.from(signature, "base64"),
+    );
   } catch {
     return false;
   }
@@ -154,13 +174,17 @@ export class PluginRepository {
         return null;
       }
 
-      const manifest = JSON.parse(fs.readFileSync(clawJsonPath, "utf-8")) as PluginManifest;
+      const manifest = JSON.parse(
+        fs.readFileSync(clawJsonPath, "utf-8"),
+      ) as PluginManifest;
 
       // 可选：clawhub.json
       let marketplace: MarketplaceMeta | undefined;
       const clawHubPath = findFile(skillDir, "clawhub.json");
       if (clawHubPath) {
-        marketplace = JSON.parse(fs.readFileSync(clawHubPath, "utf-8")) as MarketplaceMeta;
+        marketplace = JSON.parse(
+          fs.readFileSync(clawHubPath, "utf-8"),
+        ) as MarketplaceMeta;
       }
 
       // 可选：_meta.json
@@ -176,7 +200,9 @@ export class PluginRepository {
       // 安全审计
       const audit = this.auditPermissions(manifest.permissions);
       if (audit.blocked.length > 0) {
-        log.error(`Plugin ${manifest.name} blocked: dangerous permissions [${audit.blocked.join(", ")}]`);
+        log.error(
+          `Plugin ${manifest.name} blocked: dangerous permissions [${audit.blocked.join(", ")}]`,
+        );
         return null;
       }
 
@@ -201,7 +227,9 @@ export class PluginRepository {
       this.installed.set(manifest.name, installed);
       this.saveRegistry();
 
-      log.info(`Imported OpenClaw skill: ${manifest.name} v${manifest.version}`);
+      log.info(
+        `Imported OpenClaw skill: ${manifest.name} v${manifest.version}`,
+      );
       return installed;
     } catch (err) {
       log.error(`Failed to import from ${skillDir}:`, err);
@@ -214,13 +242,16 @@ export class PluginRepository {
    */
   installLocal(pluginDir: string): InstalledPlugin | null {
     // 查找 manifest（支持 claw.json 或 manifest.json）
-    const manifestPath = findFile(pluginDir, "claw.json") || findFile(pluginDir, "manifest.json");
+    const manifestPath =
+      findFile(pluginDir, "claw.json") || findFile(pluginDir, "manifest.json");
     if (!manifestPath) {
       log.error(`No manifest found in ${pluginDir}`);
       return null;
     }
 
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8")) as PluginManifest;
+    const manifest = JSON.parse(
+      fs.readFileSync(manifestPath, "utf-8"),
+    ) as PluginManifest;
     const hash = computePluginHash(path.dirname(manifestPath));
 
     const destDir = path.join(this.pluginsDir, manifest.name);
@@ -283,10 +314,11 @@ export class PluginRepository {
    */
   search(query: string): InstalledPlugin[] {
     const lower = query.toLowerCase();
-    return this.list().filter(p =>
-      p.manifest.name.toLowerCase().includes(lower) ||
-      p.manifest.description.toLowerCase().includes(lower) ||
-      p.manifest.tags.some(t => t.toLowerCase().includes(lower))
+    return this.list().filter(
+      (p) =>
+        p.manifest.name.toLowerCase().includes(lower) ||
+        p.manifest.description.toLowerCase().includes(lower) ||
+        p.manifest.tags.some((t) => t.toLowerCase().includes(lower)),
     );
   }
 
@@ -299,7 +331,10 @@ export class PluginRepository {
 
     const currentHash = computePluginHash(plugin.installPath);
     if (currentHash !== plugin.integrityHash) {
-      return { valid: false, reason: "Integrity hash mismatch (files modified)" };
+      return {
+        valid: false,
+        reason: "Integrity hash mismatch (files modified)",
+      };
     }
 
     return { valid: true };
@@ -308,7 +343,10 @@ export class PluginRepository {
   /**
    * 批量导入 OpenClaw skills 目录
    */
-  batchImportOpenClaw(skillsRootDir: string, limit?: number): { imported: number; failed: number; skipped: number } {
+  batchImportOpenClaw(
+    skillsRootDir: string,
+    limit?: number,
+  ): { imported: number; failed: number; skipped: number } {
     let imported = 0;
     let failed = 0;
     let skipped = 0;
@@ -336,7 +374,9 @@ export class PluginRepository {
       }
     }
 
-    log.info(`Batch import: ${imported} imported, ${failed} failed, ${skipped} skipped`);
+    log.info(
+      `Batch import: ${imported} imported, ${failed} failed, ${skipped} skipped`,
+    );
     return { imported, failed, skipped };
   }
 
@@ -349,8 +389,17 @@ export class PluginRepository {
     blocked: string[];
   } {
     const SAFE = new Set(["network", "filesystem.read", "clipboard.read"]);
-    const WARNING = new Set(["filesystem.write", "clipboard.write", "process.read"]);
-    const BLOCKED = new Set(["process.kill", "registry.write", "system.admin", "kernel"]);
+    const WARNING = new Set([
+      "filesystem.write",
+      "clipboard.write",
+      "process.read",
+    ]);
+    const BLOCKED = new Set([
+      "process.kill",
+      "registry.write",
+      "system.admin",
+      "kernel",
+    ]);
 
     const safe: string[] = [];
     const warning: string[] = [];
@@ -371,7 +420,9 @@ export class PluginRepository {
     const registryPath = path.join(this.pluginsDir, "registry.json");
     if (fs.existsSync(registryPath)) {
       try {
-        const data = JSON.parse(fs.readFileSync(registryPath, "utf-8")) as Record<string, InstalledPlugin>;
+        const data = JSON.parse(
+          fs.readFileSync(registryPath, "utf-8"),
+        ) as Record<string, InstalledPlugin>;
         for (const [name, plugin] of Object.entries(data)) {
           this.installed.set(name, plugin);
         }

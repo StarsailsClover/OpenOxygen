@@ -19,19 +19,19 @@ const log = createSubsystemLogger("async/compute");
 // Task Types & Priorities
 // ═══════════════════════════════════════════════════════════════════════════
 
-export type TaskType = 
-  | "inference"      // LLM 推理
-  | "vision"         // 视觉处理
-  | "io"             // IO 操作
-  | "compute"        // 通用计算
-  | "background";    // 后台任务
+export type TaskType =
+  | "inference" // LLM 推理
+  | "vision" // 视觉处理
+  | "io" // IO 操作
+  | "compute" // 通用计算
+  | "background"; // 后台任务
 
-export type TaskPriority = 
-  | "critical"       // 用户阻塞等待
-  | "high"           // 交互式任务
-  | "normal"         // 标准任务
-  | "low"            // 可延迟任务
-  | "background";    // 空闲时执行
+export type TaskPriority =
+  | "critical" // 用户阻塞等待
+  | "high" // 交互式任务
+  | "normal" // 标准任务
+  | "low" // 可延迟任务
+  | "background"; // 空闲时执行
 
 export interface ComputeTask<T = unknown> {
   id: string;
@@ -45,10 +45,10 @@ export interface ComputeTask<T = unknown> {
 }
 
 export interface ResourceHints {
-  cpuCores?: number;      // 需要的 CPU 核心数
-  gpuMemoryMB?: number;   // 需要的 GPU 显存
-  ramMB?: number;         // 需要的内存
-  preferGPU?: boolean;    // 优先使用 GPU
+  cpuCores?: number; // 需要的 CPU 核心数
+  gpuMemoryMB?: number; // 需要的 GPU 显存
+  ramMB?: number; // 需要的内存
+  preferGPU?: boolean; // 优先使用 GPU
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -102,8 +102,16 @@ export class ThreadPool {
     if (this.taskQueue.length === 0) return;
 
     // 按优先级排序
-    const priorityOrder = { critical: 0, high: 1, normal: 2, low: 3, background: 4 };
-    this.taskQueue.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+    const priorityOrder = {
+      critical: 0,
+      high: 1,
+      normal: 2,
+      low: 3,
+      background: 4,
+    };
+    this.taskQueue.sort(
+      (a, b) => priorityOrder[a.priority] - priorityOrder[b.priority],
+    );
 
     const task = this.taskQueue.shift()!;
     this.execute(task);
@@ -186,14 +194,16 @@ export class GPUDispatcher {
    * 选择最优 GPU 设备
    */
   selectDevice(hints: ResourceHints): GPUDevice | null {
-    const available = this.devices.filter(d => d.isAvailable);
+    const available = this.devices.filter((d) => d.isAvailable);
     if (available.length === 0) return null;
 
     if (hints.gpuMemoryMB) {
       // 选择满足显存要求的最小设备
-      return available
-        .filter(d => d.memoryMB >= hints.gpuMemoryMB!)
-        .sort((a, b) => a.memoryMB - b.memoryMB)[0] || null;
+      return (
+        available
+          .filter((d) => d.memoryMB >= hints.gpuMemoryMB!)
+          .sort((a, b) => a.memoryMB - b.memoryMB)[0] || null
+      );
     }
 
     // 默认选择第一个可用设备
@@ -248,7 +258,7 @@ export class AsyncComputeStack {
       priority?: TaskPriority;
       useGPU?: boolean;
       resourceHints?: ResourceHints;
-    } = {}
+    } = {},
   ): Promise<T> {
     const startTime = nowMs();
     this.metrics.tasksSubmitted++;
@@ -289,9 +299,10 @@ export class AsyncComputeStack {
       type?: TaskType;
       priority?: TaskPriority;
       concurrency?: number;
-    } = {}
+    } = {},
   ): Promise<T[]> {
-    const limit = options.concurrency || this.threadPool.getStatus().maxConcurrency;
+    const limit =
+      options.concurrency || this.threadPool.getStatus().maxConcurrency;
     const results: T[] = [];
 
     // 使用 p-limit 风格的并发控制
@@ -299,7 +310,7 @@ export class AsyncComputeStack {
 
     for (let i = 0; i < tasks.length; i++) {
       const task = tasks[i]!;
-      const promise = this.submit(task, options).then(result => {
+      const promise = this.submit(task, options).then((result) => {
         results[i] = result;
       });
 
@@ -307,7 +318,10 @@ export class AsyncComputeStack {
 
       if (executing.length >= limit) {
         await Promise.race(executing);
-        executing.splice(executing.findIndex(p => p === promise), 1);
+        executing.splice(
+          executing.findIndex((p) => p === promise),
+          1,
+        );
       }
     }
 
@@ -319,9 +333,10 @@ export class AsyncComputeStack {
    * 获取性能指标
    */
   getMetrics() {
-    const avgLatency = this.metrics.tasksCompleted > 0
-      ? this.metrics.totalLatency / this.metrics.tasksCompleted
-      : 0;
+    const avgLatency =
+      this.metrics.tasksCompleted > 0
+        ? this.metrics.totalLatency / this.metrics.tasksCompleted
+        : 0;
 
     return {
       ...this.metrics,

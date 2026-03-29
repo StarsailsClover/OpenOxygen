@@ -45,8 +45,10 @@ export async function runLLMIntegrationTests(): Promise<{
     log.error(`Test suite failed: ${error.message}`);
   }
 
-  const allPassed = tests.every(t => t.passed);
-  log.info(`LLM integration tests completed: ${allPassed ? "PASSED" : "FAILED"}`);
+  const allPassed = tests.every((t) => t.passed);
+  log.info(
+    `LLM integration tests completed: ${allPassed ? "PASSED" : "FAILED"}`,
+  );
 
   return { success: allPassed, tests };
 }
@@ -54,16 +56,26 @@ export async function runLLMIntegrationTests(): Promise<{
 /**
  * Test Ollama status
  */
-async function testOllamaStatus(): Promise<{ name: string; passed: boolean; error?: string }> {
+async function testOllamaStatus(): Promise<{
+  name: string;
+  passed: boolean;
+  error?: string;
+}> {
   try {
     log.info("Test: Ollama status check");
     const status = await getOllamaStatus();
-    
+
     if (status.running) {
-      log.info(`✓ Ollama running, version: ${status.version}, models: ${status.models.length}`);
+      log.info(
+        `✓ Ollama running, version: ${status.version}, models: ${status.models.length}`,
+      );
       return { name: "Ollama Status", passed: true };
     } else {
-      return { name: "Ollama Status", passed: false, error: status.error || "Ollama not running" };
+      return {
+        name: "Ollama Status",
+        passed: false,
+        error: status.error || "Ollama not running",
+      };
     }
   } catch (error: any) {
     return { name: "Ollama Status", passed: false, error: error.message };
@@ -73,16 +85,24 @@ async function testOllamaStatus(): Promise<{ name: string; passed: boolean; erro
 /**
  * Test ensure Ollama running
  */
-async function testEnsureOllama(): Promise<{ name: string; passed: boolean; error?: string }> {
+async function testEnsureOllama(): Promise<{
+  name: string;
+  passed: boolean;
+  error?: string;
+}> {
   try {
     log.info("Test: Ensure Ollama running");
     const running = await ensureOllamaRunning();
-    
+
     if (running) {
       log.info("✓ Ollama is running");
       return { name: "Ensure Ollama", passed: true };
     } else {
-      return { name: "Ensure Ollama", passed: false, error: "Failed to start Ollama" };
+      return {
+        name: "Ensure Ollama",
+        passed: false,
+        error: "Failed to start Ollama",
+      };
     }
   } catch (error: any) {
     return { name: "Ensure Ollama", passed: false, error: error.message };
@@ -92,10 +112,14 @@ async function testEnsureOllama(): Promise<{ name: string; passed: boolean; erro
 /**
  * Test basic inference
  */
-async function testBasicInference(): Promise<{ name: string; passed: boolean; error?: string }> {
+async function testBasicInference(): Promise<{
+  name: string;
+  passed: boolean;
+  error?: string;
+}> {
   try {
     log.info("Test: Basic inference");
-    
+
     const engine = new InferenceEngine({
       inference: {
         defaultModel: { provider: "ollama", model: TEST_MODEL },
@@ -103,14 +127,23 @@ async function testBasicInference(): Promise<{ name: string; passed: boolean; er
     } as any);
 
     const response = await engine.infer({
-      messages: [{ role: "user", content: "Say 'Hello from OpenOxygen' and nothing else." }],
+      messages: [
+        {
+          role: "user",
+          content: "Say 'Hello from OpenOxygen' and nothing else.",
+        },
+      ],
     });
 
     if (response.content.toLowerCase().includes("hello")) {
       log.info("✓ Basic inference working");
       return { name: "Basic Inference", passed: true };
     } else {
-      return { name: "Basic Inference", passed: false, error: "Unexpected response" };
+      return {
+        name: "Basic Inference",
+        passed: false,
+        error: "Unexpected response",
+      };
     }
   } catch (error: any) {
     return { name: "Basic Inference", passed: false, error: error.message };
@@ -120,10 +153,14 @@ async function testBasicInference(): Promise<{ name: string; passed: boolean; er
 /**
  * Test chat completion
  */
-async function testChatCompletion(): Promise<{ name: string; passed: boolean; error?: string }> {
+async function testChatCompletion(): Promise<{
+  name: string;
+  passed: boolean;
+  error?: string;
+}> {
   try {
     log.info("Test: Chat completion");
-    
+
     const engine = new InferenceEngine({
       inference: {
         defaultModel: { provider: "ollama", model: TEST_MODEL },
@@ -141,7 +178,11 @@ async function testChatCompletion(): Promise<{ name: string; passed: boolean; er
       log.info("✓ Chat completion working");
       return { name: "Chat Completion", passed: true };
     } else {
-      return { name: "Chat Completion", passed: false, error: "Incorrect answer" };
+      return {
+        name: "Chat Completion",
+        passed: false,
+        error: "Incorrect answer",
+      };
     }
   } catch (error: any) {
     return { name: "Chat Completion", passed: false, error: error.message };
@@ -151,10 +192,14 @@ async function testChatCompletion(): Promise<{ name: string; passed: boolean; er
 /**
  * Test tool calling
  */
-async function testToolCalling(): Promise<{ name: string; passed: boolean; error?: string }> {
+async function testToolCalling(): Promise<{
+  name: string;
+  passed: boolean;
+  error?: string;
+}> {
   try {
     log.info("Test: Tool calling");
-    
+
     const engine = new InferenceEngine({
       inference: {
         defaultModel: { provider: "ollama", model: TEST_MODEL },
@@ -179,10 +224,12 @@ async function testToolCalling(): Promise<{ name: string; passed: boolean; error
 
 // Run tests if executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  runLLMIntegrationTests().then(result => {
+  runLLMIntegrationTests().then((result) => {
     console.log("\n=== LLM Integration Test Results ===");
     for (const test of result.tests) {
-      console.log(`${test.passed ? "✓" : "✗"} ${test.name}${test.error ? `: ${test.error}` : ""}`);
+      console.log(
+        `${test.passed ? "✓" : "✗"} ${test.name}${test.error ? `: ${test.error}` : ""}`,
+      );
     }
     console.log(`\nOverall: ${result.success ? "PASSED" : "FAILED"}`);
     process.exit(result.success ? 0 : 1);

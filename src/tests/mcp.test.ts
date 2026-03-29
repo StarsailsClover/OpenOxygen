@@ -1,6 +1,6 @@
 /**
  * MCP Protocol Tests
- * 
+ *
  * Test suite for Model Context Protocol client
  */
 
@@ -41,7 +41,7 @@ describe("MCP Client", () => {
       });
 
       const disconnected = await mcpClient.disconnect("test-server-2");
-      
+
       expect(disconnected).toBe(true);
       expect(mcpClient.isConnected("test-server-2")).toBe(false);
     });
@@ -60,7 +60,7 @@ describe("MCP Client", () => {
       });
 
       const servers = mcpClient.listServers();
-      
+
       expect(servers).toContain("server-a");
       expect(servers).toContain("server-b");
       expect(servers.length).toBe(2);
@@ -76,7 +76,7 @@ describe("MCP Client", () => {
       });
 
       const tools = await mcpClient.discoverTools("tool-server");
-      
+
       expect(tools).toBeDefined();
       expect(tools.length).toBeGreaterThan(0);
       expect(tools[0]).toHaveProperty("name");
@@ -86,7 +86,7 @@ describe("MCP Client", () => {
 
     test("should return empty array for disconnected server", async () => {
       const tools = await mcpClient.discoverTools("not-connected");
-      
+
       expect(tools).toEqual([]);
     });
   });
@@ -123,7 +123,7 @@ describe("MCP Client", () => {
       });
 
       const resources = await mcpClient.discoverResources("resource-server");
-      
+
       expect(resources).toBeDefined();
     });
 
@@ -136,7 +136,7 @@ describe("MCP Client", () => {
 
       const result = await mcpClient.readResource(
         "resource-server-2",
-        "file:///docs/readme.md"
+        "file:///docs/readme.md",
       );
 
       expect(result.success).toBe(true);
@@ -152,7 +152,7 @@ describe("MCP Client", () => {
       });
 
       const prompts = await mcpClient.discoverPrompts("prompt-server");
-      
+
       expect(prompts).toBeDefined();
     });
 
@@ -166,7 +166,7 @@ describe("MCP Client", () => {
       const result = await mcpClient.getPrompt(
         "prompt-server-2",
         "code_review",
-        { code: "console.log('test')" }
+        { code: "console.log('test')" },
       );
 
       expect(result.success).toBe(true);
@@ -178,7 +178,7 @@ describe("MCP Client", () => {
 describe("MCP Tool Adapter", () => {
   test("should convert MCP tool to skill", () => {
     const adapter = new MCPToolAdapter(mcpClient);
-    
+
     const mcpTool = {
       name: "test_tool",
       description: "A test tool",
@@ -205,21 +205,21 @@ describe("MCP Tool Adapter", () => {
 describe("MCP Gateway Integration", () => {
   test("should initialize integration", async () => {
     await mcpGatewayIntegration.initialize();
-    
+
     // Should complete without error
     expect(true).toBe(true);
   });
 
   test("should get server status", async () => {
     const status = mcpGatewayIntegration.getServerStatus("test");
-    
+
     expect(status).toHaveProperty("connected");
     expect(status).toHaveProperty("tools");
   });
 
   test("should list connected servers", () => {
     const servers = mcpGatewayIntegration.listConnectedServers();
-    
+
     expect(Array.isArray(servers)).toBe(true);
   });
 });

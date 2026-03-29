@@ -23,19 +23,19 @@ const log = createSubsystemLogger("security/deps");
 export const DEPENDENCY_POLICY = {
   // 高风险依赖：必须满足的最低版本
   requiredVersions: {
-    "requests": ">=2.32.3",      // CVE-2024-35195
-    "pyyaml": ">=6.0.1",         // CVE-2024-27198
-    "urllib3": ">=2.2.2",        // CVE-2024-3787
-    "certifi": ">=2024.07.04",   // 证书吊销列表更新
-    "openssl": ">=3.0.14",       // 多CVE修复
+    requests: ">=2.32.3", // CVE-2024-35195
+    pyyaml: ">=6.0.1", // CVE-2024-27198
+    urllib3: ">=2.2.2", // CVE-2024-3787
+    certifi: ">=2024.07.04", // 证书吊销列表更新
+    openssl: ">=3.0.14", // 多CVE修复
   },
 
   // 禁止使用的依赖（已知恶意或过度权限）
   blockedPackages: [
-    "claw-utils-malicious",       // 示例恶意包
-    "eval-hook",                  // 动态代码执行风险
-    "requests-extended",          // 非官方fork
-    "pyyaml-full",                // 不安全加载模式
+    "claw-utils-malicious", // 示例恶意包
+    "eval-hook", // 动态代码执行风险
+    "requests-extended", // 非官方fork
+    "pyyaml-full", // 不安全加载模式
   ],
 
   // 插件允许的依赖白名单
@@ -54,7 +54,12 @@ export const DEPENDENCY_POLICY = {
   // 高风险版本模式（自动检测）
   vulnerablePatterns: [
     { pkg: "requests", max: "2.32.0", cve: "CVE-2024-35195", severity: "high" },
-    { pkg: "pyyaml", max: "6.0.0", cve: "CVE-2024-27198", severity: "critical" },
+    {
+      pkg: "pyyaml",
+      max: "6.0.0",
+      cve: "CVE-2024-27198",
+      severity: "critical",
+    },
   ],
 };
 
@@ -77,7 +82,9 @@ export async function auditDependencies(projectPath?: string): Promise<{
   const installed = await getInstalledDependencies(projectPath);
 
   // 2. 检查必须版本
-  for (const [pkg, required] of Object.entries(DEPENDENCY_POLICY.requiredVersions)) {
+  for (const [pkg, required] of Object.entries(
+    DEPENDENCY_POLICY.requiredVersions,
+  )) {
     const installedVersion = installed[pkg];
     if (installedVersion && !semver.satisfies(installedVersion, required)) {
       violations.push({
@@ -105,7 +112,12 @@ export async function auditDependencies(projectPath?: string): Promise<{
   }
 
   // 4. CVE 模式匹配
-  for (const { pkg, max, cve, severity } of DEPENDENCY_POLICY.vulnerablePatterns) {
+  for (const {
+    pkg,
+    max,
+    cve,
+    severity,
+  } of DEPENDENCY_POLICY.vulnerablePatterns) {
     const ver = installed[pkg];
     if (ver && semver.lte(ver, max)) {
       violations.push({
@@ -120,14 +132,16 @@ export async function auditDependencies(projectPath?: string): Promise<{
   }
 
   // 5. 未锁定依赖警告
-  const unpinned = Object.entries(installed).filter(([, ver]) => 
-    ver && !/^\d+\.\d+\.\d+$/.test(ver)
+  const unpinned = Object.entries(installed).filter(
+    ([, ver]) => ver && !/^\d+\.\d+\.\d+$/.test(ver),
   );
   for (const [pkg] of unpinned) {
     warnings.push(`${pkg} 未使用精确版本锁定，建议添加 == 版本约束`);
   }
 
-  log.info(`Dependency audit: ${violations.length} violations, ${warnings.length} warnings`);
+  log.info(
+    `Dependency audit: ${violations.length} violations, ${warnings.length} warnings`,
+  );
 
   return {
     passed: violations.length === 0,
@@ -151,8 +165,11 @@ export function validatePluginDependencies(skillPath: string): {
   const content = readFileSync(requirementsPath, "utf-8");
   const deps = content
     .split("\n")
-    .map(l => (l.split("==")[0] ?? "").split(">=")[0]?.split("<=")[0]?.trim() ?? "")
-    .filter(l => l && !l.startsWith("#"));
+    .map(
+      (l) =>
+        (l.split("==")[0] ?? "").split(">=")[0]?.split("<=")[0]?.trim() ?? "",
+    )
+    .filter((l) => l && !l.startsWith("#"));
 
   const violations: string[] = [];
   for (const dep of deps) {
@@ -180,17 +197,17 @@ export async function generateLockfile(
       // 过滤到安全版本
       const safeDeps = output
         .split("\n")
-        .filter(line => {
+        .filter((line) => {
           const [pkg] = line.split("==");
           return pkg && !DEPENDENCY_POLICY.blockedPackages.includes(pkg.trim());
         })
         .join("\n");
-      
+
       // 添加安全注释
       const header = `# OpenOxygen Locked Dependencies
 # Generated: ${new Date().toISOString()}
 # Security Policy: ${DEPENDENCY_POLICY.requiredVersions["requests"]} enforced\n\n`;
-      
+
       const fs = await import("node:fs");
       fs.writeFileSync(outputPath, header + safeDeps, "utf-8");
       break;
@@ -205,7 +222,7 @@ export async function generateLockfile(
         packages: {},
         dependencies: {},
       };
-      
+
       const fs = await import("node:fs");
       fs.writeFileSync(outputPath, JSON.stringify(locked, null, 2), "utf-8");
       break;
@@ -223,10 +240,10 @@ export function verifyPackageIntegrity(
   expectedHash: string,
 ): boolean {
   if (!existsSync(packagePath)) return false;
-  
+
   const content = readFileSync(packagePath);
   const actualHash = createHash("sha256").update(content).digest("hex");
-  
+
   return actualHash === expectedHash;
 }
 
@@ -234,12 +251,17 @@ export function verifyPackageIntegrity(
 // 辅助函数
 // ═══════════════════════════════════════════════════════════════════════════
 
-async function getInstalledDependencies(projectPath?: string): Promise<Record<string, string>> {
+async function getInstalledDependencies(
+  projectPath?: string,
+): Promise<Record<string, string>> {
   try {
-    const output = execSync(projectPath ? `cd ${projectPath} && pip freeze` : "pip freeze", {
-      encoding: "utf-8",
-    });
-    
+    const output = execSync(
+      projectPath ? `cd ${projectPath} && pip freeze` : "pip freeze",
+      {
+        encoding: "utf-8",
+      },
+    );
+
     const deps: Record<string, string> = {};
     for (const line of output.split("\n")) {
       const [pkg, ver] = line.split("==");
@@ -266,4 +288,3 @@ export type DependencyViolation = {
   required?: string;
   cve?: string;
 };
-

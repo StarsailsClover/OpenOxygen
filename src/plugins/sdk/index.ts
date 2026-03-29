@@ -31,10 +31,18 @@ export type {
 
 export type PluginBuilder = {
   setManifest: (manifest: PluginManifest) => PluginBuilder;
-  addHook: (phase: PluginHookPhase, handler: PluginHook["handler"], priority?: number) => PluginBuilder;
-  addTool: (tool: NonNullable<OxygenPluginDefinition["tools"]>[number]) => PluginBuilder;
+  addHook: (
+    phase: PluginHookPhase,
+    handler: PluginHook["handler"],
+    priority?: number,
+  ) => PluginBuilder;
+  addTool: (
+    tool: NonNullable<OxygenPluginDefinition["tools"]>[number],
+  ) => PluginBuilder;
   onActivate: (handler: (ctx: PluginContext) => Promise<void>) => PluginBuilder;
-  onDeactivate: (handler: (ctx: PluginContext) => Promise<void>) => PluginBuilder;
+  onDeactivate: (
+    handler: (ctx: PluginContext) => Promise<void>,
+  ) => PluginBuilder;
   build: () => OxygenPluginDefinition;
 };
 
@@ -61,7 +69,11 @@ export type PluginBuilder = {
  * ```
  */
 export function definePlugin(): PluginBuilder {
-  let manifest: PluginManifest = { name: "unnamed", version: "0.0.0", entryPoint: "index.js" };
+  let manifest: PluginManifest = {
+    name: "unnamed",
+    version: "0.0.0",
+    entryPoint: "index.js",
+  };
   const hooks: PluginHook[] = [];
   const tools: NonNullable<OxygenPluginDefinition["tools"]> = [];
   let activateHandler: ((ctx: PluginContext) => Promise<void>) | undefined;

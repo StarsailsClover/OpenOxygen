@@ -1,6 +1,6 @@
 /**
  * Prompt Injection Detection
- * 
+ *
  * Detects and prevents prompt injection attacks
  * Uses pattern matching and heuristics
  */
@@ -34,16 +34,25 @@ export interface DetectionConfig {
 
 const INJECTION_PATTERNS = [
   // System prompt override
-  { pattern: /ignore\s+(previous|above|all)\s+(instructions|prompts)/i, weight: 0.9 },
-  { pattern: /disregard\s+(previous|above|all)\s+(instructions|prompts)/i, weight: 0.9 },
-  { pattern: /forget\s+(previous|above|all)\s+(instructions|prompts)/i, weight: 0.9 },
-  
+  {
+    pattern: /ignore\s+(previous|above|all)\s+(instructions|prompts)/i,
+    weight: 0.9,
+  },
+  {
+    pattern: /disregard\s+(previous|above|all)\s+(instructions|prompts)/i,
+    weight: 0.9,
+  },
+  {
+    pattern: /forget\s+(previous|above|all)\s+(instructions|prompts)/i,
+    weight: 0.9,
+  },
+
   // Role manipulation
   { pattern: /you\s+are\s+now/i, weight: 0.8 },
   { pattern: /act\s+as\s+/i, weight: 0.7 },
   { pattern: /pretend\s+to\s+be/i, weight: 0.7 },
   { pattern: /roleplay\s+as/i, weight: 0.7 },
-  
+
   // Delimiter injection
   { pattern: /```\s*system/i, weight: 0.95 },
   { pattern: /```\s*assistant/i, weight: 0.95 },
@@ -51,23 +60,23 @@ const INJECTION_PATTERNS = [
   { pattern: /<\|system\|>/i, weight: 0.95 },
   { pattern: /<\|assistant\|>/i, weight: 0.95 },
   { pattern: /<\|user\|>/i, weight: 0.95 },
-  
+
   // Instruction override
   { pattern: /new\s+instructions?:/i, weight: 0.85 },
   { pattern: /override\s+(previous|default)\s+behavior/i, weight: 0.85 },
   { pattern: /bypass\s+(restrictions|filters)/i, weight: 0.9 },
-  
+
   // Jailbreak attempts
   { pattern: /DAN\s*mode/i, weight: 0.95 },
   { pattern: /developer\s*mode/i, weight: 0.9 },
   { pattern: /sudo\s*mode/i, weight: 0.9 },
   { pattern: /root\s*access/i, weight: 0.9 },
-  
+
   // Encoding tricks
   { pattern: /base64\s*decode/i, weight: 0.6 },
   { pattern: /rot13/i, weight: 0.6 },
   { pattern: /hex\s*decode/i, weight: 0.6 },
-  
+
   // Multi-language
   { pattern: /переведи|переключись|игнорируй/i, weight: 0.7 },
   { pattern: /忽略|忘记|角色扮演/i, weight: 0.7 },
@@ -148,9 +157,12 @@ export class PromptInjectionDetector {
     };
 
     if (isInjection) {
-      log.warn(`Prompt injection detected: ${confidence.toFixed(2)} confidence`, {
-        patterns: detectedPatterns,
-      });
+      log.warn(
+        `Prompt injection detected: ${confidence.toFixed(2)} confidence`,
+        {
+          patterns: detectedPatterns,
+        },
+      );
     }
 
     return result;
