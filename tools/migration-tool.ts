@@ -1,8 +1,8 @@
-ï»¿#!/usr/bin/env node
+#!/usr/bin/env node
 /**
  * OpenClaw to OpenOxygen Migration Tool
  * 
- * ä¸€é”®è¿ç§»å·¥å…·
+ * Ò»¼üÇ¨ÒÆ¹¤¾ß
  */
 
 import * as fs from 'fs';
@@ -25,46 +25,46 @@ class MigrationTool {
     async migrate(): Promise<boolean> {
         console.log('=== OpenClaw to OpenOxygen Migration ===\n');
         
-        // 1. æ£€æŸ¥æºé…ç½®
+        // 1. ¼ì²éÔ´ÅäÖÃ
         console.log('Step 1: Checking source configuration...');
         const sourceConfigPath = path.join(this.options.source, 'openclaw.config.json');
         
         if (!fs.existsSync(sourceConfigPath)) {
-            console.error('âŒ Source config not found:', sourceConfigPath);
+            console.error('? Source config not found:', sourceConfigPath);
             return false;
         }
         
         const openclawConfig = JSON.parse(fs.readFileSync(sourceConfigPath, 'utf8'));
-        console.log('âœ… Source config loaded');
+        console.log('? Source config loaded');
         
-        // 2. æ£€æŸ¥å…¼å®¹æ€§
+        // 2. ¼ì²é¼æÈİĞÔ
         console.log('\nStep 2: Checking compatibility...');
         const compatibility = OpenClawAdapter.checkCompatibility(openclawConfig);
         
         if (!compatibility.compatible) {
-            console.warn('âš ï¸ Compatibility issues found:');
+            console.warn('?? Compatibility issues found:');
             compatibility.issues.forEach(issue => console.warn('  -', issue));
         } else {
-            console.log('âœ… Configuration is compatible');
+            console.log('? Configuration is compatible');
         }
         
-        // 3. åˆ›å»ºå¤‡ä»½
+        // 3. ´´½¨±¸·İ
         if (this.options.backup) {
             console.log('\nStep 3: Creating backup...');
             const backupDir = path.join(this.options.target, 'backup', `migration-${Date.now()}`);
             fs.mkdirSync(backupDir, { recursive: true });
-            console.log('âœ… Backup created:', backupDir);
+            console.log('? Backup created:', backupDir);
         }
         
-        // 4. è¿ç§»é…ç½®
+        // 4. Ç¨ÒÆÅäÖÃ
         console.log('\nStep 4: Migrating configuration...');
         const oxygenConfig = OpenClawAdapter.migrateConfig(openclawConfig);
         
         const targetConfigPath = path.join(this.options.target, 'openoxygen.config.json');
         fs.writeFileSync(targetConfigPath, JSON.stringify(oxygenConfig, null, 2));
-        console.log('âœ… Configuration migrated:', targetConfigPath);
+        console.log('? Configuration migrated:', targetConfigPath);
         
-        // 5. å®Œæˆ
+        // 5. Íê³É
         console.log('\n=== Migration Complete ===');
         console.log('OpenOxygen is ready to use!');
         console.log('\nNext steps:');

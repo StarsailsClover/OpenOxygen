@@ -9,16 +9,16 @@
 ## üéØ What's New
 
 ### Phase 0: Deployment Documentation (Critical Fix)
-- ‚úÖ **INSTALL.md** - Complete installation guide
-- ‚úÖ **docs/QUICKSTART.md** - 5-minute quick start
-- ‚úÖ **start.bat** - One-click Windows launcher
-- ‚úÖ **RELEASE_26w13aB.md** - Release notes
+- ‚ú?**INSTALL.md** - Complete installation guide
+- ‚ú?**docs/QUICKSTART.md** - 5-minute quick start
+- ‚ú?**start.bat** - One-click Windows launcher
+- ‚ú?**RELEASE_26w13aB.md** - Release notes
 
 ### Phase 1: Deployment Fixes
-- ‚úÖ **Port auto-detection** - Automatically switches if 4800 is in use
-- ‚úÖ **Config path fix** - Uses installation directory instead of user home
-- ‚úÖ **Native module loading** - Multiple fallback strategies
-- ‚úÖ **@openoxygen/core-native** - Local file dependency
+- ‚ú?**Port auto-detection** - Automatically switches if 4800 is in use
+- ‚ú?**Config path fix** - Uses installation directory instead of user home
+- ‚ú?**Native module loading** - Multiple fallback strategies
+- ‚ú?**@openoxygen/core-native** - Local file dependency
 
 ---
 
@@ -52,7 +52,7 @@ cd D:\OpenOxygen
 
 ---
 
-## ‚úÖ Verification
+## ‚ú?Verification
 
 Run these commands to verify installation:
 
@@ -82,7 +82,7 @@ curl -X POST http://127.0.0.1:4800/api/v1/chat `
 | Issue | Status | Workaround |
 |-------|--------|------------|
 | OUV Native module warning | ‚ö†Ô∏è Minor | Does not affect basic functionality |
-| Port 4800 in use | ‚úÖ Fixed | Auto-switches to 4801-4810 |
+| Port 4800 in use | ‚ú?Fixed | Auto-switches to 4801-4810 |
 
 ---
 

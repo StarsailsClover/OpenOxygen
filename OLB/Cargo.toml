@@ -4,7 +4,7 @@ version = "0.103.0"
 edition = "2021"
 authors = ["OpenOxygen Team"]
 description = "OpenOxygen Lightning Backend - Universal LLM Acceleration Engine"
-license = "Apache-2.0"
+license = "MIT"
 
 [lib]
 name = "olb_core"

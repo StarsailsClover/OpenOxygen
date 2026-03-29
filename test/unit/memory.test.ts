@@ -78,6 +78,6 @@ describe("GlobalMemory", () => {
       metadata: { keywords: ["npm"] },
     });
     const enhanced = memory.injectContext("npm run build");
-    expect(enhanced).toContain("上下文参考");
+    expect(enhanced).toContain("上下文参�?);
   });
 });

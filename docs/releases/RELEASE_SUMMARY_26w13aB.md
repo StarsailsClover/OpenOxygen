@@ -2,7 +2,7 @@
 
 **Release Date**: 2026-03-16  
 **Version**: 26w13aB  
-**Status**: ‚úÖ Production Ready
+**Status**: ‚ú?Production Ready
 
 ---
 
@@ -17,17 +17,17 @@
 ## üéØ What's Included
 
 ### Phase 0: Deployment Documentation
-- ‚úÖ **INSTALL.md** - Complete installation guide with prerequisites
-- ‚úÖ **docs/QUICKSTART.md** - 5-minute quick start guide
-- ‚úÖ **start.bat** - One-click Windows launcher with auto-setup
-- ‚úÖ **RELEASE_26w13aB.md** - Detailed release notes
+- ‚ú?**INSTALL.md** - Complete installation guide with prerequisites
+- ‚ú?**docs/QUICKSTART.md** - 5-minute quick start guide
+- ‚ú?**start.bat** - One-click Windows launcher with auto-setup
+- ‚ú?**RELEASE_26w13aB.md** - Detailed release notes
 
 ### Phase 1: Critical Fixes
-- ‚úÖ **Port auto-detection** - Automatically switches if 4800 is in use (tries 4801-4810)
-- ‚úÖ **Config path fix** - Uses installation directory instead of user home directory
-- ‚úÖ **Native module loading** - Multiple fallback strategies for reliable loading
-- ‚úÖ **@openoxygen/core-native** - Local file dependency for offline installation
-- ‚úÖ **Verification script** - `start.bat --verify` to check installation
+- ‚ú?**Port auto-detection** - Automatically switches if 4800 is in use (tries 4801-4810)
+- ‚ú?**Config path fix** - Uses installation directory instead of user home directory
+- ‚ú?**Native module loading** - Multiple fallback strategies for reliable loading
+- ‚ú?**@openoxygen/core-native** - Local file dependency for offline installation
+- ‚ú?**Verification script** - `start.bat --verify` to check installation
 
 ---
 
@@ -46,20 +46,20 @@
 
 ---
 
-## ‚úÖ Verification
+## ‚ú?Verification
 
 ```powershell
 # Run verification script
 .\start.bat --verify
 
 # Expected output:
-# ‚úÖ Node.js Installation: v22.x.x
-# ‚úÖ Package.json: Found
-# ‚úÖ Dependencies: XX packages installed
-# ‚úÖ Native Module: 51 functions available
-# ‚úÖ Configuration: Version 26w13aB
-# ‚úÖ Service Health: Gateway running
-# ‚úÖ LLM Inference: qwen3:4b responded in Xms
+# ‚ú?Node.js Installation: v22.x.x
+# ‚ú?Package.json: Found
+# ‚ú?Dependencies: XX packages installed
+# ‚ú?Native Module: 51 functions available
+# ‚ú?Configuration: Version 26w13aB
+# ‚ú?Service Health: Gateway running
+# ‚ú?LLM Inference: qwen3:4b responded in Xms
 ```
 
 ---
@@ -68,10 +68,10 @@
 
 | Test | Result | Details |
 |------|--------|---------|
-| Installation | ‚úÖ Pass | npm install successful |
-| Service Start | ‚úÖ Pass | Process starts correctly |
-| Health Check | ‚úÖ Pass | `status: ok` |
-| LLM Inference | ‚úÖ Pass | `OK` response in ~4s |
+| Installation | ‚ú?Pass | npm install successful |
+| Service Start | ‚ú?Pass | Process starts correctly |
+| Health Check | ‚ú?Pass | `status: ok` |
+| LLM Inference | ‚ú?Pass | `OK` response in ~4s |
 | Native Module | ‚ö†Ô∏è Minor Warning | OUV subsystem only |
 
 ---
@@ -136,10 +136,10 @@ f1a2933 26w13aB_Phase0: Add release builder script
 ## üéâ Ready for Release
 
 This release addresses the critical deployment issues:
-1. ‚úÖ Users can now download and run OpenOxygen without manual configuration
-2. ‚úÖ Port conflicts are automatically handled
-3. ‚úÖ Configuration files are correctly located
-4. ‚úÖ Native modules load reliably
-5. ‚úÖ Verification script confirms installation success
+1. ‚ú?Users can now download and run OpenOxygen without manual configuration
+2. ‚ú?Port conflicts are automatically handled
+3. ‚ú?Configuration files are correctly located
+4. ‚ú?Native modules load reliably
+5. ‚ú?Verification script confirms installation success
 
 **Status**: Ready for GitHub Release publication.

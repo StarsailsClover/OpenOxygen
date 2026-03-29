@@ -52,27 +52,27 @@ npm run tauri:build
 ```
 desktop/
 ├── src/
-│   ├── components/      # Vue components
-│   │   ├── icons/      # Icon components
-│   │   ├── AppHeader.vue
-│   │   ├── AppSidebar.vue
-│   │   ├── AppStatusBar.vue
-│   │   └── SearchBar.vue
-│   ├── views/          # Page views
-│   │   ├── Dashboard.vue
-│   │   ├── Browser.vue
-│   │   ├── Skills.vue
-│   │   ├── Memory.vue
-│   │   └── Settings.vue
-│   ├── router/         # Vue Router config
-│   ├── styles/         # Global styles
-│   ├── main.ts         # Entry point
-│   └── App.vue         # Root component
+�?  ├── components/      # Vue components
+�?  �?  ├── icons/      # Icon components
+�?  �?  ├── AppHeader.vue
+�?  �?  ├── AppSidebar.vue
+�?  �?  ├── AppStatusBar.vue
+�?  �?  └── SearchBar.vue
+�?  ├── views/          # Page views
+�?  �?  ├── Dashboard.vue
+�?  �?  ├── Browser.vue
+�?  �?  ├── Skills.vue
+�?  �?  ├── Memory.vue
+�?  �?  └── Settings.vue
+�?  ├── router/         # Vue Router config
+�?  ├── styles/         # Global styles
+�?  ├── main.ts         # Entry point
+�?  └── App.vue         # Root component
 ├── src-tauri/          # Rust backend
-│   ├── src/
-│   │   └── main.rs     # Tauri commands
-│   ├── Cargo.toml
-│   └── tauri.conf.json
+�?  ├── src/
+�?  �?  └── main.rs     # Tauri commands
+�?  ├── Cargo.toml
+�?  └── tauri.conf.json
 ├── package.json
 ├── vite.config.ts
 └── README.md

@@ -33,7 +33,7 @@ This is a major release completing all P-0 to P-2 functionality with 10 developm
 - Load balancing
 - Cost optimization
 
-### üõ†Ô∏è Automation Skills (30+)
+### üõ†Ô∏?Automation Skills (30+)
 
 #### Office Suite
 - Word document operations
@@ -69,7 +69,7 @@ This is a major release completing all P-0 to P-2 functionality with 10 developm
 - Prompt injection detection (20+ patterns)
 - Multi-language support
 
-### üñ•Ô∏è Desktop Client (NEW)
+### üñ•Ô∏?Desktop Client (NEW)
 
 #### Tauri-Based Application
 - Native Windows integration
@@ -184,10 +184,10 @@ await mcpClient.callTool(server, tool, args);
 
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
-| Inference Latency | < 21ms | ~15ms | ‚úÖ |
-| Screenshot Capture | < 85ms | ~60ms | ‚úÖ |
-| Vector Search | < 14ms | ~10ms | ‚úÖ |
-| Test Coverage | 70% | 72% | ‚úÖ |
+| Inference Latency | < 21ms | ~15ms | ‚ú?|
+| Screenshot Capture | < 85ms | ~60ms | ‚ú?|
+| Vector Search | < 14ms | ~10ms | ‚ú?|
+| Test Coverage | 70% | 72% | ‚ú?|
 
 ---
 
@@ -226,10 +226,9 @@ npm test -- benchmark  # Benchmarks only
 
 ---
 
-## üõ£Ô∏è Roadmap
+## üõ£Ô∏?Roadmap
 
-### Completed ‚úÖ
-- P-0: Core functionality (85%)
+### Completed ‚ú?- P-0: Core functionality (85%)
 - P-1: High priority (70%)
 - P-2: Medium priority (40%)
 
@@ -272,7 +271,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## üìÑ License
 
-Apache 2.0 License
+MIT License
 
 See [LICENSE](LICENSE) for full text.
 

@@ -67,7 +67,7 @@ async function testOllamaStatus(): Promise<{
 
     if (status.running) {
       log.info(
-        `âœ“ Ollama running, version: ${status.version}, models: ${status.models.length}`,
+        `âœ?Ollama running, version: ${status.version}, models: ${status.models.length}`,
       );
       return { name: "Ollama Status", passed: true };
     } else {
@@ -95,7 +95,7 @@ async function testEnsureOllama(): Promise<{
     const running = await ensureOllamaRunning();
 
     if (running) {
-      log.info("âœ“ Ollama is running");
+      log.info("âœ?Ollama is running");
       return { name: "Ensure Ollama", passed: true };
     } else {
       return {
@@ -136,7 +136,7 @@ async function testBasicInference(): Promise<{
     });
 
     if (response.content.toLowerCase().includes("hello")) {
-      log.info("âœ“ Basic inference working");
+      log.info("âœ?Basic inference working");
       return { name: "Basic Inference", passed: true };
     } else {
       return {
@@ -175,7 +175,7 @@ async function testChatCompletion(): Promise<{
     });
 
     if (response.content.includes("4")) {
-      log.info("âœ“ Chat completion working");
+      log.info("âœ?Chat completion working");
       return { name: "Chat Completion", passed: true };
     } else {
       return {
@@ -212,7 +212,7 @@ async function testToolCalling(): Promise<{
     });
 
     if (response.content.includes("50")) {
-      log.info("âœ“ Tool calling working");
+      log.info("âœ?Tool calling working");
       return { name: "Tool Calling", passed: true };
     } else {
       return { name: "Tool Calling", passed: false, error: "Incorrect answer" };
@@ -228,7 +228,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.log("\n=== LLM Integration Test Results ===");
     for (const test of result.tests) {
       console.log(
-        `${test.passed ? "âœ“" : "âœ—"} ${test.name}${test.error ? `: ${test.error}` : ""}`,
+        `${test.passed ? "âœ? : "âœ?} ${test.name}${test.error ? `: ${test.error}` : ""}`,
       );
     }
     console.log(`\nOverall: ${result.success ? "PASSED" : "FAILED"}`);

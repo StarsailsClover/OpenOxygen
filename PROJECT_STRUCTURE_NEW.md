@@ -10,129 +10,129 @@
 ```
 OpenOxygen/
 ├── src/                          # Source code
-│   ├── core/                     # Core system modules
-│   │   ├── ai-cluster/          # AI Cluster (multi-model fusion)
-│   │   ├── config/              # Configuration management
-│   │   ├── errors.ts            # Error codes and handling
-│   │   ├── gateway.ts           # HTTP/WebSocket gateway
-│   │   └── runtime.ts           # Runtime engine
-│   │
-│   ├── execution/               # Execution layer
-│   │   ├── sandbox/             # Secure code sandbox
-│   │   ├── browser/             # Browser automation
-│   │   ├── terminal/            # Terminal execution
-│   │   └── unified/             # Unified execution interface
-│   │
-│   ├── inference/               # Inference layer
-│   │   ├── engine/              # LLM inference engine
-│   │   ├── router/              # Model routing
-│   │   └── reflection/          # Reflection and self-improvement
-│   │
-│   ├── agent/                   # Agent layer
-│   │   ├── orchestrator/        # Agent orchestration
-│   │   └── communication/       # Inter-agent communication
-│   │
-│   ├── memory/                  # Memory management
-│   │   ├── vector/              # Vector store
-│   │   ├── lifecycle/           # Memory lifecycle
-│   │   └── global/              # Global memory
-│   │
-│   ├── security/                # Security modules
-│   │   ├── permissions/         # Permission system
-│   │   └── audit/               # Audit logging
-│   │
-│   ├── skills/                  # Automation skills
-│   │   ├── office/              # Office automation
-│   │   ├── browser/             # Browser automation
-│   │   ├── system/              # System operations
-│   │   └── registry.ts          # Skill registry
-│   │
-│   ├── planning/                # Planning systems
-│   │   └── htn/                 # HTN planner
-│   │       ├── index.ts         # Core HTN implementation
-│   │       └── domains.ts       # Predefined domains
-│   │
-│   ├── protocols/               # Protocol implementations
-│   │   └── mcp/                 # MCP protocol
-│   │       ├── index.ts         # MCP client
-│   │       └── gateway-integration.ts
-│   │
-│   ├── compat/                  # Compatibility layers
-│   │   └── openclaw/            # OpenClaw compatibility
-│   │
-│   ├── multimodal/              # Multimodal processing
-│   │   └── index.ts             # Audio/vision/video
-│   │
-│   ├── browser/                 # OxygenBrowser
-│   │   └── index.ts             # WebView2-based browser
-│   │
-│   ├── vision/                  # Vision systems
-│   │   ├── ui-tars.ts
-│   │   └── qwen-vl.ts
-│   │
-│   ├── logging/                 # Logging system
-│   ├── types/                   # TypeScript types
-│   ├── utils/                   # Utilities
-│   └── tests/                   # Test suites
-│       ├── sandbox.test.ts
-│       ├── permissions.test.ts
-│       ├── ai-cluster.test.ts
-│       ├── reflection.test.ts
-│       ├── htn.test.ts
-│       ├── mcp.test.ts
-│       └── skills.test.ts
-│
+�?  ├── core/                     # Core system modules
+�?  �?  ├── ai-cluster/          # AI Cluster (multi-model fusion)
+�?  �?  ├── config/              # Configuration management
+�?  �?  ├── errors.ts            # Error codes and handling
+�?  �?  ├── gateway.ts           # HTTP/WebSocket gateway
+�?  �?  └── runtime.ts           # Runtime engine
+�?  �?
+�?  ├── execution/               # Execution layer
+�?  �?  ├── sandbox/             # Secure code sandbox
+�?  �?  ├── browser/             # Browser automation
+�?  �?  ├── terminal/            # Terminal execution
+�?  �?  └── unified/             # Unified execution interface
+�?  �?
+�?  ├── inference/               # Inference layer
+�?  �?  ├── engine/              # LLM inference engine
+�?  �?  ├── router/              # Model routing
+�?  �?  └── reflection/          # Reflection and self-improvement
+�?  �?
+�?  ├── agent/                   # Agent layer
+�?  �?  ├── orchestrator/        # Agent orchestration
+�?  �?  └── communication/       # Inter-agent communication
+�?  �?
+�?  ├── memory/                  # Memory management
+�?  �?  ├── vector/              # Vector store
+�?  �?  ├── lifecycle/           # Memory lifecycle
+�?  �?  └── global/              # Global memory
+�?  �?
+�?  ├── security/                # Security modules
+�?  �?  ├── permissions/         # Permission system
+�?  �?  └── audit/               # Audit logging
+�?  �?
+�?  ├── skills/                  # Automation skills
+�?  �?  ├── office/              # Office automation
+�?  �?  ├── browser/             # Browser automation
+�?  �?  ├── system/              # System operations
+�?  �?  └── registry.ts          # Skill registry
+�?  �?
+�?  ├── planning/                # Planning systems
+�?  �?  └── htn/                 # HTN planner
+�?  �?      ├── index.ts         # Core HTN implementation
+�?  �?      └── domains.ts       # Predefined domains
+�?  �?
+�?  ├── protocols/               # Protocol implementations
+�?  �?  └── mcp/                 # MCP protocol
+�?  �?      ├── index.ts         # MCP client
+�?  �?      └── gateway-integration.ts
+�?  �?
+�?  ├── compat/                  # Compatibility layers
+�?  �?  └── openclaw/            # OpenClaw compatibility
+�?  �?
+�?  ├── multimodal/              # Multimodal processing
+�?  �?  └── index.ts             # Audio/vision/video
+�?  �?
+�?  ├── browser/                 # OxygenBrowser
+�?  �?  └── index.ts             # WebView2-based browser
+�?  �?
+�?  ├── vision/                  # Vision systems
+�?  �?  ├── ui-tars.ts
+�?  �?  └── qwen-vl.ts
+�?  �?
+�?  ├── logging/                 # Logging system
+�?  ├── types/                   # TypeScript types
+�?  ├── utils/                   # Utilities
+�?  └── tests/                   # Test suites
+�?      ├── sandbox.test.ts
+�?      ├── permissions.test.ts
+�?      ├── ai-cluster.test.ts
+�?      ├── reflection.test.ts
+�?      ├── htn.test.ts
+�?      ├── mcp.test.ts
+�?      └── skills.test.ts
+�?
 ├── OLB/                         # OxygenLLMBooster (Rust)
-│   ├── src/
-│   │   ├── lib.rs               # Main library
-│   │   ├── attention.rs         # Flash Attention V3
-│   │   ├── moe.rs               # Universal MoE
-│   │   ├── kv_cache.rs          # TurboKV Cache
-│   │   ├── memory.rs            # Paged Memory
-│   │   ├── router.rs            # Model Router
-│   │   └── quantization.rs      # Quantization
-│   ├── python/
-│   │   └── olb/
-│   │       ├── __init__.py
-│   │       └── config.py
-│   ├── Cargo.toml
-│   ├── build.rs
-│   └── README.md
-│
+�?  ├── src/
+�?  �?  ├── lib.rs               # Main library
+�?  �?  ├── attention.rs         # Flash Attention V3
+�?  �?  ├── moe.rs               # Universal MoE
+�?  �?  ├── kv_cache.rs          # TurboKV Cache
+�?  �?  ├── memory.rs            # Paged Memory
+�?  �?  ├── router.rs            # Model Router
+�?  �?  └── quantization.rs      # Quantization
+�?  ├── python/
+�?  �?  └── olb/
+�?  �?      ├── __init__.py
+�?  �?      └── config.py
+�?  ├── Cargo.toml
+�?  ├── build.rs
+�?  └── README.md
+�?
 ├── native/                      # Native C++ modules
-│   └── (Node-API bindings)
-│
+�?  └── (Node-API bindings)
+�?
 ├── docs/                        # Documentation
-│   ├── API.md                   # API reference
-│   ├── SKILLS.md                # Skills guide
-│   ├── ARCHITECTURE.md          # Architecture docs
-│   └── MIGRATION.md             # Migration guide
-│
+�?  ├── API.md                   # API reference
+�?  ├── SKILLS.md                # Skills guide
+�?  ├── ARCHITECTURE.md          # Architecture docs
+�?  └── MIGRATION.md             # Migration guide
+�?
 ├── scripts/                     # Build scripts
-│   ├── build-installer.nsi      # NSIS installer
-│   ├── release-pipeline.bat     # Release pipeline
-│   ├── project-audit.cjs        # Project audit
-│   ├── file-indexer.cjs         # File indexer
-│   └── cleanup-redundant.bat    # Cleanup script
-│
+�?  ├── build-installer.nsi      # NSIS installer
+�?  ├── release-pipeline.bat     # Release pipeline
+�?  ├── project-audit.cjs        # Project audit
+�?  ├── file-indexer.cjs         # File indexer
+�?  └── cleanup-redundant.bat    # Cleanup script
+�?
 ├── archive/                     # Archived files
-│   ├── old_roadmaps/            # Old planning docs
-│   ├── backups/                 # Backup files
-│   └── test_outputs/            # Test outputs
-│
+�?  ├── old_roadmaps/            # Old planning docs
+�?  ├── backups/                 # Backup files
+�?  └── test_outputs/            # Test outputs
+�?
 ├── resources/                   # Resources
-│   ├── docs/                    # Additional docs
-│   └── examples/                # Example code
-│
+�?  ├── docs/                    # Additional docs
+�?  └── examples/                # Example code
+�?
 ├── deprecated/                  # Deprecated code
-│
+�?
 ├── tests/                       # Additional tests
-│
+�?
 ├── FILE_INDEX.json              # File index
 ├── REORGANIZATION_PLAN.json     # Reorganization plan
 ├── PROJECT_STRUCTURE_NEW.md     # This file
 ├── README.md                    # Main readme
-├── LICENSE                      # Apache 2.0
+├── LICENSE                      # MIT
 ├── CHANGELOG.md                 # Changelog
 ├── package.json                 # Node.js config
 ├── tsconfig.json                # TypeScript config

@@ -1,5 +1,5 @@
 /**
- * OpenOxygen â€” Pool-Integrated Router (26w11aE)
+ * OpenOxygen â€?Pool-Integrated Router (26w11aE)
  */
 import type { ModelConfig, InferenceMode } from "../types/index.js";
 import type { ChatMessage } from "./engine/index.js";

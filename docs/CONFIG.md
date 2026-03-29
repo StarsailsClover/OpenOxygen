@@ -97,13 +97,13 @@ OPENOXYGEN_CONFIG_PATH=/path/to/config.json
 | `OPENOXYGEN_STATE_DIR` | State directory | `~/.openoxygen` |
 | `OPENOXYGEN_GATEWAY_PORT` | Gateway port | `4800` |
 | `OPENOXYGEN_GATEWAY_HOST` | Gateway host | `127.0.0.1` |
-| `OPENOXYGEN_GATEWAY_TOKEN` | Auth token | â€” |
+| `OPENOXYGEN_GATEWAY_TOKEN` | Auth token | â€?|
 | `OPENOXYGEN_LOG_LEVEL` | Log level | `info` |
 | `OPENOXYGEN_AUDIT_ENABLED` | Enable audit | `1` |
-| `OPENAI_API_KEY` | OpenAI key | â€” |
-| `ANTHROPIC_API_KEY` | Anthropic key | â€” |
-| `GEMINI_API_KEY` | Gemini key | â€” |
-| `OLLAMA_MODELS` | Ollama models path | â€” |
+| `OPENAI_API_KEY` | OpenAI key | â€?|
+| `ANTHROPIC_API_KEY` | Anthropic key | â€?|
+| `GEMINI_API_KEY` | Gemini key | â€?|
+| `OLLAMA_MODELS` | Ollama models path | â€?|
 
 ## Model Providers
 

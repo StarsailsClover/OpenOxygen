@@ -1,10 +1,8 @@
 /**
- * OpenOxygen — Gateway Cluster Manager (26w11aE_P6)
+ * OpenOxygen �?Gateway Cluster Manager (26w11aE_P6)
  *
- * 进程级分布式网关：
- * - 多 Gateway 进程负载均衡
- * - 共享 SQLite 状态
- * - 会话亲和 (sticky sessions)
+ * 进程级分布式网关�? * - �?Gateway 进程负载均衡
+ * - 共享 SQLite 状�? * - 会话亲和 (sticky sessions)
  * - 健康检查与自动故障转移
  * - Prometheus 兼容指标
  */

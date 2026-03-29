@@ -12,7 +12,7 @@ Phase A.2 focuses on OSR system enhancement and Native module ESM compatibility 
 
 ## Completed Features
 
-### 1. Native ESM Adapter ‚úÖ
+### 1. Native ESM Adapter ‚ú?
 
 **File**: `src/native/esm-adapter.js`
 
@@ -26,7 +26,7 @@ Phase A.2 focuses on OSR system enhancement and Native module ESM compatibility 
 - `loadNativeModuleESM()` - Load native module with dual-mode support
 - `callNativeFunction()` - Safe native function caller
 
-### 2. Enhanced OSR Recorder ‚úÖ
+### 2. Enhanced OSR Recorder ‚ú?
 
 **File**: `src/osr/enhanced-recorder.js`
 
@@ -42,7 +42,7 @@ Phase A.2 focuses on OSR system enhancement and Native module ESM compatibility 
 - `EnhancedAction` - Action with metadata
 - `ActionPattern` - Learned patterns
 
-### 3. OSR Player ‚úÖ
+### 3. OSR Player ‚ú?
 
 **File**: `src/osr/player.js`
 
@@ -63,7 +63,7 @@ Phase A.2 focuses on OSR system enhancement and Native module ESM compatibility 
 
 | Component | Status |
 |-----------|--------|
-| TypeScript Compilation | ‚úÖ 0 errors |
+| TypeScript Compilation | ‚ú?0 errors |
 | Native Module (Rust) | ‚ö†Ô∏è 53 warnings |
 | Package Size | ~459 KB |
 | Unpacked Size | ~2.0 MB |
@@ -72,11 +72,11 @@ Phase A.2 focuses on OSR system enhancement and Native module ESM compatibility 
 
 | Test | Status |
 |------|--------|
-| Ollama Connection | ‚úÖ |
-| OUV Visual Understanding | ‚úÖ |
-| Mouse Operations | ‚úÖ (fallback) |
-| Keyboard Operations | ‚úÖ (fallback) |
-| Cross-Platform | ‚úÖ |
+| Ollama Connection | ‚ú?|
+| OUV Visual Understanding | ‚ú?|
+| Mouse Operations | ‚ú?(fallback) |
+| Keyboard Operations | ‚ú?(fallback) |
+| Cross-Platform | ‚ú?|
 
 ## Known Issues
 
@@ -151,5 +151,5 @@ export { InferenceEngine } from './inference/engine/index.js';
 
 ---
 
-**Status**: Phase A.2 Complete ‚úÖ  
+**Status**: Phase A.2 Complete ‚ú? 
 **Next**: Phase A.3 - Native ESM Fix + Visual Verification

@@ -10,7 +10,7 @@ This release represents a major milestone for OpenOxygen, delivering complete P-
 
 ---
 
-## ✨ Key Features
+## �?Key Features
 
 ### 🔒 Security-First Architecture
 - **Zero-Trust Permission System**: Fine-grained access control for all operations
@@ -18,14 +18,14 @@ This release represents a major milestone for OpenOxygen, delivering complete P-
 - **Comprehensive Audit Trail**: Full logging and monitoring
 - **Vulnerability Patched**: Fixed critical eval() vulnerability in workflow-engine.ts
 
-### ⚡ High-Performance OLB Engine
+### �?High-Performance OLB Engine
 - **Rust-Based Core**: Native performance with memory safety
 - **Flash Attention V3**: Optimized attention mechanism
 - **TurboKV Cache**: 3-bit quantization (6x memory reduction, 4-8x speedup)
 - **Paged Memory Management**: 4KB page-level GPU/CPU/Disk hierarchy
 - **Universal MoE**: Expert parallelism for all MoE architectures
 
-### 🛠️ Comprehensive Skill Library (30+)
+### 🛠�?Comprehensive Skill Library (30+)
 - **Office Automation**: Word, Excel, PowerPoint, PDF operations
 - **Browser Automation**: CDP-based Chrome/Edge control
 - **System Operations**: File management, clipboard, desktop organization
@@ -130,9 +130,9 @@ skillRegistry.register({
 ## 🔐 Security Notes
 
 ### Fixed Vulnerabilities
-- ✅ **CVE-2026-XXX**: eval() code injection (workflow-engine.ts)
-- ✅ **Sandbox Escape**: Worker Thread isolation implemented
-- ✅ **Prototype Pollution**: Input validation added
+- �?**CVE-2026-XXX**: eval() code injection (workflow-engine.ts)
+- �?**Sandbox Escape**: Worker Thread isolation implemented
+- �?**Prototype Pollution**: Input validation added
 
 ### Security Features
 - Zero-trust permission model
@@ -156,7 +156,7 @@ skillRegistry.register({
 
 ---
 
-## 🗺️ Roadmap
+## 🗺�?Roadmap
 
 ### Next Release (26w14a)
 - HTN hierarchical task planning
@@ -182,7 +182,7 @@ skillRegistry.register({
 
 ## 📄 License
 
-Apache 2.0 License - See [LICENSE](LICENSE) for details.
+MIT License - See [LICENSE](LICENSE) for details.
 
 ---
 

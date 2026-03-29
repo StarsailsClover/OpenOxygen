@@ -18,15 +18,15 @@
 
 | Phase | Status | Tests | Commit | Duration |
 |-------|--------|-------|--------|----------|
-| **P1: Security Foundation** | ‚úÖ | 47/47 | `a38e7e6` | 3 days |
-| **P2: Multi-Model Runtime** | ‚úÖ | Complete | `ab1301c` | 2 days |
-| **P3: Vision-Language Fusion** | ‚úÖ | E2E verified | `9b624d6` | 3 days |
-| **P4: Input Hardening** | ‚úÖ | 12/12 | `2ce2c85` | 2 days |
-| **P5: Persistent Storage** | üîÑ Next | ‚Äî | ‚Äî | 3-4 days |
-| **P6: Distributed Gateway** | ‚è≥ | ‚Äî | ‚Äî | 5-7 days |
-| **P7: Plugin Marketplace** | ‚è≥ | ‚Äî | ‚Äî | 4-5 days |
-| **P8: GUI Dashboard** | ‚è≥ | ‚Äî | ‚Äî | 5-6 days |
-| **P9: Production Release** | ‚è≥ | ‚Äî | ‚Äî | 3-4 days |
+| **P1: Security Foundation** | ‚ú?| 47/47 | `a38e7e6` | 3 days |
+| **P2: Multi-Model Runtime** | ‚ú?| Complete | `ab1301c` | 2 days |
+| **P3: Vision-Language Fusion** | ‚ú?| E2E verified | `9b624d6` | 3 days |
+| **P4: Input Hardening** | ‚ú?| 12/12 | `2ce2c85` | 2 days |
+| **P5: Persistent Storage** | üîÑ Next | ‚Ä?| ‚Ä?| 3-4 days |
+| **P6: Distributed Gateway** | ‚è?| ‚Ä?| ‚Ä?| 5-7 days |
+| **P7: Plugin Marketplace** | ‚è?| ‚Ä?| ‚Ä?| 4-5 days |
+| **P8: GUI Dashboard** | ‚è?| ‚Ä?| ‚Ä?| 5-6 days |
+| **P9: Production Release** | ‚è?| ‚Ä?| ‚Ä?| 3-4 days |
 
 **Progress: 4/9 phases complete**
 
@@ -34,7 +34,7 @@
 
 ## Phase Details
 
-### P1: Security Foundation ‚úÖ
+### P1: Security Foundation ‚ú?
 - Dependency security manager (CVE matching, blocked packages)
 - Temporary file security (0600 permissions, AES encryption, secure delete)
 - Windows privilege isolation (low-priv user, process isolation)
@@ -42,19 +42,19 @@
 - AI thinking cluster (ThoughtRouter, ConsensusEngine, ReflectionLoop)
 - Architecture declaration ("Beyond OpenClaw")
 
-### P2: Multi-Model Runtime ‚úÖ
+### P2: Multi-Model Runtime ‚ú?
 - 3-model Ollama configuration (qwen3:4b, qwen3-vl:4b, gpt-oss:20b)
 - Dynamic model router with complexity analysis
 - Pool-integrated router with direct API calls
 
-### P3: Vision-Language Fusion ‚úÖ
+### P3: Vision-Language Fusion ‚ú?
 - OxygenUltraVision v2 (3-layer: UIA + CV + VLM)
 - Native VisionTokenizer (Rust JPEG compression + base64)
 - Vision-Language fusion pipeline (TS)
 - Input safety guard (anti-lock)
 - E2E verified: "ÊâìÂºÄChromeÂπ∂ËÆøÈóÆbilibili"
 
-### P4: Input Hardening ‚úÖ
+### P4: Input Hardening ‚ú?
 - Signed input sequences (HMAC-SHA256, nonce anti-replay)
 - Human-likeness scoring (timing + movement + pattern)
 - Multi-monitor DPI awareness
@@ -98,19 +98,19 @@
 
 | Technology | Status | Description |
 |-----------|--------|-------------|
-| AI Thinking Cluster | ‚úÖ P1 | Multi-model consensus, 15-30% accuracy boost |
-| Async Compute Stack | ‚úÖ P1 | 10x concurrency, 90%+ resource utilization |
-| Vision-Language Fusion | ‚úÖ P3 | Native Windows UI understanding |
-| Signed Input System | ‚úÖ P4 | Anti-tamper, anti-replay, auditable |
-| Distributed Memory | ‚è≥ P5-P6 | TB-scale vector persistence |
-| Secure Plugin Ecosystem | ‚è≥ P7 | WASM + Ed25519, zero-trust |
+| AI Thinking Cluster | ‚ú?P1 | Multi-model consensus, 15-30% accuracy boost |
+| Async Compute Stack | ‚ú?P1 | 10x concurrency, 90%+ resource utilization |
+| Vision-Language Fusion | ‚ú?P3 | Native Windows UI understanding |
+| Signed Input System | ‚ú?P4 | Anti-tamper, anti-replay, auditable |
+| Distributed Memory | ‚è?P5-P6 | TB-scale vector persistence |
+| Secure Plugin Ecosystem | ‚è?P7 | WASM + Ed25519, zero-trust |
 
 ---
 
 ## Timeline
 
 ```
-Week 1-2:  P1-P4 ‚úÖ (Security + Models + Vision + Input)
+Week 1-2:  P1-P4 ‚ú?(Security + Models + Vision + Input)
 Week 3-4:  P5-P6 (Persistence + Distributed)
 Week 5-6:  P7-P8 (Marketplace + GUI)
 Week 7:    P9 (Release)

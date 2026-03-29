@@ -4,45 +4,45 @@
 
 ```
 User Request
-    â”‚
-    â–¼
-[Rate Limiter] â†’ 429 if exceeded
-    â”‚
-    â–¼
-[Auth] â†’ 401 if failed (timing-safe comparison)
-    â”‚
-    â–¼
-[Prompt Injection Detector] â†’ 400 if high-risk
-    â”‚
-    â–¼
-[Permission Check] â†’ 403 if denied
-    â”‚
-    â–¼
-[Execution] â†’ Audit logged
-    â”‚
-    â–¼
-[Response] â†’ API keys masked
+    â”?
+    â–?
+[Rate Limiter] â†?429 if exceeded
+    â”?
+    â–?
+[Auth] â†?401 if failed (timing-safe comparison)
+    â”?
+    â–?
+[Prompt Injection Detector] â†?400 if high-risk
+    â”?
+    â–?
+[Permission Check] â†?403 if denied
+    â”?
+    â–?
+[Execution] â†?Audit logged
+    â”?
+    â–?
+[Response] â†?API keys masked
 ```
 
 ## Threat Mitigations
 
-### CVE-2026-25253 â€” Gateway URL Injection
+### CVE-2026-25253 â€?Gateway URL Injection
 - Query strings stripped from path routing
 - Gateway URL cannot be overridden by external input
 - Binding validation rejects `0.0.0.0` and privileged ports
 
-### ClawJacked â€” WebSocket Hijack
+### ClawJacked â€?WebSocket Hijack
 - Origin whitelist (localhost-only by default)
 - Rate limiter with auth failure tracking
 - Auto-block after 5 consecutive failures
 - Timing-safe token comparison
 
-### CVE-2026-24763 â€” Command Injection
+### CVE-2026-24763 â€?Command Injection
 - Shell metacharacter sanitization (`;`, `|`, `` ` ``, `$()`)
 - Command blacklist: `powershell`, `cmd`, `certutil`, `bitsadmin`
 - Environment variable sanitization (`LD_PRELOAD`, `NODE_OPTIONS` removed)
 
-### CVE-2026-25593 â€” Prompt Injection
+### CVE-2026-25593 â€?Prompt Injection
 - 3-level detection: high / medium / low
 - High-risk patterns blocked at gateway
 - Audit event generated for all detections

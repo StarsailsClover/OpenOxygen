@@ -1,9 +1,8 @@
 /**
- * OpenOxygen — OxygenBrowser CDP Integration (26w15aD Phase 4)
+ * OpenOxygen �?OxygenBrowser CDP Integration (26w15aD Phase 4)
  *
  * Chrome DevTools Protocol 集成
- * 用于高级浏览器控制
- */
+ * 用于高级浏览器控�? */
 export interface CDPClient {
     send: (method: string, params?: any) => Promise<any>;
     on: (event: string, callback: (params: any) => void) => void;

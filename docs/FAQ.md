@@ -12,7 +12,7 @@ OpenOxygen is a next-generation AI Agent platform optimized for Windows native e
 
 ### Is OpenOxygen free?
 
-Yes, OpenOxygen is open-source under the Apache 2.0 License.
+Yes, OpenOxygen is open-source under the MIT License.
 
 ### What platforms are supported?
 

@@ -2,13 +2,13 @@
 
 ## Overview
 
-**26w11aD** â€” "D" for "Dynamic" â€” introduces major architectural improvements:
+**26w11aD** â€?"D" for "Dynamic" â€?introduces major architectural improvements:
 
-1. **Multi-Model Local LLM Support** â€” 3 Ollama models running simultaneously
-2. **Vision-Language Integration** â€” Qwen3-VL for screen understanding
-3. **High-Performance Rust Inference Client** â€” reqwest + tokio for 5x concurrency
-4. **RocksDB Persistent Storage** â€” TB-scale vector persistence
-5. **Dynamic Model Router** â€” automatic model selection based on task
+1. **Multi-Model Local LLM Support** â€?3 Ollama models running simultaneously
+2. **Vision-Language Integration** â€?Qwen3-VL for screen understanding
+3. **High-Performance Rust Inference Client** â€?reqwest + tokio for 5x concurrency
+4. **RocksDB Persistent Storage** â€?TB-scale vector persistence
+5. **Dynamic Model Router** â€?automatic model selection based on task
 
 ## New Features
 
@@ -25,9 +25,9 @@
 ```
 
 The router automatically selects:
-- **qwen3:4b** (2.5GB) â†’ Fast queries, text generation
-- **qwen3-vl:4b** (3.3GB) â†’ Screenshot analysis, UI detection
-- **gpt-oss:20b** (13GB) â†’ Deep planning, complex reasoning
+- **qwen3:4b** (2.5GB) â†?Fast queries, text generation
+- **qwen3-vl:4b** (3.3GB) â†?Screenshot analysis, UI detection
+- **gpt-oss:20b** (13GB) â†?Deep planning, complex reasoning
 
 ### Vision Model Integration
 
@@ -85,23 +85,21 @@ Performance vs TypeScript fetch:
 
 ```
 Before (26w11aC):
-  Gateway â†’ TS InferenceEngine â†’ fetch() â†’ LLM
-                â†“
-          TS VectorStore (in-memory)
+  Gateway â†?TS InferenceEngine â†?fetch() â†?LLM
+                â†?          TS VectorStore (in-memory)
 
 After (26w11aD):
-  Gateway â†’ TS InferenceEngine â†’ Rust Client â†’ LLM
-                â†“
-          Rust VectorDatabase (RocksDB)
+  Gateway â†?TS InferenceEngine â†?Rust Client â†?LLM
+                â†?          Rust VectorDatabase (RocksDB)
 ```
 
 ## Model Download Status
 
 | Model | Size | Status | Usage |
 |-------|------|--------|-------|
-| qwen3:4b | 2.5 GB | âœ… Ready | General |
-| qwen3-vl:4b | 3.3 GB | âœ… Ready | Vision |
-| gpt-oss:20b | 13 GB | âœ… Ready | Reasoning |
+| qwen3:4b | 2.5 GB | âœ?Ready | General |
+| qwen3-vl:4b | 3.3 GB | âœ?Ready | Vision |
+| gpt-oss:20b | 13 GB | âœ?Ready | Reasoning |
 | **Total** | **18.8 GB** | | |
 
 ## Compatibility
@@ -123,7 +121,7 @@ After (26w11aD):
 
 2. **Update config** (or use default)
 
-3. **No code changes required** â€” existing agents continue working
+3. **No code changes required** â€?existing agents continue working
 
 ## Known Issues
 
@@ -136,7 +134,7 @@ After (26w11aD):
 |--------|---------|---------|-------------|
 | Concurrent requests | 5 | 50 | **10x** |
 | Avg inference latency | 250ms | 120ms | **-52%** |
-| Memory (1M vectors) | OOM | 4.2GB | **âˆž** |
+| Memory (1M vectors) | OOM | 4.2GB | **âˆ?* |
 | Vision pipeline | 500ms | 180ms | **-64%** |
 
 ---

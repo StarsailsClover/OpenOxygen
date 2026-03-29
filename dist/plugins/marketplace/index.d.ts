@@ -1,5 +1,5 @@
 /**
- * OpenOxygen — Plugin Marketplace (26w11aE_P7)
+ * OpenOxygen �?Plugin Marketplace (26w11aE_P7)
  *
  * 安全插件生态系统：
  * - Ed25519 签名验证
@@ -76,7 +76,7 @@ export declare class PluginRepository {
     private installed;
     constructor(pluginsDir?: string);
     /**
-     * 从 OpenClaw skills 目录导入
+     * �?OpenClaw skills 目录导入
      */
     importFromOpenClaw(skillDir: string): InstalledPlugin | null;
     /**
@@ -88,20 +88,17 @@ export declare class PluginRepository {
      */
     uninstall(name: string): boolean;
     /**
-     * 列出已安装插件
-     */
+     * 列出已安装插�?     */
     list(): InstalledPlugin[];
     /**
      * 获取插件信息
      */
     get(name: string): InstalledPlugin | undefined;
     /**
-     * 搜索插件（本地已安装）
-     */
+     * 搜索插件（本地已安装�?     */
     search(query: string): InstalledPlugin[];
     /**
-     * 验证插件完整性
-     */
+     * 验证插件完整�?     */
     verifyIntegrity(name: string): {
         valid: boolean;
         reason?: string;

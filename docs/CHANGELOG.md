@@ -13,14 +13,14 @@ Production release with complete P-0 to P-2 core functionality.
 - **Added** Zero-trust permission system
 - **Added** Comprehensive audit logging
 
-### ⚡ Performance
+### �?Performance
 - **Added** OLB (OxygenLLMBooster) Rust core
 - **Implemented** Flash Attention V3
 - **Added** TurboKV Cache with 3-bit quantization
 - **Implemented** Paged Memory Management
 - **Added** Performance monitoring and benchmarking
 
-### 🛠️ Features
+### 🛠�?Features
 - **Added** 30+ automation skills (Office/Browser/System)
 - **Implemented** Multimodal engine (Audio/Vision/Video)
 - **Added** OxygenBrowser WebView2 integration
@@ -40,7 +40,7 @@ Production release with complete P-0 to P-2 core functionality.
 - **Added** Architecture documentation
 - **Updated** README with bilingual support
 
-### 🏗️ Architecture
+### 🏗�?Architecture
 - **Reorganized** Project file structure
 - **Created** Unified archive directory
 - **Added** File indexing and cleanup tools

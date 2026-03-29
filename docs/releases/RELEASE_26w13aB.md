@@ -66,21 +66,21 @@ New documentation for this release:
 
 ---
 
-## âœ¨ What's New in 26w13aB
+## âœ?What's New in 26w13aB
 
 ### User Experience
 
-- âœ… **One-click start**: `start.bat` for Windows
-- âœ… **Auto-dependency check**: Detects missing Node.js/Rust
-- âœ… **Auto-build**: Builds native modules on first run
-- âœ… **Clear error messages**: Human-readable error guidance
+- âœ?**One-click start**: `start.bat` for Windows
+- âœ?**Auto-dependency check**: Detects missing Node.js/Rust
+- âœ?**Auto-build**: Builds native modules on first run
+- âœ?**Clear error messages**: Human-readable error guidance
 
 ### Documentation
 
-- âœ… **INSTALL.md**: Step-by-step installation
-- âœ… **QUICKSTART.md**: 5-minute getting started
-- âœ… **Model configuration guide**: How to add local/remote models
-- âœ… **Troubleshooting section**: Common issues and fixes
+- âœ?**INSTALL.md**: Step-by-step installation
+- âœ?**QUICKSTART.md**: 5-minute getting started
+- âœ?**Model configuration guide**: How to add local/remote models
+- âœ?**Troubleshooting section**: Common issues and fixes
 
 ### Training Results (from 26w13aA)
 
@@ -166,7 +166,7 @@ node test/26w13a-p3-multi-ai.mjs
 
 ---
 
-## ğŸ—ºï¸ Roadmap
+## ğŸ—ºï¸?Roadmap
 
 ### 26w14a (Next)
 - Visual model integration (UI-TARS, GPT-4V)

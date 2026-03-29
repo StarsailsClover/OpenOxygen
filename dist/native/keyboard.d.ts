@@ -1,5 +1,5 @@
 /**
- * OpenOxygen — Native Keyboard Control (26w15aD Phase 1)
+ * OpenOxygen �?Native Keyboard Control (26w15aD Phase 1)
  *
  * Windows 原生键盘控制
  * 使用 Win32 API 实现真实键盘输入

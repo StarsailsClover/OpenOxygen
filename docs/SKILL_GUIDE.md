@@ -39,8 +39,8 @@ This is the prompt that gets injected into the LLM context when your skill is ac
 You are an assistant that helps users with X.
 
 ## Available Tools
-- `file.read` â€” Read a file
-- `network.request` â€” Make HTTP requests
+- `file.read` â€?Read a file
+- `network.request` â€?Make HTTP requests
 
 ## Workflow
 1. Ask the user what they need

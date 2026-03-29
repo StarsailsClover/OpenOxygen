@@ -18,7 +18,7 @@ const log = createSubsystemLogger("compliance/license");
 // License types
 export type LicenseType =
   | "MIT"
-  | "Apache-2.0"
+  | "MIT"
   | "BSD-3-Clause"
   | "GPL-3.0"
   | "LGPL-3.0"
@@ -98,11 +98,11 @@ const LICENSE_DATABASE: Record<LicenseType, LicenseInfo> = {
     limitations: ["liability", "warranty"],
     conditions: ["include-copyright"],
   },
-  "Apache-2.0": {
+  "MIT": {
     name: "Apache License 2.0",
-    type: "Apache-2.0",
-    spdxId: "Apache-2.0",
-    url: "https://opensource.org/licenses/Apache-2.0",
+    type: "MIT",
+    spdxId: "MIT",
+    url: "https://opensource.org/licenses/MIT",
     permissions: [
       "commercial-use",
       "modification",
@@ -405,7 +405,7 @@ export class LicenseComplianceManager {
     const lowerText = text.toLowerCase();
 
     if (lowerText.includes("mit license")) return "MIT";
-    if (lowerText.includes("apache license")) return "Apache-2.0";
+    if (lowerText.includes("apache license")) return "MIT";
     if (lowerText.includes("bsd 3-clause")) return "BSD-3-Clause";
     if (lowerText.includes("gnu general public license")) return "GPL-3.0";
     if (lowerText.includes("gnu lesser general public license"))
@@ -421,10 +421,10 @@ export class LicenseComplianceManager {
    * Determine license compatibility
    */
   private determineCompatibility(license: LicenseType): LicenseCompatibility {
-    // For MIT/Apache-2.0/BSD-3-Clause/ISC/Unlicense: compatible
+    // For MIT/MIT/BSD-3-Clause/ISC/Unlicense: compatible
     const compatible = [
       "MIT",
-      "Apache-2.0",
+      "MIT",
       "BSD-3-Clause",
       "ISC",
       "Unlicense",

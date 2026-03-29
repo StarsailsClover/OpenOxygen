@@ -1,9 +1,8 @@
 /**
- * OpenOxygen — OxygenStepRecorder (OSR) Player (26w15aD Phase 2)
+ * OpenOxygen �?OxygenStepRecorder (OSR) Player (26w15aD Phase 2)
  *
  * 操作回放系统
- * 按时间戳回放录制的操作
- */
+ * 按时间戳回放录制的操�? */
 import type { RecordedStep, RecordingSession } from "./recorder.js";
 export type PlaybackState = "idle" | "playing" | "paused" | "stopped";
 export interface PlaybackOptions {

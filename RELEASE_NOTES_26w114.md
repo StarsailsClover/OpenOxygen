@@ -88,10 +88,10 @@ const result = await mcpClient.callTool("my-server", "tool-name", args);
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| OpenAI Tool Calling | âœ… Complete | Full standard implementation |
-| MCP Protocol | âœ… Enhanced | 2024-11-05 spec compliant |
+| OpenAI Tool Calling | âœ?Complete | Full standard implementation |
+| MCP Protocol | âœ?Enhanced | 2024-11-05 spec compliant |
 | Protocol Tests | ðŸ”„ In Progress | Core tests added |
-| Documentation | âœ… Complete | API docs updated |
+| Documentation | âœ?Complete | API docs updated |
 
 ---
 

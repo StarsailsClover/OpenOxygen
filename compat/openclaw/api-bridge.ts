@@ -1,7 +1,7 @@
 /**
  * OpenClaw API Bridge
  * 
- * OpenClaw API 兼容层
+ * OpenClaw API 兼容�?
  */
 
 import { handleExecutionRequest } from '../../execution/unified/index.js';

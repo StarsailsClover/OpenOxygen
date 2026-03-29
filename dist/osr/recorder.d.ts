@@ -1,5 +1,5 @@
 /**
- * OpenOxygen — OxygenStepRecorder (OSR) Recorder (26w15aD Phase 2)
+ * OpenOxygen �?OxygenStepRecorder (OSR) Recorder (26w15aD Phase 2)
  *
  * 操作录制系统
  * 记录鼠标、键盘、窗口操作并同步截屏
