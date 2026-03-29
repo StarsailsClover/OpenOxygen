@@ -1,12 +1,12 @@
 /**
- * OpenOxygen — Connection Pool (26w12aA P4)
+ * OpenOxygen �?Connection Pool (26w12aA P4)
  *
- * HTTP 连接池：复用连接到 Ollama/LLM 后端
+ * HTTP 连接池：复用连接�?Ollama/LLM 后端
  */
 import { createSubsystemLogger } from "../logging/index.js";
 const log = createSubsystemLogger("pool/http");
-// Node.js 22 内置 fetch 默认使用 undici，已有连接复用。
-// 这里提供显式的 Agent 配置以优化高并发场景。
+// Node.js 22 内置 fetch 默认使用 undici，已有连接复用�?
+// 这里提供显式�?Agent 配置以优化高并发场景�?
 import { Agent } from "node:http";
 const keepAliveAgent = new Agent({
     keepAlive: true,
@@ -15,13 +15,13 @@ const keepAliveAgent = new Agent({
     timeout: 60000,
 });
 /**
- * 获取共享的 keep-alive HTTP Agent
+ * 获取共享�?keep-alive HTTP Agent
  */
 export function getHttpAgent() {
     return keepAliveAgent;
 }
 /**
- * 获取连接池状态
+ * 获取连接池状�?
  */
 export function getPoolStats() {
     const sockets = Object.values(keepAliveAgent.sockets || {});
@@ -47,7 +47,7 @@ export function getMemoryUsage() {
     };
 }
 /**
- * 定期 GC 提示（V8 会自动 GC，这里仅记录内存状态）
+ * 定期 GC 提示（V8 会自�?GC，这里仅记录内存状态）
  */
 let memoryMonitorInterval = null;
 export function startMemoryMonitor(intervalMs = 60000) {
@@ -57,7 +57,7 @@ export function startMemoryMonitor(intervalMs = 60000) {
         const mem = getMemoryUsage();
         if (mem.heapPercent > 85) {
             log.warn(`High memory usage: ${mem.heapUsedMB}MB / ${mem.heapTotalMB}MB (${mem.heapPercent}%)`);
-            // 尝试触发 GC（需要 --expose-gc 标志）
+            // 尝试触发 GC（需�?--expose-gc 标志�?
             if (global.gc) {
                 global.gc();
                 log.info("Manual GC triggered");

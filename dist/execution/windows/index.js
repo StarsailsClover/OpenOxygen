@@ -1,9 +1,9 @@
 /**
- * OpenOxygen — Windows System Control Module
+ * OpenOxygen �?Windows System Control Module
  *
- * 内核级 Windows 系统操作：文件系统、进程管理、注册表、剪贴板、
- * 键鼠输入、网络、服务管理等。
- * 通过 PowerShell + Win32 API (ffi-napi) 双路径实现。
+ * 内核�?Windows 系统操作：文件系统、进程管理、注册表、剪贴板�?
+ * 键鼠输入、网络、服务管理等�?
+ * 通过 PowerShell + Win32 API (ffi-napi) 双路径实现�?
  */
 import { exec } from "node:child_process";
 import fs from "node:fs/promises";

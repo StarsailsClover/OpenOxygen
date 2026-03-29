@@ -1,8 +1,8 @@
 /**
- * OpenOxygen — Route Resolution
+ * OpenOxygen �?Route Resolution
  *
- * 消息路由：根据 channel/peer/account 解析到目标 agent + session。
- * 接口协议兼容 OpenClaw 的 resolve-route 规范。
+ * 消息路由：根�?channel/peer/account 解析到目�?agent + session�?
+ * 接口协议兼容 OpenClaw �?resolve-route 规范�?
  */
 import { createSubsystemLogger } from "../../logging/index.js";
 import { buildMainSessionKey, buildPeerSessionKey, DEFAULT_ACCOUNT_ID, DEFAULT_AGENT_ID, normalizeAgentId, } from "../sessions/index.js";

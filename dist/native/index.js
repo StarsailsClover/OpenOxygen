@@ -1,8 +1,7 @@
 /**
- * OpenOxygen — Native Input/Output Module (26w15aD Phase 1)
+ * OpenOxygen �?Native Input/Output Module (26w15aD Phase 1)
  *
- * 统一导出所有原生控制功能
- */
+ * 统一导出所有原生控制功�? */
 // Mouse control
 export { mouseMove, mouseClick, mouseDoubleClick, mouseDrag, mouseScroll, getMousePosition, mouseClickAt, MouseButton, } from "./mouse.js";
 // Keyboard control

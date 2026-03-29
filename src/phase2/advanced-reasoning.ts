@@ -1,10 +1,10 @@
 /**
  * OpenOxygen - Phase 2 Advanced Reasoning (26w15aD Phase 7)
  *
- * Phase 2: 高级推理与优化
+ * Phase 2: 高级推理与优�?
  * - 链式思维推理
  * - 自我反思与改进
- * - 知识积累与复用
+ * - 知识积累与复�?
  */
 
 import { createSubsystemLogger } from "../logging/index.js";

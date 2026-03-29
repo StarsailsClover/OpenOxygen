@@ -1,13 +1,13 @@
 /**
- * OpenOxygen — Gateway Server (Hardened)
+ * OpenOxygen �� Gateway Server (Hardened)
  *
- * 安全加固版网关：
- * - 速率限制 (防 ClawJacked 暴力破解)
- * - Origin 校验 (防跨站 WebSocket 劫持)
- * - 时间安全认证 (防计时攻击)
- * - 绑定地址校验 (防公网暴露)
- * - 请求体大小限制 (防 DoS)
- * - 提示注入检测 (防日志投毒)
+ * ��ȫ�ӹ̰����أ�
+ * - �������� (�� ClawJacked �����ƽ�)
+ * - Origin У�� (����վ WebSocket �ٳ�)
+ * - ʱ�䰲ȫ��֤ (����ʱ����)
+ * - �󶨵�ַУ�� (��������¶)
+ * - �������С���� (�� DoS)
+ * - ��ʾע���� (����־Ͷ��)
  */
 import { createServer } from "node:http";
 import process from "node:process";
@@ -16,9 +16,9 @@ import { generateId, nowMs } from "../../utils/index.js";
 import { RateLimiter, validateGatewayBinding, timingSafeEqual, detectPromptInjection, } from "../../security/hardening.js";
 import { DASHBOARD_HTML } from "../../dashboard/index.js";
 const log = createSubsystemLogger("gateway");
-// ─── Constants ──────────────────────────────────────────────────────────────
+// ������ Constants ����������������������������������������������������������������������������������������������������������������������������
 const MAX_BODY_BYTES = 1024 * 1024; // 1 MB max request body
-// ─── Auth (timing-safe) ─────────────────────────────────────────────────────
+// ������ Auth (timing-safe) ����������������������������������������������������������������������������������������������������������
 function validateAuth(config, authHeader) {
     const { auth } = config.gateway;
     if (auth.mode === "none")
@@ -45,23 +45,23 @@ function validateAuth(config, authHeader) {
     }
     return false;
 }
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ������ Helpers ��������������������������������������������������������������������������������������������������������������������������������
 function getClientIp(req) {
-    // 不信任 X-Forwarded-For（防止 IP 伪造）
+    // ������ X-Forwarded-For����ֹ IP α�죩
     return req.socket.remoteAddress ?? "unknown";
 }
 function respond(res, status, body, headers) {
     res.writeHead(status, { "Content-Type": "application/json", ...headers });
     res.end(JSON.stringify(body));
 }
-// ─── Server Factory ─────────────────────────────────────────────────────────
+// ������ Server Factory ������������������������������������������������������������������������������������������������������������������
 export function createGatewayServer(options) {
     const { config, inferenceEngine, onEvent } = options;
     let server = null;
     let running = false;
-    // 初始化速率限制器
+    // ��ʼ������������
     const rateLimiter = new RateLimiter(config.gateway.rateLimit);
-    // 定期清理速率限制记录
+    // ���������������Ƽ�¼
     const cleanupInterval = setInterval(() => rateLimiter.cleanup(), 60_000);
     const emitEvent = (event) => {
         onEvent?.(event);
@@ -71,21 +71,21 @@ export function createGatewayServer(options) {
         const ctx = {
             requestId: generateId("req"),
             method: req.method ?? "GET",
-            path: req.url?.split("?")[0] ?? "/", // 剥离 query string（防 CVE-2026-25253）
+            path: req.url?.split("?")[0] ?? "/", // ���� query string���� CVE-2026-25253��
             startTime: nowMs(),
             authenticated: false,
             clientIp,
         };
-        // ── 速率限制 ──────────────────────────────────────────────
+        // ���� �������� ��������������������������������������������������������������������������������������������
         const rateCheck = rateLimiter.check(clientIp);
         if (!rateCheck.allowed) {
-            log.warn(`Rate limited: ${clientIp} — ${rateCheck.reason}`);
+            log.warn(`Rate limited: ${clientIp} �� ${rateCheck.reason}`);
             respond(res, 429, { error: rateCheck.reason }, {
                 "Retry-After": String(Math.ceil((rateCheck.retryAfterMs ?? 60000) / 1000)),
             });
             return;
         }
-        // ── CORS（严格模式）──────────────────────────────────────
+        // ���� CORS���ϸ�ģʽ������������������������������������������������������������������������������
         const allowedOrigins = config.gateway.cors?.origins ?? [
             "http://127.0.0.1",
             "http://localhost",
@@ -94,11 +94,11 @@ export function createGatewayServer(options) {
         if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
             res.setHeader("Access-Control-Allow-Origin", requestOrigin);
         }
-        // 不设置通配符 "*"，防止跨域攻击
+        // ������ͨ��� "*"����ֹ���򹥻�
         res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
         res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
         res.setHeader("Access-Control-Max-Age", "3600");
-        // 安全响应头
+        // ��ȫ��Ӧͷ
         res.setHeader("X-Content-Type-Options", "nosniff");
         res.setHeader("X-Frame-Options", "DENY");
         res.setHeader("Content-Security-Policy", "default-src 'none'");
@@ -107,7 +107,7 @@ export function createGatewayServer(options) {
             res.end();
             return;
         }
-        // ── 认证（跳过 /health）──────────────────────────────────
+        // ���� ��֤������ /health����������������������������������������������������������������������
         if (ctx.path !== "/health") {
             ctx.authenticated = validateAuth(config, req.headers.authorization);
             if (!ctx.authenticated) {
@@ -117,7 +117,7 @@ export function createGatewayServer(options) {
             }
             rateLimiter.resetAuthFailures(clientIp);
         }
-        // ── 解析请求体（带大小限制）──────────────────────────────
+        // ���� ���������壨����С���ƣ�������������������������������������������������������������
         let body = null;
         if (req.method === "POST" || req.method === "PUT") {
             try {
@@ -150,7 +150,7 @@ export function createGatewayServer(options) {
                 });
                 return;
             }
-            // GET / — Dashboard
+            // GET / �� Dashboard
             if (method === "GET" && (path === "/" || path === "/dashboard")) {
                 res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
                 res.end(DASHBOARD_HTML);
@@ -220,7 +220,7 @@ export function createGatewayServer(options) {
                     });
                     return;
                 }
-                // ── 提示注入检测 ──────────────────────────────────────
+                // ���� ��ʾע���� ����������������������������������������������������������������������������
                 for (const msg of messages) {
                     if (msg.role === "user" && msg.content) {
                         const injection = detectPromptInjection(msg.content);
@@ -283,12 +283,12 @@ export function createGatewayServer(options) {
                 respond(res, 200, plan);
                 return;
             }
-            // POST /api/v1/task/:id/cancel — Cancel running task
+            // POST /api/v1/task/:id/cancel �� Cancel running task
             if (method === "POST" &&
                 path.startsWith("/api/v1/task/") &&
                 path.endsWith("/cancel")) {
                 const taskId = path.split("/")[4];
-                // 广播取消事件到 WebSocket
+                // �㲥ȡ���¼��� WebSocket
                 emitEvent({
                     type: "plan.failed",
                     planId: taskId || "",
@@ -297,7 +297,7 @@ export function createGatewayServer(options) {
                 respond(res, 200, { cancelled: true, taskId });
                 return;
             }
-            // GET /api/v1/ws/status — WebSocket channel status
+            // GET /api/v1/ws/status �� WebSocket channel status
             if (method === "GET" && path === "/api/v1/ws/status") {
                 respond(res, 200, {
                     websocket: true,
@@ -324,7 +324,7 @@ export function createGatewayServer(options) {
             return server;
         },
         start: () => new Promise((resolve, reject) => {
-            // 绑定地址安全检查
+            // �󶨵�ַ��ȫ���
             const bindCheck = validateGatewayBinding(config.gateway.host, config.gateway.port);
             if (!bindCheck.safe) {
                 const err = new Error(`Unsafe gateway binding: ${bindCheck.reason}`);

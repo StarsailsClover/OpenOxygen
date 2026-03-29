@@ -1,20 +1,20 @@
 /**
- * OpenOxygen — SQLite Persistence Layer (26w11aE_P5)
+ * OpenOxygen �?SQLite Persistence Layer (26w11aE_P5)
  *
- * 统一持久化存储：会话、配置、审计、向量索引元数据。
- * 使用 better-sqlite3 (同步 API，零 FFI 开销)。
+ * 统一持久化存储：会话、配置、审计、向量索引元数据�?
+ * 使用 better-sqlite3 (同步 API，零 FFI 开销)�?
  */
 import { createSubsystemLogger } from "../logging/index.js";
 import { resolveStateDir } from "../core/config/index.js";
 import path from "node:path";
 import fs from "node:fs";
 const log = createSubsystemLogger("storage/sqlite");
-// better-sqlite3 是 CJS，需要 createRequire
+// better-sqlite3 �?CJS，需�?createRequire
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Database Manager
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 export class SQLiteStore {
     db;
     dbPath;
@@ -37,7 +37,7 @@ export class SQLiteStore {
     // ─── Schema ───────────────────────────────────────────────────────────
     initSchema() {
         this.db.exec(`
-      -- 会话表
+      -- 会话�?
       CREATE TABLE IF NOT EXISTS sessions (
         key TEXT PRIMARY KEY,
         agent_id TEXT NOT NULL,
@@ -61,7 +61,7 @@ export class SQLiteStore {
       CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_log(timestamp);
       CREATE INDEX IF NOT EXISTS idx_audit_operation ON audit_log(operation);
 
-      -- 向量索引元数据
+      -- 向量索引元数�?
       CREATE TABLE IF NOT EXISTS vector_chunks (
         id TEXT PRIMARY KEY,
         source TEXT NOT NULL,
@@ -86,7 +86,7 @@ export class SQLiteStore {
         created_at INTEGER NOT NULL
       );
 
-      -- KV 存储（通用）
+      -- KV 存储（通用�?
       CREATE TABLE IF NOT EXISTS kv_store (
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL,
@@ -291,9 +291,9 @@ export class SQLiteStore {
         log.info("SQLite store closed");
     }
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Global Instance
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 let globalStore = null;
 export function getStore(dbPath) {
     if (!globalStore) {

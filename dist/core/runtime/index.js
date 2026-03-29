@@ -1,8 +1,8 @@
 /**
- * OpenOxygen — Runtime Environment
+ * OpenOxygen �?Runtime Environment
  *
- * 运行时环境管理：进程生命周期、平台检测、终端状态恢复。
- * 独立实现，参考 OpenClaw runtime.ts 的接口契约但重写全部逻辑。
+ * 运行时环境管理：进程生命周期、平台检测、终端状态恢复�?
+ * 独立实现，参�?OpenClaw runtime.ts 的接口契约但重写全部逻辑�?
  */
 import os from "node:os";
 import process from "node:process";
@@ -33,7 +33,7 @@ export function setTerminalRawMode(enabled) {
             terminalRawMode = enabled;
         }
         catch {
-            // Ignore — stdin may already be destroyed
+            // Ignore �?stdin may already be destroyed
         }
     }
 }
@@ -63,7 +63,7 @@ function createRuntimeIO() {
     };
 }
 /**
- * Default runtime — used in production.
+ * Default runtime �?used in production.
  * Restores terminal state before exit.
  */
 export const defaultRuntime = {
@@ -75,7 +75,7 @@ export const defaultRuntime = {
     },
 };
 /**
- * Non-exiting runtime — used in tests.
+ * Non-exiting runtime �?used in tests.
  * Throws instead of calling process.exit.
  */
 export function createTestRuntime() {
@@ -96,7 +96,7 @@ export function installGlobalErrorHandlers(runtime) {
     });
     process.on("unhandledRejection", (reason) => {
         runtime.error("Unhandled rejection:", reason);
-        // Don't exit — log and continue, matching OpenClaw behavior
+        // Don't exit �?log and continue, matching OpenClaw behavior
     });
     // Graceful shutdown on SIGINT / SIGTERM
     const shutdown = (signal) => {

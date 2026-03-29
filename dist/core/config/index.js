@@ -1,9 +1,9 @@
 /**
- * OpenOxygen — Configuration System
+ * OpenOxygen �?Configuration System
  *
- * 配置加载、验证、热重载。
- * 支持 openoxygen.json + .env + 环境变量三级覆盖。
- * 兼容 OpenClaw 的 openclaw.json 配置格式（通过 compat 层转译）。
+ * 配置加载、验证、热重载�?
+ * 支持 openoxygen.json + .env + 环境变量三级覆盖�?
+ * 兼容 OpenClaw �?openclaw.json 配置格式（通过 compat 层转译）�?
  */
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -83,7 +83,7 @@ export async function loadDotEnv(opts) {
             }
         }
         catch {
-            // File doesn't exist — skip silently
+            // File doesn't exist �?skip silently
         }
     }
 }
@@ -155,7 +155,7 @@ function applyEnvOverrides(config, env) {
             token: env["OPENOXYGEN_GATEWAY_TOKEN"],
         };
     }
-    // Model API keys — auto-detect and populate
+    // Model API keys �?auto-detect and populate
     const keyMappings = [
         { env: "OPENAI_API_KEY", provider: "openai" },
         { env: "ANTHROPIC_API_KEY", provider: "anthropic" },

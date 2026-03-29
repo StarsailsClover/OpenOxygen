@@ -1,8 +1,8 @@
 /**
- * OpenOxygen — Temporary File Security Manager (26w11aE_P1)
+ * OpenOxygen �?Temporary File Security Manager (26w11aE_P1)
  *
  * 针对 risks.md 临时文件泄露风险的加固实现：
- * - 强制 0600 权限（仅所有者可读写）
+ * - 强制 0600 权限（仅所有者可读写�?
  * - 自动清理机制
  * - 安全临时目录隔离
  * - 敏感数据内存加密
@@ -14,9 +14,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
 const log = createSubsystemLogger("security/tempfs");
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Configuration
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 const TEMPFS_CONFIG = {
     // 临时文件权限: 0600 (rw-------)
     fileMode: 0o600,
@@ -24,9 +24,9 @@ const TEMPFS_CONFIG = {
     dirMode: 0o700,
     // 自动清理间隔: 5 分钟
     cleanupIntervalMs: 5 * 60 * 1000,
-    // 文件最大存活时间: 1 小时
+    // 文件最大存活时�? 1 小时
     maxAgeMs: 60 * 60 * 1000,
-    // 敏感文件最大存活时间: 5 分钟
+    // 敏感文件最大存活时�? 5 分钟
     sensitiveMaxAgeMs: 5 * 60 * 1000,
     // 内存加密密钥派生参数
     keyDerivation: {
@@ -37,9 +37,9 @@ const TEMPFS_CONFIG = {
         tagLength: 16,
     },
 };
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Secure Temp Directory
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 export class SecureTempDirectory {
     basePath;
     cleanupTimer = null;
@@ -51,19 +51,19 @@ export class SecureTempDirectory {
     }
     initialize() {
         try {
-            // 创建隔离目录，权限 0700
+            // 创建隔离目录，权�?0700
             if (!existsSync(this.basePath)) {
                 mkdirSync(this.basePath, {
                     recursive: true,
                     mode: TEMPFS_CONFIG.dirMode,
                 });
             }
-            // 确保权限正确（Windows 忽略，Linux/macOS 生效）
+            // 确保权限正确（Windows 忽略，Linux/macOS 生效�?
             try {
                 chmodSync(this.basePath, TEMPFS_CONFIG.dirMode);
             }
             catch {
-                // Windows 不支持 chmod，忽略错误
+                // Windows 不支�?chmod，忽略错�?
             }
             // 启动自动清理
             this.startCleanupTimer();
@@ -106,8 +106,8 @@ export class SecureTempDirectory {
         for (const file of files) {
             try {
                 const stat = readFileSync(file);
-                // 简化的过期检查：实际应使用 stat.mtime
-                // 这里依赖 SecureTempFile 的自动清理
+                // 简化的过期检查：实际应使�?stat.mtime
+                // 这里依赖 SecureTempFile 的自动清�?
             }
             catch {
                 // 忽略错误
@@ -115,11 +115,11 @@ export class SecureTempDirectory {
         }
     }
     /**
-     * 销毁整个临时目录
+     * 销毁整个临时目�?
      */
     destroy() {
         this.stopCleanupTimer();
-        // 清理所有活跃文件
+        // 清理所有活跃文�?
         for (const filepath of this.activeFiles) {
             try {
                 unlinkSync(filepath);
@@ -160,9 +160,9 @@ export class SecureTempDirectory {
         }
     }
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Secure Temp File
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 export class SecureTempFile {
     path;
     options;
@@ -173,10 +173,10 @@ export class SecureTempFile {
         this.path = filepath;
         this.options = options;
         this.createdAt = Date.now();
-        // 如果启用加密，生成密钥
+        // 如果启用加密，生成密�?
         if (options.encrypted) {
             this.encryptionSalt = randomBytes(TEMPFS_CONFIG.keyDerivation.saltLength);
-            // 使用进程 ID 和环境变量派生密钥
+            // 使用进程 ID 和环境变量派生密�?
             const keyMaterial = `${process.pid}-${process.env.OPENOXYGEN_SECRET || "default"}`;
             this.encryptionKey = scryptSync(keyMaterial, this.encryptionSalt, TEMPFS_CONFIG.keyDerivation.keyLength);
         }
@@ -212,21 +212,21 @@ export class SecureTempFile {
      */
     read() {
         const data = readFileSync(this.path);
-        // 如果启用加密，解密数据
+        // 如果启用加密，解密数�?
         if (this.options.encrypted && this.encryptionKey && this.encryptionSalt) {
             return this.decrypt(data);
         }
         return data;
     }
     /**
-     * 安全删除（覆写后删除）
+     * 安全删除（覆写后删除�?
      */
     secureDelete() {
         try {
             if (existsSync(this.path)) {
                 // 获取文件大小
                 const data = readFileSync(this.path);
-                // 覆写 3 次：随机数据 → 0x00 → 随机数据
+                // 覆写 3 次：随机数据 �?0x00 �?随机数据
                 writeFileSync(this.path, randomBytes(data.length));
                 writeFileSync(this.path, Buffer.alloc(data.length, 0));
                 writeFileSync(this.path, randomBytes(data.length));
@@ -240,7 +240,7 @@ export class SecureTempFile {
         }
     }
     /**
-     * 检查是否过期
+     * 检查是否过�?
      */
     isExpired() {
         return Date.now() - this.createdAt > this.options.maxAgeMs;
@@ -296,9 +296,9 @@ export class SecureTempFile {
         return Buffer.concat([decipher.update(encrypted), decipher.final()]);
     }
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Global Instance
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 let globalTempDir = null;
 export function getSecureTempDir() {
     if (!globalTempDir) {
@@ -315,7 +315,7 @@ export function cleanupOnExit() {
         globalTempDir = null;
     }
 }
-// 注册退出清理
+// 注册退出清�?
 process.on("exit", cleanupOnExit);
 process.on("SIGINT", () => {
     cleanupOnExit();

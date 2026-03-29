@@ -1,8 +1,8 @@
 /**
- * OpenOxygen — OxygenBrowser Core (26w15aD Phase 4)
+ * OpenOxygen �?OxygenBrowser Core (26w15aD Phase 4)
  *
  * 基于 WebView2 的封闭浏览器
- * 与 Microsoft Edge 用户体验相同，但 Agent 视角完全不同
+ * �?Microsoft Edge 用户体验相同，但 Agent 视角完全不同
  */
 import { createSubsystemLogger } from "../logging/index.js";
 import { generateId, nowMs, sleep } from "../utils/index.js";

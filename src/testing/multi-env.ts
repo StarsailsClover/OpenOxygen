@@ -112,7 +112,7 @@ export class MultiEnvTestRunner {
       };
 
       this.results.push(result);
-      log.info(`âœ“ Test passed: ${name} (${result.durationMs}ms)`);
+      log.info(`âœ?Test passed: ${name} (${result.durationMs}ms)`);
       return result;
     } catch (error: any) {
       const result: TestResult = {
@@ -126,7 +126,7 @@ export class MultiEnvTestRunner {
       };
 
       this.results.push(result);
-      log.error(`âœ— Test failed: ${name} - ${error.message}`);
+      log.error(`âœ?Test failed: ${name} - ${error.message}`);
       return result;
     }
   }
@@ -197,8 +197,8 @@ export class MultiEnvTestRunner {
 
 ## Summary
 - Total Tests: ${summary.total}
-- Passed: ${summary.passed} âœ“
-- Failed: ${summary.failed} âœ—
+- Passed: ${summary.passed} âœ?
+- Failed: ${summary.failed} âœ?
 - Duration: ${summary.durationMs}ms
 - Success Rate: ${summary.total > 0 ? Math.round((summary.passed / summary.total) * 100) : 0}%
 
@@ -206,7 +206,7 @@ export class MultiEnvTestRunner {
 `;
 
     for (const result of this.results) {
-      const status = result.passed ? "âœ“ PASS" : "âœ— FAIL";
+      const status = result.passed ? "âœ?PASS" : "âœ?FAIL";
       report += `\n### ${result.name}\n`;
       report += `- Status: ${status}\n`;
       report += `- Duration: ${result.durationMs}ms\n`;

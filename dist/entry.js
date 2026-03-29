@@ -1,18 +1,18 @@
 /**
- * OpenOxygen — Main Entry Point
+ * OpenOxygen �� Main Entry Point
  *
- * CLI 入口：解析命令行参数，启动 Gateway 服务器。
+ * CLI ��ڣ����������в��������� Gateway ��������
  *
- * 架构宣言：
- * OpenOxygen 不是 OpenClaw 的替代品，而是下一代 Agent 框架。
- * 我们继承 OpenClaw 的接口协议作为兼容层，但在以下维度全面超越：
- * - 性能：Rust 原生核心 + SIMD 加速，10-100x 速度提升
- * - 安全：针对所有已知 CVE 的主动防御 + 零信任架构
- * - 智能：多模型融合推理 + 视觉语言理解
- * - 规模：分布式部署 + TB 级向量存储
- * - 生态：WASM 插件 + 签名验证市场
+ * �ܹ����ԣ�
+ * OpenOxygen ���� OpenClaw �����Ʒ��������һ�� Agent ��ܡ�
+ * ���Ǽ̳� OpenClaw �Ľӿ�Э����Ϊ���ݲ㣬��������ά��ȫ�泬Խ��
+ * - ���ܣ�Rust ԭ������ + SIMD ���٣�10-100x �ٶ�����
+ * - ��ȫ�����������֪ CVE ���������� + �����μܹ�
+ * - ���ܣ���ģ���ں����� + �Ӿ���������
+ * - ��ģ���ֲ�ʽ���� + TB �������洢
+ * - ��̬��WASM ��� + ǩ����֤�г�
  *
- * 兼容 OpenClaw 是为了迁移，超越 OpenClaw 是为了未来。
+ * ���� OpenClaw ��Ϊ��Ǩ�ƣ���Խ OpenClaw ��Ϊ��δ����
  */
 import process from "node:process";
 import { enableConsoleCapture, initLogLevelFromEnv } from "./logging/index.js";
@@ -31,22 +31,22 @@ import { PluginRegistry, loadPlugins } from "./plugins/loader/index.js";
 import { translateOpenClawConfig } from "./compat/openclaw/index.js";
 import { createSubsystemLogger } from "./logging/index.js";
 const log = createSubsystemLogger("main");
-// ─── Banner ─────────────────────────────────────────────────────────────────
+// ������ Banner ����������������������������������������������������������������������������������������������������������������������������������
 function printBanner() {
     defaultRuntime.log("");
-    defaultRuntime.log("  ╔═══════════════════════════════════════════════════════╗");
-    defaultRuntime.log("  ║           O P E N  O X Y G E N  v26w11aE            ║");
-    defaultRuntime.log("  ║   The Next-Generation Windows-Native AI Agent      ║");
-    defaultRuntime.log("  ║   Beyond OpenClaw · Fused Inference · Secure       ║");
-    defaultRuntime.log("  ╚═══════════════════════════════════════════════════════╝");
+    defaultRuntime.log("  �X�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�[");
+    defaultRuntime.log("  �U           O P E N  O X Y G E N  v26w11aE            �U");
+    defaultRuntime.log("  �U   The Next-Generation Windows-Native AI Agent      �U");
+    defaultRuntime.log("  �U   Beyond OpenClaw �� Fused Inference �� Secure       �U");
+    defaultRuntime.log("  �^�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�a");
     defaultRuntime.log("");
-    defaultRuntime.log("  [Architecture] Rust Core + TypeScript · SIMD + NAPI-RS");
-    defaultRuntime.log("  [Security]   Zero-Trust · CVE Hardened · Audit Trail");
-    defaultRuntime.log("  [AI Stack]   Multi-Model Fusion · Vision-Language");
-    defaultRuntime.log("  [Scale]      Distributed · TB-Scale Vector DB");
+    defaultRuntime.log("  [Architecture] Rust Core + TypeScript �� SIMD + NAPI-RS");
+    defaultRuntime.log("  [Security]   Zero-Trust �� CVE Hardened �� Audit Trail");
+    defaultRuntime.log("  [AI Stack]   Multi-Model Fusion �� Vision-Language");
+    defaultRuntime.log("  [Scale]      Distributed �� TB-Scale Vector DB");
     defaultRuntime.log("");
 }
-// ─── Bootstrap ──────────────────────────────────────────────────────────────
+// ������ Bootstrap ����������������������������������������������������������������������������������������������������������������������������
 async function bootstrap() {
     // 1. Environment setup
     process.title = "openoxygen";
@@ -115,7 +115,7 @@ async function bootstrap() {
         // Gateway server keeps the event loop alive
     });
 }
-// ─── CLI Argument Parsing ───────────────────────────────────────────────────
+// ������ CLI Argument Parsing ������������������������������������������������������������������������������������������������������
 function parseArgs() {
     const argv = process.argv.slice(2);
     if (argv.length === 0 || argv[0] === "start") {
@@ -129,7 +129,7 @@ function parseArgs() {
     }
     return { command: argv[0] ?? "start", args: {} };
 }
-// ─── Main ───────────────────────────────────────────────────────────────────
+// ������ Main ��������������������������������������������������������������������������������������������������������������������������������������
 const { command } = parseArgs();
 switch (command) {
     case "version":
@@ -160,7 +160,7 @@ switch (command) {
         });
         break;
 }
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ������ Helpers ��������������������������������������������������������������������������������������������������������������������������������
 function deepMergeConfig(base, overrides) {
     return {
         ...base,

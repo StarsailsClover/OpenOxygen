@@ -1,8 +1,8 @@
 /**
- * OpenOxygen — Unified Task Executor (完整版v2)
+ * OpenOxygen �?Unified Task Executor (完整版v2)
  *
  * 自动选择 Terminal/GUI/Browser/Hybrid 执行模式
- * 已集成真实 Terminal/Browser 模块
+ * 已集成真�?Terminal/Browser 模块
  */
 import { createSubsystemLogger } from "../../logging/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
@@ -33,7 +33,7 @@ const PATTERNS = {
     gui: [
         /(点击|click|拖动|drag|滚动|scroll)/i,
         /(截图|screenshot|查看|view|observe)/i,
-        /(微信|qq|steam|vscode|计算器|记事本)/i,
+        /(微信|qq|steam|vscode|计算器|记事�?/i,
         /(按钮|button|菜单|menu|对话框|dialog)/i,
         /(输入|type|填写|fill|粘贴|paste)/i,
         /(颜色|color|位置|position|大小|size)/i,

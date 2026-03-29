@@ -1,7 +1,7 @@
 /**
  * OpenOxygen Native Bridge v3 - 统一高性能架构
  *
- * 技术栈: Rust + SIMD + GPU 加速
+ * 技术栈: Rust + SIMD + GPU 加�?
  * 移除 C++ 双轨制，统一使用 Rust NAPI-RS
  */
 
@@ -10,7 +10,7 @@ import { createSubsystemLogger } from "./logging/index.js";
 const log = createSubsystemLogger("native-bridge-v3");
 
 // 导入 Rust 原生模块
-// 注意: 需要重新构建 Rust 模块以包含新功能
+// 注意: 需要重新构�?Rust 模块以包含新功能
 let nativeModule: any = null;
 
 try {
@@ -23,7 +23,7 @@ try {
 
 // 高性能 API 导出
 export const NativeAPI = {
-  // 截图 (GPU 加速)
+  // 截图 (GPU 加�?
   captureScreen: async (outputPath: string) => {
     if (nativeModule?.capture_screen_dxgi) {
       return nativeModule.capture_screen_dxgi(outputPath);
@@ -32,7 +32,7 @@ export const NativeAPI = {
     return nativeModule?.capture_screen?.(outputPath) || { success: false };
   },
 
-  // 向量搜索 (SIMD 加速)
+  // 向量搜索 (SIMD 加�?
   vectorSearch: (query: number[], vectors: number[][], topK: number) => {
     if (nativeModule?.SimdVectorStore) {
       const store = new nativeModule.SimdVectorStore(query.length);
@@ -69,7 +69,7 @@ export const PerformanceMonitor = {
     }
     this.metrics.get(operation)!.push(durationMs);
 
-    // 只保留最近 100 次
+    // 只保留最�?100 �?
     if (this.metrics.get(operation)!.length > 100) {
       this.metrics.get(operation)!.shift();
     }

@@ -1,9 +1,9 @@
 /**
- * OpenOxygen — Autonomous Test Generator (26w15aD Phase 3)
+ * OpenOxygen �?Autonomous Test Generator (26w15aD Phase 3)
  *
  * 自主测试生成系统
  * 利用预置数据库和记忆教会任务分配和拆解层
- * LLM 自主决策并运行任务
+ * LLM 自主决策并运行任�?
  */
 import { createSubsystemLogger } from "../logging/index.js";
 import { generateId, nowMs } from "../utils/index.js";

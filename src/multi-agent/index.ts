@@ -1,7 +1,7 @@
 /**
- * OpenOxygen — Multi-Agent Module (26w15aD Phase 5)
+ * OpenOxygen �?Multi-Agent Module (26w15aD Phase 5)
  *
- * 统一导出多 Agent 功能
+ * 统一导出�?Agent 功能
  */
 
 // Runtime

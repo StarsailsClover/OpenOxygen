@@ -1,9 +1,7 @@
 /**
- * OpenOxygen — Web Dashboard (26w11aE_P8)
+ * OpenOxygen �?Web Dashboard (26w11aE_P8)
  *
- * 最简方案：纯 HTML + 原生 JS，零依赖，由 Gateway 直接托管。
- * 无需 React/Vue/Tauri，一个 HTML 文件覆盖全部功能。
- */
+ * 最简方案：纯 HTML + 原生 JS，零依赖，由 Gateway 直接托管�? * 无需 React/Vue/Tauri，一�?HTML 文件覆盖全部功能�? */
 export const DASHBOARD_HTML = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -301,7 +299,7 @@ async function refreshModels() {
   const tbody = document.querySelector('#modelsDetailTable tbody');
   tbody.innerHTML = (data.models || []).map(m =>
     '<tr><td><strong>' + m.model + '</strong></td><td><span class="badge blue">' + m.provider + '</span></td><td>' +
-    (m.hasKey ? '✅' : '❌') + '</td><td style="color:var(--dim);font-size:12px">' + (m.baseUrl || '-') + '</td></tr>'
+    (m.hasKey ? '�? : '�?) + '</td><td style="color:var(--dim);font-size:12px">' + (m.baseUrl || '-') + '</td></tr>'
   ).join('');
 }
 

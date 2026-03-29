@@ -1,9 +1,9 @@
 /**
- * OpenOxygen — Gateway Cluster Manager (26w11aE_P6)
+ * OpenOxygen �?Gateway Cluster Manager (26w11aE_P6)
  *
- * 进程级分布式网关：
- * - 多 Gateway 进程负载均衡
- * - 共享 SQLite 状态
+ * 进程级分布式网关�?
+ * - �?Gateway 进程负载均衡
+ * - 共享 SQLite 状�?
  * - 会话亲和 (sticky sessions)
  * - 健康检查与自动故障转移
  * - Prometheus 兼容指标
@@ -15,12 +15,12 @@ const log = createSubsystemLogger("cluster");
 class LoadBalancer {
     nodes = [];
     currentIndex = 0;
-    sessionMap = new Map(); // sessionKey → nodeId
+    sessionMap = new Map(); // sessionKey �?nodeId
     setNodes(nodes) {
         this.nodes = nodes;
     }
     /**
-     * 选择下一个健康节点
+     * 选择下一个健康节�?
      */
     select(strategy, sessionKey) {
         const healthy = this.nodes.filter((n) => n.status === "healthy");
@@ -55,9 +55,9 @@ class LoadBalancer {
         this.sessionMap.delete(sessionKey);
     }
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Health Checker
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 class HealthChecker {
     failureCounts = new Map();
     async check(node, timeoutMs) {
@@ -84,9 +84,9 @@ class HealthChecker {
         return this.failureCounts.get(nodeId) || 0;
     }
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Cluster Manager
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 export class ClusterManager {
     config;
     nodes = [];
@@ -212,8 +212,8 @@ export class ClusterManager {
             requestCount: 0,
             avgLatencyMs: 0,
         };
-        // 在实际部署中，这里会 fork 子进程运行 Gateway
-        // 当前实现为模拟节点（单进程多端口）
+        // 在实际部署中，这里会 fork 子进程运�?Gateway
+        // 当前实现为模拟节点（单进程多端口�?
         log.info(`Worker node ${node.id} assigned to port ${port}`);
         node.status = "healthy";
         return node;

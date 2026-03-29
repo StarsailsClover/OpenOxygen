@@ -1,11 +1,11 @@
 /**
- * OpenOxygen Phase 4 — Signed Input Sequences (26w11aE_P4)
+ * OpenOxygen Phase 4 �?Signed Input Sequences (26w11aE_P4)
  *
  * 签名输入序列：防篡改、防重放、可审计的输入操作链
  *
- * 安全模型：
+ * 安全模型�?
  * 1. 每个输入序列签名 (HMAC-SHA256)
- * 2. Nonce 防重放
+ * 2. Nonce 防重�?
  * 3. 时间窗口验证
  * 4. 操作日志关联审计
  */
@@ -13,11 +13,11 @@ import { createHmac, randomBytes } from "node:crypto";
 import { createSubsystemLogger } from "../logging/index.js";
 import { generateId, nowMs } from "../utils/index.js";
 const log = createSubsystemLogger("input/signed");
-// ═══════════════════════════════════════════════════════════════════════════
-// Nonce Registry — 防重放
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
+// Nonce Registry �?防重�?
+// ══════════════════════════════════════════════════════════════════════════�?
 class NonceRegistry {
-    seen = new Map(); // nonce → expiry timestamp
+    seen = new Map(); // nonce �?expiry timestamp
     cleanupTimer;
     constructor(windowMs = 300_000) {
         this.cleanupTimer = setInterval(() => this.cleanup(), 60_000);
@@ -41,9 +41,9 @@ class NonceRegistry {
         clearInterval(this.cleanupTimer);
     }
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Signed Input Manager
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 export class SignedInputManager {
     config;
     nonceRegistry;
@@ -88,14 +88,14 @@ export class SignedInputManager {
      * 验证签名输入序列
      */
     verify(sequence) {
-        // 1. 版本检查
+        // 1. 版本检�?
         if (sequence.version !== 1) {
             return {
                 valid: false,
                 reason: `Unsupported version: ${sequence.version}`,
             };
         }
-        // 2. 过期检查
+        // 2. 过期检�?
         if (nowMs() > sequence.expiresAt) {
             return { valid: false, reason: "Sequence expired" };
         }
@@ -104,18 +104,18 @@ export class SignedInputManager {
         if (sequence.signature !== expectedSig) {
             return { valid: false, reason: "Invalid signature (tampered)" };
         }
-        // 4. 重放检测
+        // 4. 重放检�?
         if (!this.nonceRegistry.register(sequence.nonce, sequence.expiresAt)) {
             return { valid: false, reason: "Replay attack detected" };
         }
-        // 5. 序列长度检查
+        // 5. 序列长度检�?
         if (sequence.actions.length > this.config.maxSequenceLength) {
             return { valid: false, reason: "Sequence too long" };
         }
         return { valid: true };
     }
     /**
-     * 执行签名序列（验证后执行）
+     * 执行签名序列（验证后执行�?
      */
     async execute(sequence, executor) {
         // 验证

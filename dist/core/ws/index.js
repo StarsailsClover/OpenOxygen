@@ -1,19 +1,19 @@
 /**
- * OpenOxygen — WebSocket Real-time Channel (26w12aA)
+ * OpenOxygen �?WebSocket Real-time Channel (26w12aA)
  *
- * 双向实时通信：
- * - 任务执行流式推送
+ * 双向实时通信�?
+ * - 任务执行流式推�?
  * - 实时打断/取消
- * - 执行参数动态修改
+ * - 执行参数动态修�?
  * - 心跳保活
  */
 import { WebSocketServer, WebSocket } from "ws";
 import { createSubsystemLogger } from "../../logging/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
 const log = createSubsystemLogger("ws");
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // WebSocket Server
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 export class RealtimeChannel {
     wss = null;
     clients = new Map();
@@ -24,7 +24,7 @@ export class RealtimeChannel {
         this.inferenceEngine = inferenceEngine;
     }
     /**
-     * 附加到现有 HTTP 服务器
+     * 附加到现�?HTTP 服务�?
      */
     attach(httpServer) {
         this.wss = new WebSocketServer({ server: httpServer, path: "/ws" });
@@ -32,7 +32,7 @@ export class RealtimeChannel {
             const clientId = generateId("ws");
             this.clients.set(clientId, ws);
             log.info(`WebSocket client connected: ${clientId} from ${req.socket.remoteAddress}`);
-            // 发送欢迎消息
+            // 发送欢迎消�?
             this.send(ws, {
                 type: "system.status",
                 id: generateId("msg"),
@@ -59,7 +59,7 @@ export class RealtimeChannel {
             });
             ws.on("close", () => {
                 this.clients.delete(clientId);
-                // 取消该客户端的所有活跃任务
+                // 取消该客户端的所有活跃任�?
                 for (const [taskId, task] of this.activeTasks) {
                     if (task.clientId === clientId) {
                         task.abortController.abort();
@@ -88,7 +88,7 @@ export class RealtimeChannel {
         log.info("WebSocket realtime channel attached at /ws");
     }
     /**
-     * 处理客户端消息
+     * 处理客户端消�?
      */
     async handleMessage(clientId, ws, msg) {
         switch (msg.type) {
@@ -102,7 +102,7 @@ export class RealtimeChannel {
                 this.handleModify(msg.taskId, msg.data);
                 break;
             case "pong":
-                // 心跳响应，忽略
+                // 心跳响应，忽�?
                 break;
             default:
                 this.send(ws, {
@@ -137,7 +137,7 @@ export class RealtimeChannel {
             abortController,
         };
         this.activeTasks.set(taskId, task);
-        // 通知任务开始
+        // 通知任务开�?
         this.send(ws, {
             type: "task.start",
             id: generateId("msg"),
@@ -157,7 +157,7 @@ export class RealtimeChannel {
             // 检查是否已取消
             if (task.status === "cancelled")
                 return;
-            // 推送结果
+            // 推送结�?
             this.send(ws, {
                 type: "chat.done",
                 id: generateId("msg"),
@@ -199,7 +199,7 @@ export class RealtimeChannel {
             task.abortController.abort();
             task.status = "cancelled";
             log.info(`Task cancelled: ${taskId}`);
-            // 通知客户端
+            // 通知客户�?
             const ws = this.clients.get(task.clientId);
             if (ws) {
                 this.send(ws, {
@@ -221,11 +221,11 @@ export class RealtimeChannel {
         const task = this.activeTasks.get(taskId);
         if (task) {
             log.info(`Task modified: ${taskId}, params: ${JSON.stringify(params)}`);
-            // 参数修改会在下一个步骤生效
+            // 参数修改会在下一个步骤生�?
         }
     }
     /**
-     * 向指定客户端发送消息
+     * 向指定客户端发送消�?
      */
     send(ws, msg) {
         if (ws.readyState === WebSocket.OPEN) {
@@ -241,13 +241,13 @@ export class RealtimeChannel {
         }
     }
     /**
-     * 获取活跃连接数
+     * 获取活跃连接�?
      */
     getClientCount() {
         return this.clients.size;
     }
     /**
-     * 获取活跃任务数
+     * 获取活跃任务�?
      */
     getActiveTaskCount() {
         return this.activeTasks.size;

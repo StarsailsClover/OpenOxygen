@@ -1,8 +1,8 @@
 /**
- * OpenOxygen — Plugin SDK
+ * OpenOxygen �?Plugin SDK
  *
- * 插件开发 SDK：提供类型定义和辅助函数，供第三方插件开发者使用。
- * 兼容 OpenClaw 的 plugin-sdk 导出接口。
+ * 插件开�?SDK：提供类型定义和辅助函数，供第三方插件开发者使用�?
+ * 兼容 OpenClaw �?plugin-sdk 导出接口�?
  */
 /**
  * Fluent builder for creating OpenOxygen plugins.

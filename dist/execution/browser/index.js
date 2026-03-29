@@ -1,17 +1,17 @@
 /**
- * OxygenBrowser — OpenOxygen 专用浏览器引擎 (26w15a Phase 4 完整版)
+ * OxygenBrowser �?OpenOxygen 专用浏览器引�?(26w15a Phase 4 完整�?
  *
- * 功能：
- *   ✅ CDP 基础客户端
- *   ✅ Chromium 进程管理
- *   ✅ Cookie 检测与复制（安全处理，不上传）
- *   ✅ CSS 选择器元素定位
- *   ✅ Hybrid fallback 策略
- *   ✅ 与普通浏览器（Chrome/Edge）对比测试
+ * 功能�?
+ *   �?CDP 基础客户�?
+ *   �?Chromium 进程管理
+ *   �?Cookie 检测与复制（安全处理，不上传）
+ *   �?CSS 选择器元素定�?
+ *   �?Hybrid fallback 策略
+ *   �?与普通浏览器（Chrome/Edge）对比测�?
  *
- * 安全注意：
- *   - 用户 Cookie 仅复制到临时目录，不上传到 GitHub
- *   - .gitignore 已排除 .state/browser-* 目录
+ * 安全注意�?
+ *   - 用户 Cookie 仅复制到临时目录，不上传�?GitHub
+ *   - .gitignore 已排�?.state/browser-* 目录
  */
 import { spawn } from "node:child_process";
 import { WebSocket } from "ws";
@@ -21,9 +21,9 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 const log = createSubsystemLogger("execution/browser");
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // CDP Client
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 class CDPClient {
     ws = null;
     messageId = 0;
@@ -83,9 +83,9 @@ class CDPClient {
         this.ws = null;
     }
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Session Management
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 const sessions = new Map();
 export async function createBrowserSession(options) {
     const cdpPort = 9222;
@@ -200,9 +200,9 @@ function findChromium() {
     }
     return null;
 }
-// ═══════════════════════════════════════════════════════════════════════════
-// Cookie Inheritance (安全：仅复制到临时目录)
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
+// Cookie Inheritance (安全：仅复制到临时目�?
+// ══════════════════════════════════════════════════════════════════════════�?
 export function findSystemBrowserCookies() {
     const paths = {};
     const localAppData = process.env.LOCALAPPDATA || "";
@@ -253,9 +253,9 @@ async function inheritSystemCookies(targetDir) {
         return false;
     }
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Page Operations
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 export async function navigate(sessionId, url) {
     const session = sessions.get(sessionId);
     if (!session?.cdpClient) {
@@ -300,9 +300,9 @@ export async function getPageInfo(sessionId) {
         return null;
     }
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // CSS Selector Element Location
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 export async function querySelector(sessionId, selector) {
     const session = sessions.get(sessionId);
     if (!session?.cdpClient)
@@ -395,9 +395,9 @@ export async function querySelectorAll(sessionId, selector) {
         return [];
     }
 }
-// ═══════════════════════════════════════════════════════════════════════════
-// Hybrid Element Location (CSS → XPath → UIA → VLM)
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
+// Hybrid Element Location (CSS �?XPath �?UIA �?VLM)
+// ══════════════════════════════════════════════════════════════════════════�?
 export async function findElementHybrid(sessionId, description) {
     // Strategy 1: CSS Selector
     const cssResult = await querySelector(sessionId, description);
@@ -508,9 +508,9 @@ async function findElementByUIA(sessionId, name) {
         return null;
     }
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Element Actions
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 export async function clickElement(sessionId, selector) {
     const session = sessions.get(sessionId);
     if (!session?.cdpClient) {
@@ -592,9 +592,9 @@ export async function typeText(sessionId, selector, text) {
         };
     }
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Cleanup
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 export function destroyBrowserSession(sessionId) {
     const session = sessions.get(sessionId);
     if (!session)
@@ -618,9 +618,9 @@ export function destroyBrowserSession(sessionId) {
     sessions.delete(sessionId);
     log.info(`Browser session destroyed: ${sessionId}`);
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Comparison with External Browsers
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 export async function compareWithExternalBrowser(url) {
     const results = {
         oxygen: { success: false, durationMs: 0, elementsFound: 0 },

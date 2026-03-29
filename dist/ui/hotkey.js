@@ -1,7 +1,7 @@
 /**
  * OpenOxygen -Global Hotkey (26w15aD Phase 6)
  *
- * 鍏ㄥ眬蹇嵎閿敜璧? * Alt+Space / Ctrl+Alt+O 蹇-熷敜璧? */
+ * 鍏ㄥ眬蹇嵎閿敜璧? * Alt+Space / Ctrl+Alt+O 蹇-熷敜�? */
 import { createSubsystemLogger } from "../logging/index.js";
 const log = createSubsystemLogger("ui/hotkey");
 // Registered hotkeys

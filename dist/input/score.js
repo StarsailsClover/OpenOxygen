@@ -1,14 +1,14 @@
 /**
- * OpenOxygen Phase 4 — Human-Likeness Scoring (26w11aE_P4)
+ * OpenOxygen Phase 4 �?Human-Likeness Scoring (26w11aE_P4)
  *
  * 评估输入序列的人类行为相似度
- * 用于反检测、质量保证、安全审计
+ * 用于反检测、质量保证、安全审�?
  */
 import { createSubsystemLogger } from "../logging/index.js";
 const log = createSubsystemLogger("input/score");
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Scoring Engine
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 export class HumanLikenessScorer {
     /**
      * 评估输入序列的人类行为相似度
@@ -49,10 +49,10 @@ export class HumanLikenessScorer {
         if (hasMicroPauses)
             score += 15;
         if (mean > 50 && mean < 2000)
-            score += 15; // 合理的间隔范围
+            score += 15; // 合理的间隔范�?
         // 惩罚
         if (cv < 0.05)
-            score -= 30; // 太均匀 = 机器人
+            score -= 30; // 太均匀 = 机器�?
         if (mean < 10)
             score -= 20; // 太快
         return {
@@ -93,16 +93,16 @@ export class HumanLikenessScorer {
                 angles.push(Math.abs(angle));
             }
             totalSegments++;
-            // 直线检测：连续3点共线
+            // 直线检测：连续3点共�?
             if (angles.length > 0 && angles[angles.length - 1] < 0.05) {
                 straightSegments++;
             }
         }
         const straightLineRatio = totalSegments > 0 ? straightSegments / totalSegments : 0;
-        // 路径平滑度 = 角度变化不应太大也不应太小
+        // 路径平滑�?= 角度变化不应太大也不应太�?
         const meanAngle = angles.length > 0 ? angles.reduce((a, b) => a + b, 0) / angles.length : 0;
         const pathSmoothness = meanAngle > 0.01 && meanAngle < 0.5 ? 0.8 : 0.3;
-        // 加速→减速模式
+        // 加速→减速模�?
         const hasAcceleration = distances.length >= 3 &&
             distances[0] < distances[Math.floor(distances.length / 2)] &&
             distances[Math.floor(distances.length / 2)] >
@@ -120,7 +120,7 @@ export class HumanLikenessScorer {
         if (straightLineRatio < 0.3)
             score += 10;
         if (straightLineRatio > 0.8)
-            score -= 20; // 太直 = 机器人
+            score -= 20; // 太直 = 机器�?
         return {
             score: Math.max(0, Math.min(100, score)),
             pathSmoothness,
@@ -130,7 +130,7 @@ export class HumanLikenessScorer {
         };
     }
     scorePattern(actions) {
-        // 重复性检测
+        // 重复性检�?
         const typeSequence = actions.map((a) => a.type).join(",");
         const chunks = [];
         for (let len = 2; len <= 5; len++) {
@@ -143,14 +143,14 @@ export class HumanLikenessScorer {
         }
         const uniqueChunks = new Set(chunks);
         const isRepetitive = chunks.length > 0 && uniqueChunks.size / chunks.length < 0.3;
-        // 犹豫检测
+        // 犹豫检�?
         const hasHesitation = actions.some((a, i) => {
             if (i === 0)
                 return false;
             const gap = a.timestamp - actions[i - 1].timestamp;
             return gap > 500 && gap < 3000;
         });
-        // 点击精确度（像素级精确不自然）
+        // 点击精确度（像素级精确不自然�?
         const clickActions = actions.filter((a) => a.type === "click" && a.x !== undefined);
         const clickPrecision = clickActions.length > 1
             ? (() => {
@@ -200,5 +200,5 @@ export class HumanLikenessScorer {
         return suggestions;
     }
 }
-// 全局评分器
+// 全局评分�?
 export const humanScorer = new HumanLikenessScorer();

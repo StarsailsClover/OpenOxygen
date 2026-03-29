@@ -1,7 +1,7 @@
 /**
- * OpenOxygen — Multi-Agent Module (26w15aD Phase 5)
+ * OpenOxygen �?Multi-Agent Module (26w15aD Phase 5)
  *
- * 统一导出多 Agent 功能
+ * 统一导出�?Agent 功能
  */
 // Runtime
 export { registerAgent, unregisterAgent, getAgent, listAgents, findBestAgent, delegateTask, getAssignment, waitForTask, saveCheckpoint, loadCheckpoint, resumeTask, cancelTask, getTaskStatistics, } from "./runtime.js";

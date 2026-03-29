@@ -1,8 +1,8 @@
 /**
- * OpenOxygen — Task Planner
+ * OpenOxygen �?Task Planner
  *
- * 任务规划引擎：将用户意图分解为可执行的多步骤计划。
- * 实现「推理-规划-执行-反馈-反思」一体化循环。
+ * 任务规划引擎：将用户意图分解为可执行的多步骤计划�?
+ * 实现「推�?规划-执行-反馈-反思」一体化循环�?
  */
 import { createSubsystemLogger } from "../../logging/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
@@ -85,7 +85,7 @@ Rules:
 2. Prefer parallel execution where possible (minimize dependencies)
 3. Include verification steps after critical operations
 4. For Windows system operations, use specific Win32 action names
-5. Keep plans concise — avoid unnecessary steps
+5. Keep plans concise �?avoid unnecessary steps
 
 Respond ONLY with the JSON array, no other text.`;
 export class TaskPlanner {

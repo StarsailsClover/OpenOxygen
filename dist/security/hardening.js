@@ -1,27 +1,27 @@
 /**
- * OpenOxygen — Security Hardening Module
+ * OpenOxygen �?Security Hardening Module
  *
  * 针对 OpenClaw 已知漏洞的全面防护：
  *
- * [CVE-2026-25253] Gateway URL 注入 → 硬编码绑定 + 禁止外部覆盖
- * [ClawJacked]     WebSocket 跨域劫持 → Origin 校验 + 速率限制 + 设备审批
- * [CVE-2026-24763] PATH 命令注入 → 环境变量净化 + 参数白名单
- * [CVE-2026-25593] 日志投毒/提示注入 → 日志消毒 + 输入边界隔离
- * [Supply Chain]   插件投毒 → 签名校验 + 权限声明 + 沙箱执行
- * [CNCERT Advisory] 凭证明文存储 → 内存加密 + 文件权限锁定
+ * [CVE-2026-25253] Gateway URL 注入 �?硬编码绑�?+ 禁止外部覆盖
+ * [ClawJacked]     WebSocket 跨域劫持 �?Origin 校验 + 速率限制 + 设备审批
+ * [CVE-2026-24763] PATH 命令注入 �?环境变量净�?+ 参数白名�?
+ * [CVE-2026-25593] 日志投毒/提示注入 �?日志消毒 + 输入边界隔离
+ * [Supply Chain]   插件投毒 �?签名校验 + 权限声明 + 沙箱执行
+ * [CNCERT Advisory] 凭证明文存储 �?内存加密 + 文件权限锁定
  */
 import crypto from "node:crypto";
 import { createSubsystemLogger } from "../logging/index.js";
 const log = createSubsystemLogger("security/hardening");
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // 1. GATEWAY URL INJECTION DEFENSE  (CVE-2026-25253)
-//    OpenClaw 从 URL query string 读取 gatewayUrl 并自动连接，
-//    攻击者可构造恶意链接劫持 WebSocket 连接。
-//    OpenOxygen 方案：完全禁止从外部输入覆盖 gateway 地址。
-// ═══════════════════════════════════════════════════════════════════════════
+//    OpenClaw �?URL query string 读取 gatewayUrl 并自动连接，
+//    攻击者可构造恶意链接劫�?WebSocket 连接�?
+//    OpenOxygen 方案：完全禁止从外部输入覆盖 gateway 地址�?
+// ══════════════════════════════════════════════════════════════════════════�?
 const ALLOWED_GATEWAY_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
 export function validateGatewayBinding(host, port) {
-    // 禁止绑定到 0.0.0.0 或公网地址
+    // 禁止绑定�?0.0.0.0 或公网地址
     if (host === "0.0.0.0" || host === "::") {
         return {
             safe: false,
@@ -40,8 +40,8 @@ export function validateGatewayBinding(host, port) {
     return { safe: true };
 }
 /**
- * 拒绝从 URL 参数、HTTP header 或外部输入动态设置 gateway 地址。
- * 这是 CVE-2026-25253 的根本修复。
+ * 拒绝�?URL 参数、HTTP header 或外部输入动态设�?gateway 地址�?
+ * 这是 CVE-2026-25253 的根本修复�?
  */
 export function sanitizeGatewayUrl(input) {
     try {
@@ -58,7 +58,7 @@ export function sanitizeGatewayUrl(input) {
 }
 const DEFAULT_RATE_LIMIT = {
     windowMs: 60_000, // 1 分钟窗口
-    maxRequests: 60, // 每分钟最多 60 请求
+    maxRequests: 60, // 每分钟最�?60 请求
     maxAuthFailures: 5, // 5 次认证失败后封禁
     blockDurationMs: 300_000, // 封禁 5 分钟
 };
@@ -69,7 +69,7 @@ export class RateLimiter {
         this.config = { ...DEFAULT_RATE_LIMIT, ...config };
     }
     /**
-     * 检查请求是否被允许。返回 false 表示应拒绝。
+     * 检查请求是否被允许。返�?false 表示应拒绝�?
      */
     check(clientIp) {
         const now = Date.now();
@@ -78,7 +78,7 @@ export class RateLimiter {
             record = { requests: [], authFailures: 0, blockedUntil: 0 };
             this.clients.set(clientIp, record);
         }
-        // 检查是否在封禁期
+        // 检查是否在封禁�?
         if (record.blockedUntil > now) {
             return {
                 allowed: false,
@@ -101,7 +101,7 @@ export class RateLimiter {
         return { allowed: true };
     }
     /**
-     * 记录认证失败。超过阈值自动封禁。
+     * 记录认证失败。超过阈值自动封禁�?
      */
     recordAuthFailure(clientIp) {
         let record = this.clients.get(clientIp);
@@ -117,7 +117,7 @@ export class RateLimiter {
         }
     }
     /**
-     * 认证成功后重置失败计数。
+     * 认证成功后重置失败计数�?
      */
     resetAuthFailures(clientIp) {
         const record = this.clients.get(clientIp);
@@ -126,7 +126,7 @@ export class RateLimiter {
         }
     }
     /**
-     * 定期清理过期记录，防止内存泄漏。
+     * 定期清理过期记录，防止内存泄漏�?
      */
     cleanup() {
         const now = Date.now();
@@ -138,12 +138,12 @@ export class RateLimiter {
     }
 }
 /**
- * WebSocket Origin 校验。
- * 只允许来自本地或已知白名单的 Origin。
+ * WebSocket Origin 校验�?
+ * 只允许来自本地或已知白名单的 Origin�?
  */
 export function validateWebSocketOrigin(origin, allowedOrigins) {
     if (!origin)
-        return false; // 无 Origin 一律拒绝
+        return false; // �?Origin 一律拒�?
     const allowed = new Set([
         "http://127.0.0.1",
         "http://localhost",
@@ -161,21 +161,21 @@ export function validateWebSocketOrigin(origin, allowedOrigins) {
         return false;
     }
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // 3. COMMAND INJECTION DEFENSE  (CVE-2026-24763, CVE-2026-25157)
-//    OpenClaw 的 Docker sandbox 和 MCP 服务器存在 PATH 注入和参数注入。
-//    OpenOxygen 方案：参数白名单 + shell 元字符过滤 + 环境变量净化。
-// ═══════════════════════════════════════════════════════════════════════════
+//    OpenClaw �?Docker sandbox �?MCP 服务器存�?PATH 注入和参数注入�?
+//    OpenOxygen 方案：参数白名单 + shell 元字符过�?+ 环境变量净化�?
+// ══════════════════════════════════════════════════════════════════════════�?
 /** Shell 危险字符 */
 const SHELL_META_CHARS = /[;&|`$(){}[\]<>!\n\r\\'"]/g;
 /**
- * 净化 shell 参数，移除所有元字符。
+ * 净�?shell 参数，移除所有元字符�?
  */
 export function sanitizeShellArg(arg) {
     return arg.replace(SHELL_META_CHARS, "");
 }
 /**
- * 验证命令是否在白名单中。
+ * 验证命令是否在白名单中�?
  */
 export function validateCommand(command, allowedCommands) {
     const basename = command
@@ -183,7 +183,7 @@ export function validateCommand(command, allowedCommands) {
         .pop()
         ?.toLowerCase()
         .replace(/\.exe$/i, "") ?? "";
-    // 绝对禁止的命令（无论配置如何）
+    // 绝对禁止的命令（无论配置如何�?
     const ALWAYS_BLOCKED = new Set([
         "format",
         "diskpart",
@@ -230,12 +230,12 @@ export function validateCommand(command, allowedCommands) {
     return { allowed: true };
 }
 /**
- * 净化环境变量，移除危险的 PATH 覆盖。
- * 防止 CVE-2026-24763 类型的 PATH 注入。
+ * 净化环境变量，移除危险�?PATH 覆盖�?
+ * 防止 CVE-2026-24763 类型�?PATH 注入�?
  */
 export function sanitizeEnvironment(env) {
     const sanitized = { ...env };
-    // 移除可被利用的环境变量
+    // 移除可被利用的环境变�?
     const DANGEROUS_VARS = [
         "LD_PRELOAD",
         "LD_LIBRARY_PATH",
@@ -255,13 +255,13 @@ export function sanitizeEnvironment(env) {
     }
     return sanitized;
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // 4. LOG POISONING / PROMPT INJECTION DEFENSE  (CVE-2026-25593)
-//    OpenClaw 的日志可被注入恶意内容，Agent 读取日志时触发提示注入。
-//    OpenOxygen 方案：日志内容消毒 + 结构化日志 + 输入/输出边界隔离。
-// ═══════════════════════════════════════════════════════════════════════════
+//    OpenClaw 的日志可被注入恶意内容，Agent 读取日志时触发提示注入�?
+//    OpenOxygen 方案：日志内容消�?+ 结构化日�?+ 输入/输出边界隔离�?
+// ══════════════════════════════════════════════════════════════════════════�?
 /**
- * 消毒日志内容，移除可能的提示注入载荷。
+ * 消毒日志内容，移除可能的提示注入载荷�?
  */
 export function sanitizeLogContent(content) {
     // 移除控制字符
@@ -274,8 +274,8 @@ export function sanitizeLogContent(content) {
     return sanitized;
 }
 /**
- * 检测输入中的提示注入模式。
- * 返回风险等级和匹配的模式。
+ * 检测输入中的提示注入模式�?
+ * 返回风险等级和匹配的模式�?
  */
 export function detectPromptInjection(input) {
     const patterns = [];
@@ -301,7 +301,7 @@ export function detectPromptInjection(input) {
         /\bexfiltrate\b/i,
         /curl\s+.*\s+--data/i,
     ];
-    // 低风险：可疑但可能无害
+    // 低风险：可疑但可能无�?
     const LOW_RISK = [
         /pretend\s+(you|to\s+be)/i,
         /act\s+as\s+(if|a)/i,
@@ -334,19 +334,19 @@ export function detectPromptInjection(input) {
     }
     return { risk, patterns };
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // 5. PLUGIN SUPPLY CHAIN DEFENSE  (CNCERT Advisory)
-//    OpenClaw 的 skills 生态存在投毒风险，恶意插件可窃取密钥、部署后门。
-//    OpenOxygen 方案：SHA-256 完整性校验 + 权限声明审计 + 沙箱隔离。
-// ═══════════════════════════════════════════════════════════════════════════
+//    OpenClaw �?skills 生态存在投毒风险，恶意插件可窃取密钥、部署后门�?
+//    OpenOxygen 方案：SHA-256 完整性校�?+ 权限声明审计 + 沙箱隔离�?
+// ══════════════════════════════════════════════════════════════════════════�?
 /**
- * 计算文件的 SHA-256 哈希。
+ * 计算文件�?SHA-256 哈希�?
  */
 export function computeFileHash(content) {
     return crypto.createHash("sha256").update(content).digest("hex");
 }
 /**
- * 验证插件完整性。
+ * 验证插件完整性�?
  */
 export function verifyPluginIntegrity(content, expectedHash) {
     const actual = computeFileHash(content);
@@ -356,15 +356,15 @@ export function verifyPluginIntegrity(content, expectedHash) {
     }
     return match;
 }
-/** 插件不应请求的危险权限 */
+/** 插件不应请求的危险权�?*/
 const DANGEROUS_PLUGIN_PERMISSIONS = new Set([
     "registry.write",
     "process.kill",
     "file.delete",
 ]);
 /**
- * 审计插件权限声明。
- * 返回风险评估和建议。
+ * 审计插件权限声明�?
+ * 返回风险评估和建议�?
  */
 export function auditPluginPermissions(permissions) {
     const warnings = [];
@@ -375,7 +375,7 @@ export function auditPluginPermissions(permissions) {
     }
     // 权限数量过多也是风险信号
     if (permissions.length > 10) {
-        warnings.push(`Plugin requests ${permissions.length} permissions — unusually high`);
+        warnings.push(`Plugin requests ${permissions.length} permissions �?unusually high`);
     }
     const risk = warnings.some((w) => w.includes("dangerous"))
         ? "dangerous"
@@ -384,15 +384,15 @@ export function auditPluginPermissions(permissions) {
             : "safe";
     return { risk, warnings };
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // 6. CREDENTIAL PROTECTION  (CNCERT Advisory)
-//    OpenClaw 在环境变量和 localStorage 中明文存储 API Key。
-//    OpenOxygen 方案：运行时内存加密 + 配置文件权限检查。
-// ═══════════════════════════════════════════════════════════════════════════
+//    OpenClaw 在环境变量和 localStorage 中明文存�?API Key�?
+//    OpenOxygen 方案：运行时内存加密 + 配置文件权限检查�?
+// ══════════════════════════════════════════════════════════════════════════�?
 // 运行时密钥：进程启动时随机生成，不持久化
 const RUNTIME_KEY = crypto.randomBytes(32);
 /**
- * 加密敏感字符串（用于内存中保存 API Key）。
+ * 加密敏感字符串（用于内存中保�?API Key）�?
  */
 export function encryptSecret(plaintext) {
     const iv = crypto.randomBytes(16);
@@ -405,7 +405,7 @@ export function encryptSecret(plaintext) {
     return `${iv.toString("hex")}:${tag.toString("hex")}:${encrypted.toString("hex")}`;
 }
 /**
- * 解密敏感字符串。
+ * 解密敏感字符串�?
  */
 export function decryptSecret(ciphertext) {
     const [ivHex, tagHex, dataHex] = ciphertext.split(":");
@@ -419,7 +419,7 @@ export function decryptSecret(ciphertext) {
     return decipher.update(data).toString("utf-8") + decipher.final("utf-8");
 }
 /**
- * 遮蔽 API Key 用于日志输出。
+ * 遮蔽 API Key 用于日志输出�?
  */
 export function maskApiKey(key) {
     if (key.length <= 8)
@@ -427,11 +427,11 @@ export function maskApiKey(key) {
     return key.slice(0, 4) + "****" + key.slice(-4);
 }
 /**
- * 时间安全的字符串比较，防止计时攻击。
+ * 时间安全的字符串比较，防止计时攻击�?
  */
 export function timingSafeEqual(a, b) {
     if (a.length !== b.length) {
-        // 仍然执行比较以保持恒定时间
+        // 仍然执行比较以保持恒定时�?
         crypto.timingSafeEqual(Buffer.from(a.padEnd(Math.max(a.length, b.length))), Buffer.from(b.padEnd(Math.max(a.length, b.length))));
         return false;
     }

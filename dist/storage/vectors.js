@@ -1,16 +1,16 @@
 /**
- * OpenOxygen — Persistent Vector Store (26w11aE_P5)
+ * OpenOxygen �?Persistent Vector Store (26w11aE_P5)
  *
- * 向量持久化：内存向量 + SQLite 元数据 + 磁盘缓存
- * 支持 Int8 量化、LRU 淘汰、增量索引
+ * 向量持久化：内存向量 + SQLite 元数�?+ 磁盘缓存
+ * 支持 Int8 量化、LRU 淘汰、增量索�?
  */
 import { createSubsystemLogger } from "../logging/index.js";
 import { VectorStore } from "../memory/vector/index.js";
 import { createHash } from "node:crypto";
 const log = createSubsystemLogger("storage/vectors");
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Int8 Quantization
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 export function quantizeFloat64ToInt8(vector) {
     const min = Math.min(...vector);
     const max = Math.max(...vector);
@@ -30,9 +30,9 @@ export function dequantizeInt8ToFloat64(quantized, scale, offset) {
     }
     return result;
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // LRU Cache
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 class LRUCache {
     map = new Map();
     maxSize;
@@ -70,9 +70,9 @@ class LRUCache {
         this.map.clear();
     }
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Persistent Vector Store
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 export class PersistentVectorStore {
     memoryStore;
     sqliteStore;
@@ -92,7 +92,7 @@ export class PersistentVectorStore {
     addChunk(chunk) {
         // 存入内存向量存储
         this.memoryStore.addChunk(chunk);
-        // 存入 SQLite 元数据
+        // 存入 SQLite 元数�?
         this.sqliteStore.saveChunk({
             id: chunk.id,
             source: chunk.source,
@@ -120,7 +120,7 @@ export class PersistentVectorStore {
         let added = 0;
         let skipped = 0;
         for (const chunk of chunks) {
-            // 检查内存限制
+            // 检查内存限�?
             if (this.memoryStore.getChunkCount() >= this.maxMemoryChunks) {
                 // LRU 淘汰：移除最旧的
                 this.memoryStore.removeExpired();
@@ -136,13 +136,13 @@ export class PersistentVectorStore {
         return { added, skipped };
     }
     /**
-     * 搜索（混合：内存向量 + BM25）
+     * 搜索（混合：内存向量 + BM25�?
      */
     search(query, queryEmbedding, opts) {
         return this.memoryStore.search(query, queryEmbedding, opts);
     }
     /**
-     * 清理过期块
+     * 清理过期�?
      */
     cleanup() {
         const memoryRemoved = this.memoryStore.removeExpired();
@@ -165,7 +165,7 @@ export class PersistentVectorStore {
         };
     }
     /**
-     * 清空所有数据
+     * 清空所有数�?
      */
     clear() {
         this.memoryStore.clear();

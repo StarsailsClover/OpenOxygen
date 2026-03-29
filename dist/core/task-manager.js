@@ -1,16 +1,16 @@
 /**
- * OpenOxygen — Task Manager (26w12aA)
+ * OpenOxygen �?Task Manager (26w12aA)
  *
- * 任务生命周期管理：创建、执行、打断、恢复、取消
+ * 任务生命周期管理：创建、执行、打断、恢复、取�?
  */
 import { createSubsystemLogger } from "../logging/index.js";
 import { nowMs } from "../utils/index.js";
 import { TaskPlanner, getNextExecutableSteps, isPlanComplete, isPlanFailed, addReflection, updateStepStatus, } from "../inference/planner/index.js";
 import { ReflectionEngine } from "../inference/reflection/index.js";
 const log = createSubsystemLogger("task-manager");
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Task Manager
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 export class TaskManager {
     tasks = new Map();
     inferenceEngine;
@@ -24,7 +24,7 @@ export class TaskManager {
         this.stepExecutor = stepExecutor;
     }
     /**
-     * 创建并执行任务
+     * 创建并执行任�?
      */
     async createAndRun(goal, context, options) {
         // 1. 生成计划
@@ -80,13 +80,13 @@ export class TaskManager {
         return this.runTask(task);
     }
     /**
-     * 获取任务状态
+     * 获取任务状�?
      */
     getTask(taskId) {
         return this.tasks.get(taskId);
     }
     /**
-     * 列出所有任务
+     * 列出所有任�?
      */
     listTasks() {
         return [...this.tasks.values()].map((t) => ({
@@ -101,7 +101,7 @@ export class TaskManager {
         task.status = "running";
         task.startedAt = task.startedAt || nowMs();
         while (!isPlanComplete(task.plan) && !isPlanFailed(task.plan)) {
-            // 检查取消/暂停
+            // 检查取�?暂停
             if (task.abortController.signal.aborted) {
                 task.status = "cancelled";
                 break;
@@ -122,7 +122,7 @@ export class TaskManager {
                 try {
                     const result = await this.stepExecutor(step);
                     updateStepStatus(task.plan, step.id, "completed", result);
-                    // 反思
+                    // 反�?
                     const reflectionResult = await this.reflection.reflect(task.plan, step.id, result);
                     if (reflectionResult.shouldRetry &&
                         task.retryCount < task.maxRetries) {
@@ -135,7 +135,7 @@ export class TaskManager {
                 catch (err) {
                     const errorMsg = err instanceof Error ? err.message : String(err);
                     updateStepStatus(task.plan, step.id, "failed", undefined, errorMsg);
-                    // 反思失败
+                    // 反思失�?
                     const { shouldContinue } = await this.planner.reflectOnStep(task.plan, step.id, null, errorMsg);
                     if (!shouldContinue) {
                         task.plan.status = "failed";

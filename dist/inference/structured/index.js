@@ -1,17 +1,17 @@
 /**
- * OpenOxygen — Structured LLM Output Module (26w15a)
+ * OpenOxygen �?Structured LLM Output Module (26w15a)
  *
- * 解决 qwen3:4b thinking 模式下 response 为空的问题。
- * 兼容：
- *   1. 标准模型（response 字段直接输出 JSON）
- *   2. Thinking 模型（JSON 在 thinking 字段中）
+ * 解决 qwen3:4b thinking 模式�?response 为空的问题�?
+ * 兼容�?
+ *   1. 标准模型（response 字段直接输出 JSON�?
+ *   2. Thinking 模型（JSON �?thinking 字段中）
  *   3. Ollama format:"json" 模式
- *   4. 任意模型的 fallback 提取
+ *   4. 任意模型�?fallback 提取
  *
  * 策略优先级：
  *   1. response 字段直接解析
  *   2. format:"json" 强制 JSON 模式
- *   3. thinking 字段提取（平衡括号法）
+ *   3. thinking 字段提取（平衡括号法�?
  *   4. 正则 fallback 提取关键字段
  */
 import { createSubsystemLogger } from "../../logging/index.js";
@@ -103,8 +103,8 @@ export function extractJSON(text) {
     return null;
 }
 /**
- * 正则 fallback：从文本中提取关键字段
- * 用于 JSON 完全无法解析时的最后手段
+ * 正则 fallback：从文本中提取关键字�?
+ * 用于 JSON 完全无法解析时的最后手�?
  */
 export function regexFallback(text, fields) {
     const result = {};
@@ -271,7 +271,7 @@ async function singleCall(prompt, cfg) {
 }
 // ─── Convenience Functions ──────────────────────────────────────────────────
 /**
- * 快速获取 Agent 决策 JSON
+ * 快速获�?Agent 决策 JSON
  */
 export async function getAgentDecision(prompt, model = "qwen3:4b") {
     return structuredLLMCall(prompt, {
@@ -283,7 +283,7 @@ export async function getAgentDecision(prompt, model = "qwen3:4b") {
     });
 }
 /**
- * 快速获取 Agent 反思 JSON
+ * 快速获�?Agent 反�?JSON
  */
 export async function getAgentReflection(prompt, model = "qwen3:4b") {
     return structuredLLMCall(prompt, {

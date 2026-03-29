@@ -1,12 +1,12 @@
 /**
- * OpenOxygen — Global Memory System (26w15a Phase 1)
+ * OpenOxygen �?Global Memory System (26w15a Phase 1)
  *
  * 全局记忆系统：跨会话、跨任务的用户偏好和历史操作记忆
  *
- * 功能：
- *   - 用户偏好存储（工作目录、常用命令、喜欢的模型）
- *   - 任务历史索引（按应用、按时间、按类型）
- *   - 快速检索（"上次在 VS Code 做了什么？"）
+ * 功能�?
+ *   - 用户偏好存储（工作目录、常用命令、喜欢的模型�?
+ *   - 任务历史索引（按应用、按时间、按类型�?
+ *   - 快速检索（"上次�?VS Code 做了什么？"�?
  *   - 上下文自动注入（新任务自动带上相关历史）
  */
 import { createSubsystemLogger } from "../../logging/index.js";
@@ -199,7 +199,7 @@ export class GlobalMemory {
     }
     // ─── Context Injection ────────────────────────────────────────────────────
     /**
-     * 为新任务自动注入相关上下文
+     * 为新任务自动注入相关上下�?
      */
     injectContext(instruction) {
         const contexts = [];
@@ -209,7 +209,7 @@ export class GlobalMemory {
         for (const keyword of keywords) {
             const related = this.queryTasks({ keyword, limit: 3 });
             for (const task of related) {
-                contexts.push(`[历史] ${task.instruction} → ${task.success ? "成功" : "失败"}`);
+                contexts.push(`[历史] ${task.instruction} �?${task.success ? "成功" : "失败"}`);
             }
         }
         // Get user preferences that might be relevant

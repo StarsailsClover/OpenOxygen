@@ -1,8 +1,8 @@
 /**
- * OpenOxygen — Unified Result Type
+ * OpenOxygen �?Unified Result Type
  *
- * 统一的操作结果类型，替代分散的 success/error 模式。
- * 所有模块应使用 OxygenResult<T> 作为返回类型。
+ * 统一的操作结果类型，替代分散�?success/error 模式�?
+ * 所有模块应使用 OxygenResult<T> 作为返回类型�?
  */
 
 export type OxygenResult<T = void> = {

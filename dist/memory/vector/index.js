@@ -1,9 +1,9 @@
 /**
- * OpenOxygen — Memory System (Vector Store + Hybrid Search)
+ * OpenOxygen �?Memory System (Vector Store + Hybrid Search)
  *
- * 分层记忆系统：向量检索 + BM25 关键词检索 + 生命周期管理。
- * 使用 better-sqlite3 作为本地存储后端。
- * 接口兼容 OpenClaw 的 MemorySearchManager。
+ * 分层记忆系统：向量检�?+ BM25 关键词检�?+ 生命周期管理�?
+ * 使用 better-sqlite3 作为本地存储后端�?
+ * 接口兼容 OpenClaw �?MemorySearchManager�?
  */
 import { createSubsystemLogger } from "../../logging/index.js";
 import { nowMs } from "../../utils/index.js";

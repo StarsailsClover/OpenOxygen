@@ -1,8 +1,8 @@
 /**
- * OpenOxygen — Inference Engine
+ * OpenOxygen �?Inference Engine
  *
- * 自适应推理引擎：根据任务复杂度自动选择推理模式。
- * 支持 fast/balanced/deep 三档推理深度。
+ * 自适应推理引擎：根据任务复杂度自动选择推理模式�?
+ * 支持 fast/balanced/deep 三档推理深度�?
  */
 import { createSubsystemLogger } from "../../logging/index.js";
 import { generateId, nowMs, withTimeout } from "../../utils/index.js";
@@ -76,10 +76,10 @@ async function callOpenAICompatible(messages, config, tools, providerName) {
     // Qwen3 thinking 模式：content 可能为空，实际内容在 reasoning 字段
     const rawContent = choice?.message.content || "";
     const reasoning = choice?.message.reasoning || "";
-    // 优先使用 content，如果为空则从 reasoning 提取最终答案
+    // 优先使用 content，如果为空则�?reasoning 提取最终答�?
     let finalContent = rawContent;
     if (!finalContent && reasoning) {
-        // 尝试提取 reasoning 中最后一段作为答案
+        // 尝试提取 reasoning 中最后一段作为答�?
         const lines = reasoning
             .split("\n")
             .filter((l) => l.trim().length > 0);

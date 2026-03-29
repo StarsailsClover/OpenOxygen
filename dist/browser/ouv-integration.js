@@ -1,5 +1,5 @@
 /**
- * OpenOxygen — OxygenBrowser OUV Integration (26w15aD Phase 4)
+ * OpenOxygen �?OxygenBrowser OUV Integration (26w15aD Phase 4)
  *
  * 视觉辅助定位
  * OUV + UIA 双重定位

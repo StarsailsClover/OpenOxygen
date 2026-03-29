@@ -1,7 +1,7 @@
 /**
- * OpenOxygen — Security Audit System
+ * OpenOxygen �?Security Audit System
  *
- * 全链路审计：记录所有系统操作，支持查询、告警和事务回滚。
+ * 全链路审计：记录所有系统操作，支持查询、告警和事务回滚�?
  */
 import fs from "node:fs/promises";
 import path from "node:path";

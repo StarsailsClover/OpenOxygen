@@ -1,13 +1,13 @@
 /**
- * OpenOxygen — Multi-Agent Communication Protocol (26w15a Phase 2)
+ * OpenOxygen �?Multi-Agent Communication Protocol (26w15a Phase 2)
  *
- * 多 Agent 通信协议：支持多个 Agent 实例协同工作
+ * �?Agent 通信协议：支持多�?Agent 实例协同工作
  *
- * 功能：
- *   - Agent 注册与发现
- *   - 任务委派 API（"Agent B，帮我检查这个网页"）
- *   - 结果聚合（多个 Agent 的结果合并）
- *   - 负载均衡（任务分配给空闲 Agent）
+ * 功能�?
+ *   - Agent 注册与发�?
+ *   - 任务委派 API�?Agent B，帮我检查这个网�?�?
+ *   - 结果聚合（多�?Agent 的结果合并）
+ *   - 负载均衡（任务分配给空闲 Agent�?
  *   - WebSocket 广播通道
  *   - 消息 ACK 机制
  */

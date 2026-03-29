@@ -1,8 +1,7 @@
 /**
- * OpenOxygen — OxygenStepRecorder (OSR) Module (26w15aD Phase 2)
+ * OpenOxygen �?OxygenStepRecorder (OSR) Module (26w15aD Phase 2)
  *
- * 统一导出 OSR 所有功能
- */
+ * 统一导出 OSR 所有功�? */
 
 // Recorder
 export {

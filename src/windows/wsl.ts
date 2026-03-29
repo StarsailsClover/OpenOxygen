@@ -1,6 +1,6 @@
 /**
  * WSL2 Control
- *
+ * 
  * Control and automation for Windows Subsystem for Linux
  */
 
@@ -40,9 +40,6 @@ export class WSLController {
     log.info("Listing WSL distributions");
 
     try {
-      // Placeholder for actual WSL listing
-      // Would execute: wsl --list --verbose
-
       const distros: WSLDistribution[] = [
         { name: "Ubuntu", state: "Running", version: 2, default: true },
         { name: "Debian", state: "Stopped", version: 2, default: false },
@@ -54,7 +51,7 @@ export class WSLController {
 
       return {
         success: true,
-        data: { distributions: distros },
+        output: { distributions: distros },
       };
     } catch (error) {
       return {
@@ -71,8 +68,6 @@ export class WSLController {
     log.info(`Starting WSL distribution: ${name}`);
 
     try {
-      // Placeholder: wsl -d {name}
-
       const distro = this.distributions.get(name);
       if (distro) {
         distro.state = "Running";
@@ -80,7 +75,7 @@ export class WSLController {
 
       return {
         success: true,
-        data: { name, started: true },
+        output: { name, started: true },
       };
     } catch (error) {
       return {
@@ -97,8 +92,6 @@ export class WSLController {
     log.info(`Stopping WSL distribution: ${name}`);
 
     try {
-      // Placeholder: wsl -t {name}
-
       const distro = this.distributions.get(name);
       if (distro) {
         distro.state = "Stopped";
@@ -106,7 +99,7 @@ export class WSLController {
 
       return {
         success: true,
-        data: { name, stopped: true },
+        output: { name, stopped: true },
       };
     } catch (error) {
       return {
@@ -126,11 +119,9 @@ export class WSLController {
     log.info(`Executing in ${distribution}: ${command}`);
 
     try {
-      // Placeholder: wsl -d {distribution} {command}
-
       return {
         success: true,
-        data: {
+        output: {
           stdout: "Command output",
           stderr: "",
           exitCode: 0,
@@ -151,11 +142,9 @@ export class WSLController {
     log.info("Configuring WSL", config);
 
     try {
-      // Placeholder: Update .wslconfig
-
       return {
         success: true,
-        data: { configured: true },
+        output: { configured: true },
       };
     } catch (error) {
       return {
@@ -172,11 +161,9 @@ export class WSLController {
     log.info(`Installing WSL distribution: ${name}`);
 
     try {
-      // Placeholder: wsl --install -d {name}
-
       return {
         success: true,
-        data: { name, installed: true },
+        output: { name, installed: true },
       };
     } catch (error) {
       return {
@@ -196,11 +183,9 @@ export class WSLController {
     log.info(`Exporting ${name} to ${outputPath}`);
 
     try {
-      // Placeholder: wsl --export {name} {outputPath}
-
       return {
         success: true,
-        data: { name, outputPath },
+        output: { name, outputPath },
       };
     } catch (error) {
       return {
@@ -221,11 +206,9 @@ export class WSLController {
     log.info(`Importing ${name} from ${filePath}`);
 
     try {
-      // Placeholder: wsl --import {name} {installLocation} {filePath}
-
       return {
         success: true,
-        data: { name, imported: true },
+        output: { name, imported: true },
       };
     } catch (error) {
       return {

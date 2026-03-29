@@ -1,19 +1,19 @@
 /**
- * OpenOxygen — Input Safety Guard (26w11aE_P3)
+ * OpenOxygen �?Input Safety Guard (26w11aE_P3)
  *
- * 防止输入系统锁定用户鼠标/键盘的安全机制
+ * 防止输入系统锁定用户鼠标/键盘的安全机�?
  */
 import { createSubsystemLogger } from "../logging/index.js";
 const log = createSubsystemLogger("input/safety");
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Safety Configuration
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 export const INPUT_SAFETY_CONFIG = {
     // 最大连续输入操作数
     maxConsecutiveOps: 10,
-    // 操作之间最小间隔 (ms)
+    // 操作之间最小间�?(ms)
     minIntervalMs: 100,
-    // 紧急停止热键: Ctrl+Shift+Esc
+    // 紧急停止热�? Ctrl+Shift+Esc
     emergencyHotkey: {
         ctrl: true,
         shift: true,
@@ -21,22 +21,22 @@ export const INPUT_SAFETY_CONFIG = {
     },
     // 自动释放超时 (ms)
     autoReleaseTimeoutMs: 5000,
-    // 安全区域 (屏幕中心区域不操作)
+    // 安全区域 (屏幕中心区域不操�?
     safeZone: {
         enabled: true,
         marginPercent: 10, // 屏幕边缘 10% 为安全区
     },
 };
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Input Safety Guard
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 export class InputSafetyGuard {
     opCount = 0;
     lastOpTime = 0;
     isPaused = false;
     autoReleaseTimer = null;
     /**
-     * 检查是否允许执行输入操作
+     * 检查是否允许执行输入操�?
      */
     check(operation) {
         if (this.isPaused) {
@@ -49,7 +49,7 @@ export class InputSafetyGuard {
                 reason: `Too many consecutive operations (${this.opCount}), reset required`,
             };
         }
-        // 检查操作间隔
+        // 检查操作间�?
         const now = Date.now();
         const elapsed = now - this.lastOpTime;
         if (elapsed < INPUT_SAFETY_CONFIG.minIntervalMs) {
@@ -96,12 +96,12 @@ export class InputSafetyGuard {
         log.info("Input system resumed");
     }
     /**
-     * 紧急停止所有输入
+     * 紧急停止所有输�?
      */
     emergencyStop() {
         this.pause();
         this.clearAutoReleaseTimer();
-        // 尝试释放所有按键
+        // 尝试释放所有按�?
         this.releaseAllKeys();
         log.error("EMERGENCY STOP: All input operations halted");
     }
@@ -132,13 +132,13 @@ export class InputSafetyGuard {
         }
     }
     releaseAllKeys() {
-        // 使用 native 模块释放所有按键
+        // 使用 native 模块释放所有按�?
         try {
             const native = require("../native-bridge.js");
             if (native.loadNativeModule) {
                 const mod = native.loadNativeModule();
                 if (mod && mod.sendHotkey) {
-                    // 发送空操作确保状态重置
+                    // 发送空操作确保状态重�?
                     log.debug("Attempting to release all keys via native module");
                 }
             }
@@ -150,9 +150,9 @@ export class InputSafetyGuard {
 }
 // 全局安全守卫实例
 export const inputSafetyGuard = new InputSafetyGuard();
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Safe Input Wrapper
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 export async function safeInput(operation, fn, options) {
     if (!options?.skipSafetyCheck) {
         const check = inputSafetyGuard.check(operation);
@@ -166,20 +166,20 @@ export async function safeInput(operation, fn, options) {
         return result;
     }
     catch (err) {
-        // 错误时自动暂停
+        // 错误时自动暂�?
         inputSafetyGuard.pause();
         throw err;
     }
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Emergency Recovery
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 /**
- * 紧急恢复函数 - 可从外部调用
+ * 紧急恢复函�?- 可从外部调用
  */
 export function emergencyRecover() {
     inputSafetyGuard.emergencyStop();
-    // 尝试移动鼠标到屏幕中心
+    // 尝试移动鼠标到屏幕中�?
     try {
         const native = require("../native-bridge.js");
         const mod = native.loadNativeModule();
@@ -196,7 +196,7 @@ export function emergencyRecover() {
     }
     log.info("Emergency recovery completed");
 }
-// 注册全局紧急处理
+// 注册全局紧急处�?
 if (typeof process !== "undefined") {
     process.on("SIGINT", () => {
         emergencyRecover();

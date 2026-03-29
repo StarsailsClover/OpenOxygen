@@ -1,20 +1,20 @@
 /**
- * OpenOxygen — Async Compute Stack (26w11aE)
+ * OpenOxygen �?Async Compute Stack (26w11aE)
  *
  * 异步多线程算力栈：核心性能基础设施
  *
- * 设计目标：
- * 1. 最大化 CPU/GPU 利用率
+ * 设计目标�?
+ * 1. 最大化 CPU/GPU 利用�?
  * 2. 最小化任务切换开销
  * 3. 可预测的性能特征
- * 4. 资源隔离与公平调度
+ * 4. 资源隔离与公平调�?
  */
 import { createSubsystemLogger } from "../../logging/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
 const log = createSubsystemLogger("async/compute");
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Thread Pool Manager
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 export class ThreadPool {
     workers = [];
     taskQueue = [];
@@ -51,7 +51,7 @@ export class ThreadPool {
         });
     }
     /**
-     * 优先级调度
+     * 优先级调�?
      */
     schedule() {
         if (this.currentConcurrency >= this.maxConcurrency)
@@ -99,7 +99,7 @@ export class ThreadPool {
         return false;
     }
     /**
-     * 获取当前状态
+     * 获取当前状�?
      */
     getStatus() {
         return {
@@ -116,24 +116,24 @@ export class GPUDispatcher {
         this.detectDevices();
     }
     detectDevices() {
-        // 实际实现需要调用 native 模块检测 GPU
+        // 实际实现需要调�?native 模块检�?GPU
         // 这里提供框架接口
         log.info("GPU device detection (requires native module)");
     }
     /**
-     * 选择最优 GPU 设备
+     * 选择最�?GPU 设备
      */
     selectDevice(hints) {
         const available = this.devices.filter((d) => d.isAvailable);
         if (available.length === 0)
             return null;
         if (hints.gpuMemoryMB) {
-            // 选择满足显存要求的最小设备
+            // 选择满足显存要求的最小设�?
             return (available
                 .filter((d) => d.memoryMB >= hints.gpuMemoryMB)
                 .sort((a, b) => a.memoryMB - b.memoryMB)[0] || null);
         }
-        // 默认选择第一个可用设备
+        // 默认选择第一个可用设�?
         return available[0] || null;
     }
     /**
@@ -144,7 +144,7 @@ export class GPUDispatcher {
         if (!device) {
             throw new Error("No suitable GPU device available");
         }
-        // 添加到设备队列
+        // 添加到设备队�?
         const queue = this.deviceQueues.get(device.id) || [];
         queue.push(task);
         this.deviceQueues.set(device.id, queue);
@@ -152,9 +152,9 @@ export class GPUDispatcher {
         return task.fn();
     }
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Async Compute Stack (Main Export)
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 export class AsyncComputeStack {
     threadPool;
     gpuDispatcher;
@@ -169,7 +169,7 @@ export class AsyncComputeStack {
         this.gpuDispatcher = new GPUDispatcher();
     }
     /**
-     * 提交计算任务（自动选择 CPU/GPU）
+     * 提交计算任务（自动选择 CPU/GPU�?
      */
     async submit(fn, options = {}) {
         const startTime = nowMs();
@@ -205,7 +205,7 @@ export class AsyncComputeStack {
     async batch(tasks, options = {}) {
         const limit = options.concurrency || this.threadPool.getStatus().maxConcurrency;
         const results = [];
-        // 使用 p-limit 风格的并发控制
+        // 使用 p-limit 风格的并发控�?
         const executing = [];
         for (let i = 0; i < tasks.length; i++) {
             const task = tasks[i];

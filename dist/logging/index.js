@@ -1,8 +1,8 @@
 /**
- * OpenOxygen — Logging Subsystem
+ * OpenOxygen �?Logging Subsystem
  *
- * 结构化日志系统，支持子系统标签、级别过滤和控制台捕获。
- * 独立实现，不依赖 OpenClaw 的 logging 模块。
+ * 结构化日志系统，支持子系统标签、级别过滤和控制台捕获�?
+ * 独立实现，不依赖 OpenClaw �?logging 模块�?
  */
 import process from "node:process";
 const LOG_LEVEL_PRIORITY = {

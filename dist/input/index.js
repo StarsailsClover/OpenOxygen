@@ -1,7 +1,7 @@
 /**
- * OpenOxygen — Input Layer (26w15aD Phase 1)
+ * OpenOxygen �?Input Layer (26w15aD Phase 1)
  *
- * 请求链路革新 - 输入层
+ * 请求链路革新 - 输入�?
  * 全局快捷键、系统托盘、语音输入、剪贴板监听
  */
 import { createSubsystemLogger } from "../logging/index.js";

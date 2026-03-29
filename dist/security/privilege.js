@@ -1,5 +1,5 @@
 /**
- * OpenOxygen — Windows Privilege Isolation (26w11aE_P1)
+ * OpenOxygen �?Windows Privilege Isolation (26w11aE_P1)
  *
  * 针对 risks.md Windows 权限继承风险的加固实现：
  * - 低权限用户创建与运行
@@ -12,11 +12,11 @@ import { platform } from "node:os";
 import process from "node:process";
 const log = createSubsystemLogger("security/privilege");
 /**
- * 检测当前进程权限级别
+ * 检测当前进程权限级�?
  */
 export function detectPrivilegeLevel() {
     if (platform() !== "win32") {
-        // 非 Windows 平台简化处理
+        // �?Windows 平台简化处�?
         return {
             level: (process.getuid?.() === 0 ? "admin" : "user"),
             isElevated: process.getuid?.() === 0,
@@ -26,7 +26,7 @@ export function detectPrivilegeLevel() {
         };
     }
     try {
-        // Windows: 使用 whoami 和 net session 检测
+        // Windows: 使用 whoami �?net session 检�?
         const username = execSync("whoami", { encoding: "utf-8" }).trim();
         const [domain = "", user = "unknown"] = username.includes("\\")
             ? username.split("\\")
@@ -42,7 +42,7 @@ export function detectPrivilegeLevel() {
         catch {
             isElevated = false;
         }
-        // 检测 SYSTEM 账户
+        // 检�?SYSTEM 账户
         if (username.toLowerCase().includes("system") ||
             username.toLowerCase().includes("nt authority")) {
             level = "system";
@@ -73,7 +73,7 @@ export class LowPrivilegeSandbox {
         this.config = config;
     }
     /**
-     * 创建低权限 Windows 用户
+     * 创建低权�?Windows 用户
      */
     createUser() {
         if (platform() !== "win32") {
@@ -92,7 +92,7 @@ export class LowPrivilegeSandbox {
             }
             // 创建用户
             execSync(`net user ${this.config.username} ${this.config.password} /add /active:yes /comment:"OpenOxygen Sandbox User"`, { stdio: "inherit" });
-            // 从 Users 组移除（限制权限）
+            // �?Users 组移除（限制权限�?
             try {
                 execSync(`net localgroup Users ${this.config.username} /delete`, {
                     stdio: "ignore",
@@ -130,7 +130,7 @@ export class LowPrivilegeSandbox {
         }
     }
     /**
-     * 删除低权限用户
+     * 删除低权限用�?
      */
     deleteUser() {
         if (platform() !== "win32")
@@ -188,11 +188,11 @@ export class LowPrivilegeSandbox {
         });
     }
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Privilege Drop
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 /**
- * 尝试降级权限（仅限 Unix）
+ * 尝试降级权限（仅�?Unix�?
  */
 export function dropPrivileges(targetUser) {
     if (platform() === "win32") {
@@ -202,7 +202,7 @@ export function dropPrivileges(targetUser) {
     try {
         if (process.getuid && process.setuid) {
             if (process.getuid() === 0) {
-                // 当前是 root，尝试降级
+                // 当前�?root，尝试降�?
                 const user = targetUser || "nobody";
                 // 获取用户 UID（简化处理）
                 const { uid, gid } = getUserIds(user);
@@ -271,7 +271,7 @@ export function spawnIsolated(config) {
             });
         }
         else {
-            // Unix: 使用 chroot 或 systemd-run
+            // Unix: 使用 chroot �?systemd-run
             const child = spawn(config.command, config.args, {
                 ...spawnOptions,
                 env: { ...process.env, PATH: "/usr/bin:/bin" },
@@ -286,7 +286,7 @@ export function spawnIsolated(config) {
             });
             // 内存限制（通过 cgroup，简化处理）
             const memoryWatcher = setInterval(() => {
-                // 实际实现需要读取 /proc/[pid]/status
+                // 实际实现需要读�?/proc/[pid]/status
             }, 1000);
             // 超时
             const timeout = setTimeout(() => {
@@ -307,9 +307,9 @@ export function spawnIsolated(config) {
         }
     });
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Security Policy Enforcement
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 export class PrivilegePolicy {
     minLevel;
     sandbox;
@@ -317,7 +317,7 @@ export class PrivilegePolicy {
         this.minLevel = minLevel;
     }
     /**
-     * 检查当前权限是否满足策略
+     * 检查当前权限是否满足策�?
      */
     check() {
         const current = detectPrivilegeLevel();
@@ -329,7 +329,7 @@ export class PrivilegePolicy {
                 reason: `Current level ${current.level} below required ${this.minLevel}`,
             };
         }
-        // 警告：以管理员运行
+        // 警告：以管理员运�?
         if (current.level === "admin" || current.level === "system") {
             return {
                 allowed: true,
@@ -347,7 +347,7 @@ export class PrivilegePolicy {
         this.sandbox.createUser();
     }
     /**
-     * 执行敏感操作（自动降级或沙箱）
+     * 执行敏感操作（自动降级或沙箱�?
      */
     async executeSensitive(operation, options = {}) {
         const check = this.check();
@@ -359,7 +359,7 @@ export class PrivilegePolicy {
             if (!this.sandbox && options.sandboxConfig) {
                 this.enableSandbox(options.sandboxConfig);
             }
-            // 实际执行需要序列化操作，这里简化处理
+            // 实际执行需要序列化操作，这里简化处�?
             log.warn("Sandbox execution requested but not fully implemented");
         }
         return operation();

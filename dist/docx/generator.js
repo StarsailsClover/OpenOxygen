@@ -1,8 +1,8 @@
 /**
- * OpenOxygen — DOCX Generator (26w15aD Phase 7)
+ * OpenOxygen �?DOCX Generator (26w15aD Phase 7)
  *
  * 真实 docx 文档生成
- * 集成 docx 库，支持表格、图片、样式
+ * 集成 docx 库，支持表格、图片、样�?
  */
 import { createSubsystemLogger } from "../logging/index.js";
 import * as fs from "node:fs";
@@ -50,7 +50,7 @@ function convertSectionsToMarkdown(sections, options) {
         markdown += `# ${options.title}\n\n`;
     }
     if (options.author) {
-        markdown += `**作者:** ${options.author}\n\n`;
+        markdown += `**作�?** ${options.author}\n\n`;
     }
     if (options.subject) {
         markdown += `**主题:** ${options.subject}\n\n`;

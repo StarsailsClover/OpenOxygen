@@ -1,8 +1,8 @@
 /**
- * OpenOxygen — Memory Lifecycle Manager
+ * OpenOxygen �?Memory Lifecycle Manager
  *
- * 记忆生命周期管理：文件索引、增量同步、过期清理、嵌入生成。
- * 管理 workspace + memory + sessions 三个记忆源。
+ * 记忆生命周期管理：文件索引、增量同步、过期清理、嵌入生成�?
+ * 管理 workspace + memory + sessions 三个记忆源�?
  */
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -151,7 +151,7 @@ export class MemoryManager {
         const startTime = nowMs();
         const paths = opts?.paths ?? this.config.extraPaths ?? [];
         if (!opts?.force && nowMs() - this.lastSyncTime < 60_000) {
-            log.debug("Skipping sync — too recent");
+            log.debug("Skipping sync �?too recent");
             return { indexed: 0, chunks: 0 };
         }
         log.info(`Memory sync started (${paths.length} paths)`);

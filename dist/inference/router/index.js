@@ -1,8 +1,8 @@
 /**
- * OpenOxygen — Multi-Model Router
+ * OpenOxygen �?Multi-Model Router
  *
- * 多模型智能路由：根据任务类型、复杂度、成本约束自动选择最优模型。
- * 支持负载均衡、故障转移、API Key 轮换。
+ * 多模型智能路由：根据任务类型、复杂度、成本约束自动选择最优模型�?
+ * 支持负载均衡、故障转移、API Key 轮换�?
  */
 import { createSubsystemLogger } from "../../logging/index.js";
 const log = createSubsystemLogger("inference/router");

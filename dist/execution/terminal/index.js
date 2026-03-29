@@ -1,12 +1,12 @@
 /**
- * OpenOxygen — Terminal Executor (Simplified v1)
+ * OpenOxygen �?Terminal Executor (Simplified v1)
  *
  * 当前实现状态：框架搭建，核心功能待实现
  * TODO:
- * - [ ] 持久会话状态管理 (SQLite)
+ * - [ ] 持久会话状态管�?(SQLite)
  * - [ ] 命令安全过滤完整实现
  * - [ ] 流式输出捕获
- * - [ ] 与 Gateway API 集成
+ * - [ ] �?Gateway API 集成
  */
 import { spawn } from "node:child_process";
 import { createSubsystemLogger } from "../../logging/index.js";

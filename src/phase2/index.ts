@@ -1,8 +1,7 @@
 /**
  * OpenOxygen - Phase 2 Module Index (26w15aD Phase 7)
  *
- * Phase 2: 高级推理与自我优化
- */
+ * Phase 2: 高级推理与自我优�? */
 
 // Self-Healing
 export {

@@ -1,8 +1,8 @@
 /**
- * OpenOxygen — Plugin System
+ * OpenOxygen �?Plugin System
  *
- * 插件加载器：发现、验证、加载和管理插件生命周期。
- * 兼容 OpenClaw 插件协议。
+ * 插件加载器：发现、验证、加载和管理插件生命周期�?
+ * 兼容 OpenClaw 插件协议�?
  */
 import fs from "node:fs/promises";
 import path from "node:path";

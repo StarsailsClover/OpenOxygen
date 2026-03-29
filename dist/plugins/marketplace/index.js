@@ -1,5 +1,5 @@
 /**
- * OpenOxygen — Plugin Marketplace (26w11aE_P7)
+ * OpenOxygen �?Plugin Marketplace (26w11aE_P7)
  *
  * 安全插件生态系统：
  * - Ed25519 签名验证
@@ -15,9 +15,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { resolveStateDir } from "../../core/config/index.js";
 const log = createSubsystemLogger("marketplace");
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Plugin Integrity & Signing
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 export function computePluginHash(pluginDir) {
     const hash = createHash("sha256");
     const files = walkFiles(pluginDir).sort();
@@ -57,9 +57,9 @@ export function verifyPluginSignature(hash, signature, publicKeyPem) {
         return false;
     }
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Plugin Repository
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 export class PluginRepository {
     pluginsDir;
     installed = new Map();
@@ -71,7 +71,7 @@ export class PluginRepository {
         this.loadInstalled();
     }
     /**
-     * 从 OpenClaw skills 目录导入
+     * �?OpenClaw skills 目录导入
      */
     importFromOpenClaw(skillDir) {
         try {
@@ -94,7 +94,7 @@ export class PluginRepository {
             if (metaPath) {
                 meta = JSON.parse(fs.readFileSync(metaPath, "utf-8"));
             }
-            // 计算完整性哈希
+            // 计算完整性哈�?
             const hash = computePluginHash(path.dirname(clawJsonPath));
             // 安全审计
             const audit = this.auditPermissions(manifest.permissions);
@@ -102,7 +102,7 @@ export class PluginRepository {
                 log.error(`Plugin ${manifest.name} blocked: dangerous permissions [${audit.blocked.join(", ")}]`);
                 return null;
             }
-            // 复制到本地仓库
+            // 复制到本地仓�?
             const destDir = path.join(this.pluginsDir, manifest.name);
             if (!fs.existsSync(destDir)) {
                 fs.mkdirSync(destDir, { recursive: true });
@@ -132,7 +132,7 @@ export class PluginRepository {
      * 安装本地插件
      */
     installLocal(pluginDir) {
-        // 查找 manifest（支持 claw.json 或 manifest.json）
+        // 查找 manifest（支�?claw.json �?manifest.json�?
         const manifestPath = findFile(pluginDir, "claw.json") || findFile(pluginDir, "manifest.json");
         if (!manifestPath) {
             log.error(`No manifest found in ${pluginDir}`);
@@ -175,7 +175,7 @@ export class PluginRepository {
         return true;
     }
     /**
-     * 列出已安装插件
+     * 列出已安装插�?
      */
     list() {
         return [...this.installed.values()];
@@ -187,7 +187,7 @@ export class PluginRepository {
         return this.installed.get(name);
     }
     /**
-     * 搜索插件（本地已安装）
+     * 搜索插件（本地已安装�?
      */
     search(query) {
         const lower = query.toLowerCase();
@@ -196,7 +196,7 @@ export class PluginRepository {
             p.manifest.tags.some((t) => t.toLowerCase().includes(lower)));
     }
     /**
-     * 验证插件完整性
+     * 验证插件完整�?
      */
     verifyIntegrity(name) {
         const plugin = this.installed.get(name);
@@ -296,9 +296,9 @@ export class PluginRepository {
         fs.writeFileSync(registryPath, JSON.stringify(data, null, 2), "utf-8");
     }
 }
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // Helpers
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 function walkFiles(dir) {
     const results = [];
     const entries = fs.readdirSync(dir, { withFileTypes: true });

@@ -1,209 +1,127 @@
 /**
- * OpenOxygen — Core Type Definitions
+ * OpenOxygen Core Types
  *
- * 全局基础类型，所有模块共享。
- * 设计原则：与 OpenClaw 接口协议对齐但完全独立实现。
+ * Type definitions for all modules
  */
 
-// ─── Runtime ────────────────────────────────────────────────────────────────
+// ============================================================================
+// Core Types
+// ============================================================================
 
-export type OxygenRuntimeEnv = {
-  log: (...args: unknown[]) => void;
-  error: (...args: unknown[]) => void;
-  warn: (...args: unknown[]) => void;
-  exit: (code: number) => void;
-  platform: "win32" | "linux" | "darwin";
-};
+export type TaskStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
 
-// ─── Config ─────────────────────────────────────────────────────────────────
-
-export type ModelProvider =
-  | "openai"
-  | "anthropic"
-  | "gemini"
-  | "openrouter"
-  | "ollama"
-  | "stepfun"
-  | "custom";
-
-// ─── Task Execution Strategies ──────────────────────────────────────────────
-
-export type ExecutionMode = "terminal" | "gui" | "browser" | "hybrid" | "auto";
-
-export type TaskStrategy = {
-  mode: ExecutionMode;
-  confidence: number;
-  reason: string;
-  fallback?: ExecutionMode;
-};
-
-export type ModelConfig = {
-  provider: ModelProvider;
-  model: string;
-  apiKey?: string;
-  baseUrl?: string;
-  temperature?: number;
-  maxTokens?: number;
-  topP?: number;
-  /** Provider-specific extra params */
-  extra?: Record<string, unknown>;
-};
-
-export type GatewayAuthConfig = {
-  mode: "token" | "password" | "none";
-  token?: string;
-  password?: string;
-};
-
-export type GatewayConfig = {
-  host: string;
-  port: number;
-  auth: GatewayAuthConfig;
-  cors?: { origins?: string[] };
-  rateLimit?: { windowMs?: number; maxRequests?: number };
-};
-
-export type SecurityConfig = {
-  /** Minimum privilege level for system operations */
-  privilegeLevel: "minimal" | "standard" | "elevated";
-  /** Enable full audit trail */
-  auditEnabled: boolean;
-  /** Allowed filesystem paths (glob patterns) */
-  allowedPaths?: string[];
-  /** Blocked executable patterns */
-  blockedExecutables?: string[];
-  /** Enable transaction rollback for destructive ops */
-  rollbackEnabled: boolean;
-};
-
-export type MemoryConfig = {
-  backend: "builtin" | "external";
-  embeddingProvider?: ModelProvider;
-  embeddingModel?: string;
-  /** Max chunks in vector store */
-  maxChunks?: number;
-  /** Lifecycle: auto-expire after N days */
-  ttlDays?: number;
-  /** Hybrid search: vector + keyword */
-  hybridSearch: boolean;
-  /** Extra memory paths to index */
-  extraPaths?: string[];
-};
-
-export type VisionConfig = {
-  enabled: boolean;
-  /** Dual-pipeline: fast (lightweight) + precise (heavy model) */
-  fastModel?: string;
-  preciseModel?: string;
-  /** Screenshot capture interval in ms */
-  captureIntervalMs?: number;
-  /** UI element detection confidence threshold */
-  confidenceThreshold?: number;
-};
-
-export type AgentEntry = {
+export interface Task {
   id: string;
-  name?: string;
-  workspace?: string;
-  model?: ModelConfig;
-  skills?: string[];
-  memorySearch?: Partial<MemoryConfig>;
-  identity?: { systemPrompt?: string; persona?: string };
-  sandbox?: { enabled: boolean; timeoutMs?: number };
-  tools?: string[];
-};
-
-export type ChannelConfig = {
-  id: string;
-  type: string;
-  enabled: boolean;
-  config?: Record<string, unknown>;
-};
-
-export type PluginConfig = {
   name: string;
-  enabled: boolean;
-  path?: string;
-  config?: Record<string, unknown>;
-};
-
-export type OxygenConfig = {
-  version: string;
-  gateway: GatewayConfig;
-  security: SecurityConfig;
-  memory: MemoryConfig;
-  vision: VisionConfig;
-  models: ModelConfig[];
-  agents: { default?: string; list: AgentEntry[] };
-  channels: ChannelConfig[];
-  plugins: PluginConfig[];
-  /** OpenClaw compatibility mode */
-  compat?: { openclaw?: { enabled: boolean; configPath?: string } };
-  /** Raw env overrides */
-  env?: Record<string, string>;
-};
-
-// ─── Session & Routing ──────────────────────────────────────────────────────
-
-export type SessionScope = "per-sender" | "global" | "per-channel";
-
-export type SessionEntry = {
-  id: string;
-  key: string;
-  agentId: string;
-  channelId?: string;
-  createdAt: number;
-  lastActiveAt: number;
-  metadata?: Record<string, unknown>;
-};
-
-export type RouteMatch =
-  | "binding.peer"
-  | "binding.channel"
-  | "binding.account"
-  | "default";
-
-export type ResolvedRoute = {
-  agentId: string;
-  channelId: string;
-  accountId: string;
-  sessionKey: string;
-  mainSessionKey: string;
-  matchedBy: RouteMatch;
-};
-
-// ─── Inference & Planning ───────────────────────────────────────────────────
-
-export type InferenceMode = "fast" | "balanced" | "deep";
-
-export type PlanStep = {
-  id: string;
-  action: string;
-  params: Record<string, unknown>;
-  dependencies: string[];
-  status: "pending" | "running" | "completed" | "failed" | "skipped";
-  result?: unknown;
+  status: TaskStatus;
+  startTime?: number;
+  endTime?: number;
   error?: string;
-};
+  result?: unknown;
+}
 
-export type ExecutionPlan = {
+export interface ExecutionContext {
+  taskId: string;
+  agentId?: string;
+  userId?: string;
+  workspace?: string;
+  variables: Record<string, unknown>;
+}
+
+export type ExecutionMode = "sync" | "async" | "parallel" | "sequential";
+
+export interface ExecutionPlan {
   id: string;
-  goal: string;
   steps: PlanStep[];
-  createdAt: number;
-  updatedAt: number;
-  status: "planning" | "executing" | "reflecting" | "completed" | "failed";
-  reflections: ReflectionEntry[];
-};
+  mode: ExecutionMode;
+}
 
-export type ReflectionEntry = {
-  stepId: string;
-  observation: string;
-  adjustment?: string;
+export interface PlanStep {
+  id: string;
+  name: string;
+  action: string;
+  params?: Record<string, unknown>;
+  dependsOn?: string[];
+}
+
+// ============================================================================
+// Config Types
+// ============================================================================
+
+export interface OxygenConfig {
+  version: string;
+  name: string;
+  description?: string;
+  settings: Record<string, unknown>;
+}
+
+export interface OxygenRuntimeEnv {
+  nodeVersion: string;
+  platform: string;
+  arch: string;
+  version: string;
+}
+
+// ============================================================================
+// Gateway Types
+// ============================================================================
+
+export interface OxygenEvent {
+  type: string;
+  payload: unknown;
   timestamp: number;
-};
+  source: string;
+}
 
-// ─── Execution ──────────────────────────────────────────────────────────────
+export type OxygenEventHandler = (event: OxygenEvent) => void | Promise<void>;
+
+export interface ResolvedRoute {
+  path: string;
+  handler: string;
+  params: Record<string, string>;
+}
+
+export interface RouteMatch {
+  route: string;
+  params: Record<string, string>;
+  matched: boolean;
+}
+
+// ============================================================================
+// Session Types
+// ============================================================================
+
+export interface SessionEntry {
+  id: string;
+  userId: string;
+  createdAt: number;
+  lastActive: number;
+  data: Record<string, unknown>;
+}
+
+// ============================================================================
+// Model Types
+// ============================================================================
+
+export interface ModelConfig {
+  id: string;
+  name: string;
+  provider: string;
+  capabilities: string[];
+  config: Record<string, unknown>;
+}
+
+// ============================================================================
+// Tool Types
+// ============================================================================
+
+export type ToolResult = {
+  success: boolean;
+  data?: unknown;
+  output?: unknown;
+  error?: string;
+  durationMs?: number;
+};
 
 export type ToolInvocation = {
   toolName: string;
@@ -211,89 +129,30 @@ export type ToolInvocation = {
   timeout?: number;
 };
 
-export type ToolResult = {
-  success: boolean;
-  output?: unknown;
-  error?: string;
-  durationMs: number;
-};
+// ============================================================================
+// Plugin Types
+// ============================================================================
 
-export type SystemOperation =
-  | "file.read"
-  | "file.write"
-  | "file.delete"
-  | "file.list"
-  | "process.start"
-  | "process.kill"
-  | "process.list"
-  | "registry.read"
-  | "registry.write"
-  | "network.request"
-  | "clipboard.read"
-  | "clipboard.write"
-  | "screen.capture"
-  | "input.keyboard"
-  | "input.mouse";
-
-// ─── Memory ─────────────────────────────────────────────────────────────────
-
-export type MemorySource = "memory" | "sessions" | "workspace";
-
-export type MemorySearchResult = {
-  path: string;
-  startLine: number;
-  endLine: number;
-  score: number;
-  snippet: string;
-  source: MemorySource;
-  citation?: string;
-};
-
-export type MemoryChunk = {
-  id: string;
-  content: string;
-  embedding?: number[];
-  source: MemorySource;
-  path: string;
-  startLine: number;
-  endLine: number;
-  createdAt: number;
-  expiresAt?: number;
-};
-
-// ─── Plugin SDK ─────────────────────────────────────────────────────────────
-
-export type PluginManifest = {
+export interface PluginManifest {
   name: string;
   version: string;
-  description?: string;
-  author?: string;
-  entryPoint: string;
-  permissions?: SystemOperation[];
-  configSchema?: Record<string, unknown>;
-};
+  description: string;
+  author: string;
+  license: string;
+}
 
-export type PluginContext = {
+export interface PluginContext {
+  logger: unknown;
   config: Record<string, unknown>;
-  logger: Pick<OxygenRuntimeEnv, "log" | "error" | "warn">;
-  runtime: OxygenRuntimeEnv;
-};
+  api: unknown;
+}
 
-export type PluginHookPhase =
-  | "before-inference"
-  | "after-inference"
-  | "before-execution"
-  | "after-execution"
-  | "on-message"
-  | "on-error";
+export interface PluginHook {
+  event: string;
+  handler: (context: PluginContext) => void | Promise<void>;
+}
 
-export type PluginHook = {
-  phase: PluginHookPhase;
-  priority?: number;
-  handler: (ctx: PluginContext, payload: unknown) => Promise<unknown>;
-};
-
-export type OxygenPluginDefinition = {
+export interface OxygenPluginDefinition {
   manifest: PluginManifest;
   hooks?: PluginHook[];
   tools?: Array<{
@@ -305,45 +164,135 @@ export type OxygenPluginDefinition = {
       ctx: PluginContext,
     ) => Promise<ToolResult>;
   }>;
-  activate?: (ctx: PluginContext) => Promise<void>;
-  deactivate?: (ctx: PluginContext) => Promise<void>;
-};
+}
 
-// ─── Audit ──────────────────────────────────────────────────────────────────
+// ============================================================================
+// System Types
+// ============================================================================
 
-export type AuditSeverity = "info" | "warn" | "critical";
+export type SystemOperation =
+  | "file.read"
+  | "file.write"
+  | "file.delete"
+  | "file.list"
+  | "shell.execute"
+  | "browser.navigate"
+  | "browser.click"
+  | "browser.type";
 
-export type AuditEntry = {
-  id: string;
-  timestamp: number;
-  operation: SystemOperation | string;
-  actor: string;
-  target?: string;
-  severity: AuditSeverity;
+export interface SystemCall {
+  operation: SystemOperation;
+  params: Record<string, unknown>;
+}
+
+// ============================================================================
+// Inference Types
+// ============================================================================
+
+export interface InferenceRequest {
+  model?: string;
+  messages: Array<{
+    role: "system" | "user" | "assistant";
+    content: string;
+  }>;
+  temperature?: number;
+  maxTokens?: number;
+}
+
+export interface InferenceResult {
+  content: string;
+  usage: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+  model: string;
+}
+
+// ============================================================================
+// Error Types
+// ============================================================================
+
+export interface OxygenError {
+  code: string;
+  message: string;
   details?: Record<string, unknown>;
-  rollbackable: boolean;
-};
+  stack?: string;
+}
 
-// ─── Events ─────────────────────────────────────────────────────────────────
+// ============================================================================
+// Skill Types
+// ============================================================================
 
-export type OxygenEvent =
-  | { type: "gateway.started"; port: number }
-  | { type: "gateway.stopped" }
-  | {
-      type: "agent.message";
-      agentId: string;
-      sessionKey: string;
-      content: string;
-    }
-  | { type: "agent.tool-call"; agentId: string; tool: string }
-  | { type: "plan.created"; planId: string }
-  | { type: "plan.step-completed"; planId: string; stepId: string }
-  | { type: "plan.completed"; planId: string }
-  | { type: "plan.failed"; planId: string; error: string }
-  | { type: "memory.synced"; chunks: number }
-  | { type: "plugin.loaded"; name: string }
-  | { type: "plugin.error"; name: string; error: string }
-  | { type: "security.violation"; entry: AuditEntry }
-  | { type: "vision.capture"; timestamp: number };
+export type SkillHandler = (...args: any[]) => Promise<ToolResult>;
 
-export type OxygenEventHandler = (event: OxygenEvent) => void | Promise<void>;
+export interface Skill {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  handler: SkillHandler;
+  parameters?: Array<{
+    name: string;
+    type: string;
+    required: boolean;
+    description: string;
+  }>;
+}
+
+// ============================================================================
+// Security Types
+// ============================================================================
+
+export interface Permission {
+  resource: string;
+  action: "read" | "write" | "execute" | "admin";
+  granted: boolean;
+}
+
+export interface AuditLog {
+  timestamp: number;
+  action: string;
+  userId: string;
+  resource: string;
+  result: "success" | "failure";
+  details?: Record<string, unknown>;
+}
+
+// ============================================================================
+// Memory Types
+// ============================================================================
+
+export interface MemoryChunk {
+  id: string;
+  content: string;
+  embedding?: number[];
+  metadata?: Record<string, unknown>;
+  createdAt: number;
+}
+
+export interface MemorySearchResult {
+  chunk: MemoryChunk;
+  score: number;
+}
+
+export interface MemorySource {
+  id: string;
+  type: string;
+  name: string;
+  content: string;
+}
+
+// ============================================================================
+// Subtask Types
+// ============================================================================
+
+export interface SubTask {
+  id: string;
+  name: string;
+  instruction: string;
+  mode?: "sync" | "async";
+  dependsOn?: string[];
+  maxRetries?: number;
+  timeoutMs?: number;
+}

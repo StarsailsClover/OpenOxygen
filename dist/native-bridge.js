@@ -1,10 +1,10 @@
 /**
- * OpenOxygen — Native Bridge v2
+ * OpenOxygen �?Native Bridge v2
  *
- * TypeScript ↔ Rust 绑定层。
- * 优先加载 Rust native 模块，加载失败时 fallback 到纯 TS 实现。
- * 覆盖全部 native 函数：系统信息、截图、输入(v2)、窗口、进程、
- * 剪贴板、注册表、向量检索、视觉、UI Automation、沙箱。
+ * TypeScript �?Rust 绑定层�?
+ * 优先加载 Rust native 模块，加载失败时 fallback 到纯 TS 实现�?
+ * 覆盖全部 native 函数：系统信息、截图、输�?v2)、窗口、进程�?
+ * 剪贴板、注册表、向量检索、视觉、UI Automation、沙箱�?
  */
 import { createSubsystemLogger } from "./logging/index.js";
 const log = createSubsystemLogger("native-bridge");

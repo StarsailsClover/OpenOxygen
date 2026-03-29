@@ -1,5 +1,5 @@
 /**
- * OpenOxygen — Pool-Integrated Router (26w11aE)
+ * OpenOxygen �?Pool-Integrated Router (26w11aE)
  */
 import { createSubsystemLogger } from "../logging/index.js";
 const log = createSubsystemLogger("inference/router-pool");

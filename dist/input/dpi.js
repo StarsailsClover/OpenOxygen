@@ -1,16 +1,16 @@
 /**
- * OpenOxygen Phase 4 — Multi-Monitor DPI Awareness (26w11aE_P4)
+ * OpenOxygen Phase 4 �?Multi-Monitor DPI Awareness (26w11aE_P4)
  *
- * 多显示器 DPI 感知：
+ * 多显示器 DPI 感知�?
  * - 枚举所有显示器及其 DPI
  * - 自动坐标转换
  * - 跨显示器鼠标移动
  */
 import { createSubsystemLogger } from "../logging/index.js";
 const log = createSubsystemLogger("input/dpi");
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 // DPI Manager
-// ═══════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════�?
 export class DPIManager {
     monitors = [];
     nativeModule = null;
@@ -49,7 +49,7 @@ export class DPIManager {
             log.info(`Detected ${this.monitors.length} monitor(s): ${metrics.physicalWidth}x${metrics.physicalHeight} @ ${metrics.dpiX}DPI`);
         }
         else {
-            // 默认值
+            // 默认�?
             this.monitors = [
                 {
                     id: 0,
@@ -73,7 +73,7 @@ export class DPIManager {
         return [...this.monitors];
     }
     /**
-     * 逻辑坐标 → 物理坐标
+     * 逻辑坐标 �?物理坐标
      */
     logicalToPhysical(logical) {
         const monitor = this.findMonitorAt(logical.x, logical.y);
@@ -84,7 +84,7 @@ export class DPIManager {
         };
     }
     /**
-     * 物理坐标 → 逻辑坐标
+     * 物理坐标 �?逻辑坐标
      */
     physicalToLogical(physical) {
         const monitor = this.monitors.find((m) => m.id === physical.monitorId) ||
@@ -95,7 +95,7 @@ export class DPIManager {
         };
     }
     /**
-     * 找到坐标所在的显示器
+     * 找到坐标所在的显示�?
      */
     findMonitorAt(x, y) {
         for (const monitor of this.monitors) {
@@ -109,7 +109,7 @@ export class DPIManager {
         return this.monitors[0]; // 默认主显示器
     }
     /**
-     * 检查坐标是否在屏幕范围内
+     * 检查坐标是否在屏幕范围�?
      */
     isOnScreen(x, y) {
         return this.monitors.some((m) => x >= m.x && x < m.x + m.width && y >= m.y && y < m.y + m.height);
@@ -125,5 +125,5 @@ export class DPIManager {
         return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
     }
 }
-// 全局 DPI 管理器
+// 全局 DPI 管理�?
 export const dpiManager = new DPIManager();

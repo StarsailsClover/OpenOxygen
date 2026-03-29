@@ -1,8 +1,8 @@
 /**
- * OpenOxygen — OxygenBrowser CDP Integration (26w15aD Phase 4)
+ * OpenOxygen �?OxygenBrowser CDP Integration (26w15aD Phase 4)
  *
  * Chrome DevTools Protocol 集成
- * 用于高级浏览器控制
+ * 用于高级浏览器控�?
  */
 
 import { createSubsystemLogger } from "../logging/index.js";

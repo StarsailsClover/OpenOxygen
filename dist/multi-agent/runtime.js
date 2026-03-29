@@ -1,8 +1,8 @@
 /**
- * OpenOxygen — Multi-Agent Runtime (26w15aD Phase 5)
+ * OpenOxygen �?Multi-Agent Runtime (26w15aD Phase 5)
  *
- * 多 Agent 运行时系统
- * Agent 协调、任务委派、断点续传
+ * �?Agent 运行时系�?
+ * Agent 协调、任务委派、断点续�?
  */
 import { createSubsystemLogger } from "../logging/index.js";
 import { generateId, nowMs } from "../utils/index.js";

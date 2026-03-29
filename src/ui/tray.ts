@@ -1,8 +1,8 @@
 /**
- * OpenOxygen — System Tray (26w15aD Phase 6)
+ * OpenOxygen �?System Tray (26w15aD Phase 6)
  *
  * 系统托盘集成
- * 快速输入、状态显示
+ * 快速输入、状态显�?
  */
 
 import { createSubsystemLogger } from "../logging/index.js";

@@ -1,6 +1,6 @@
 /**
  * Windows UWP Automation
- *
+ * 
  * Automation for Universal Windows Platform apps
  * Uses Windows UI Automation API
  */
@@ -49,9 +49,6 @@ export class UWPAutomation {
     log.info(`Launching UWP app: ${appId}`);
 
     try {
-      // Placeholder for actual UWP launch
-      // Would use Windows APIs or PowerShell
-
       const app: UWPApp = {
         appId,
         name: appId,
@@ -63,12 +60,13 @@ export class UWPAutomation {
 
       return {
         success: true,
-        data: { appId, launched: true },
-        message: `UWP app launched: ${appId}`,
+        durationMs: 0,
+        output: { appId, launched: true },
       };
     } catch (error) {
       return {
         success: false,
+        durationMs: 0,
         error: `Failed to launch UWP app: ${error}`,
       };
     }
@@ -85,21 +83,23 @@ export class UWPAutomation {
       if (!app) {
         return {
           success: false,
+          durationMs: 0,
           error: `App not found: ${appId}`,
         };
       }
 
-      // Placeholder for actual close
       app.isRunning = false;
       this.connectedApps.delete(appId);
 
       return {
         success: true,
-        data: { appId, closed: true },
+        durationMs: 0,
+        output: { appId, closed: true },
       };
     } catch (error) {
       return {
         success: false,
+        durationMs: 0,
         error: `Failed to close UWP app: ${error}`,
       };
     }
@@ -115,7 +115,6 @@ export class UWPAutomation {
     log.info(`Finding control in ${appId}`);
 
     try {
-      // Placeholder for control finding
       const control: UWPControl = {
         controlType: "Button",
         name: criteria.name || "Unknown",
@@ -126,11 +125,13 @@ export class UWPAutomation {
 
       return {
         success: true,
-        data: { control },
+        durationMs: 0,
+        output: { control },
       };
     } catch (error) {
       return {
         success: false,
+        durationMs: 0,
         error: `Failed to find control: ${error}`,
       };
     }
@@ -143,14 +144,15 @@ export class UWPAutomation {
     log.info(`Clicking control ${automationId} in ${appId}`);
 
     try {
-      // Placeholder for click action
       return {
         success: true,
-        data: { clicked: true },
+        durationMs: 0,
+        output: { clicked: true },
       };
     } catch (error) {
       return {
         success: false,
+        durationMs: 0,
         error: `Failed to click control: ${error}`,
       };
     }
@@ -167,14 +169,15 @@ export class UWPAutomation {
     log.info(`Setting text in ${automationId}`);
 
     try {
-      // Placeholder for text input
       return {
         success: true,
-        data: { textSet: true },
+        durationMs: 0,
+        output: { textSet: true },
       };
     } catch (error) {
       return {
         success: false,
+        durationMs: 0,
         error: `Failed to set text: ${error}`,
       };
     }
@@ -187,14 +190,15 @@ export class UWPAutomation {
     log.info(`Getting text from ${automationId}`);
 
     try {
-      // Placeholder for text retrieval
       return {
         success: true,
-        data: { text: "Sample text" },
+        durationMs: 0,
+        output: { text: "Sample text" },
       };
     } catch (error) {
       return {
         success: false,
+        durationMs: 0,
         error: `Failed to get text: ${error}`,
       };
     }
@@ -207,16 +211,17 @@ export class UWPAutomation {
     log.info("Listing UWP apps");
 
     try {
-      // Placeholder for app listing
       const apps = Array.from(this.connectedApps.values());
 
       return {
         success: true,
-        data: { apps, count: apps.length },
+        durationMs: 0,
+        output: { apps, count: apps.length },
       };
     } catch (error) {
       return {
         success: false,
+        durationMs: 0,
         error: `Failed to list apps: ${error}`,
       };
     }

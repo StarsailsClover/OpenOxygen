@@ -31,8 +31,8 @@
     "verbatimModuleSyntax": false,
     "allowJs": true,
     "checkJs": false,
-    "noEmitOnError": false
+    "noEmitOnError": true
   },
-  "include": ["src/**/*.ts", "src/**/*.js"],
-  "exclude": ["node_modules", "dist", "test", "_reference", "**/*.bak", "src/native"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "test", "_reference", "**/*.bak", "src/native", "src/**/*.js"],
 }

@@ -1,5 +1,5 @@
 /**
- * OpenOxygen — Model Health Checker
+ * OpenOxygen �?Model Health Checker
  *
  * 26w11aD: Check model availability before inference
  */

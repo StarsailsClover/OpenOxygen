@@ -1,7 +1,7 @@
 /**
- * OpenOxygen — OxygenStepRecorder (OSR) Editor (26w15aD Phase 2)
+ * OpenOxygen �?OxygenStepRecorder (OSR) Editor (26w15aD Phase 2)
  *
- * 录制文件编辑器
+ * 录制文件编辑�?
  * 插入/删除/修改操作步骤
  */
 import { createSubsystemLogger } from "../logging/index.js";

@@ -1,9 +1,7 @@
 /**
- * OpenOxygen — Session Management
+ * OpenOxygen �?Session Management
  *
- * 会话生命周期管理：创建、持久化、路由绑定。
- * 接口协议兼容 OpenClaw 的 session-key 规范。
- */
+ * 会话生命周期管理：创建、持久化、路由绑定�? * 接口协议兼容 OpenClaw �?session-key 规范�? */
 import fs from "node:fs/promises";
 import path from "node:path";
 import { createSubsystemLogger } from "../../logging/index.js";

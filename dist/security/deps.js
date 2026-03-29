@@ -1,38 +1,38 @@
 /**
- * OpenOxygen — Dependency Security Manager (26w11aE)
+ * OpenOxygen �� Dependency Security Manager (26w11aE)
  *
- * 针对 risks.md 供应链风险的加固实现：
- * - 依赖版本锁定与审计
- * - 插件依赖白名单校验
- * - 完整性哈希验证
+ * ��� risks.md ��Ӧ�����յļӹ�ʵ�֣�
+ * - �����汾���������
+ * - �������������У��
+ * - �����Թ�ϣ��֤
  */
 import { createSubsystemLogger } from "../logging/index.js";
 import { execSync } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
-// @ts-ignore — semver has no types
+// @ts-ignore �� semver has no types
 import semver from "semver";
 const log = createSubsystemLogger("security/deps");
-// ═══════════════════════════════════════════════════════════════════════════
-// 依赖安全策略配置
-// ═══════════════════════════════════════════════════════════════════════════
+// �T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T
+// ������ȫ��������
+// �T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T
 export const DEPENDENCY_POLICY = {
-    // 高风险依赖：必须满足的最低版本
+    // �߷��������������������Ͱ汾
     requiredVersions: {
         requests: ">=2.32.3", // CVE-2024-35195
         pyyaml: ">=6.0.1", // CVE-2024-27198
         urllib3: ">=2.2.2", // CVE-2024-3787
-        certifi: ">=2024.07.04", // 证书吊销列表更新
-        openssl: ">=3.0.14", // 多CVE修复
+        certifi: ">=2024.07.04", // ֤������б�����
+        openssl: ">=3.0.14", // ��CVE�޸�
     },
-    // 禁止使用的依赖（已知恶意或过度权限）
+    // ��ֹʹ�õ���������֪��������Ȩ�ޣ�
     blockedPackages: [
-        "claw-utils-malicious", // 示例恶意包
-        "eval-hook", // 动态代码执行风险
-        "requests-extended", // 非官方fork
-        "pyyaml-full", // 不安全加载模式
+        "claw-utils-malicious", // ʾ�������
+        "eval-hook", // ��̬����ִ�з���
+        "requests-extended", // �ǹٷ�fork
+        "pyyaml-full", // ����ȫ����ģʽ
     ],
-    // 插件允许的依赖白名单
+    // �������������������
     allowedPluginDeps: new Set([
         "requests",
         "pyyaml",
@@ -44,7 +44,7 @@ export const DEPENDENCY_POLICY = {
         "urllib3",
         "charset-normalizer",
     ]),
-    // 高风险版本模式（自动检测）
+    // �߷��հ汾ģʽ���Զ���⣩
     vulnerablePatterns: [
         { pkg: "requests", max: "2.32.0", cve: "CVE-2024-35195", severity: "high" },
         {
@@ -55,18 +55,18 @@ export const DEPENDENCY_POLICY = {
         },
     ],
 };
-// ═══════════════════════════════════════════════════════════════════════════
-// 核心安全检查函数
-// ═══════════════════════════════════════════════════════════════════════════
+// �T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T
+// ���İ�ȫ��麯��
+// �T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T
 /**
- * 扫描并验证所有依赖的安全性
+ * ɨ�貢��֤���������İ�ȫ��
  */
 export async function auditDependencies(projectPath) {
     const violations = [];
     const warnings = [];
-    // 1. 读取当前安装的依赖
+    // 1. ��ȡ��ǰ��װ������
     const installed = await getInstalledDependencies(projectPath);
-    // 2. 检查必须版本
+    // 2. ������汾
     for (const [pkg, required] of Object.entries(DEPENDENCY_POLICY.requiredVersions)) {
         const installedVersion = installed[pkg];
         if (installedVersion && !semver.satisfies(installedVersion, required)) {
@@ -76,11 +76,11 @@ export async function auditDependencies(projectPath) {
                 installed: installedVersion,
                 required,
                 severity: "high",
-                message: `${pkg}@${installedVersion} 不满足安全版本要求 ${required}`,
+                message: `${pkg}@${installedVersion} �����㰲ȫ�汾Ҫ�� ${required}`,
             });
         }
     }
-    // 3. 检查禁止包
+    // 3. ����ֹ��
     for (const blocked of DEPENDENCY_POLICY.blockedPackages) {
         if (installed[blocked]) {
             violations.push({
@@ -88,11 +88,11 @@ export async function auditDependencies(projectPath) {
                 package: blocked,
                 installed: installed[blocked],
                 severity: "critical",
-                message: `检测到禁止使用的依赖: ${blocked}`,
+                message: `��⵽��ֹʹ�õ�����: ${blocked}`,
             });
         }
     }
-    // 4. CVE 模式匹配
+    // 4. CVE ģʽƥ��
     for (const { pkg, max, cve, severity, } of DEPENDENCY_POLICY.vulnerablePatterns) {
         const ver = installed[pkg];
         if (ver && semver.lte(ver, max)) {
@@ -102,14 +102,14 @@ export async function auditDependencies(projectPath) {
                 installed: ver,
                 cve,
                 severity: severity,
-                message: `${pkg}@${ver} 受 ${cve} 影响`,
+                message: `${pkg}@${ver} �� ${cve} Ӱ��`,
             });
         }
     }
-    // 5. 未锁定依赖警告
+    // 5. δ������������
     const unpinned = Object.entries(installed).filter(([, ver]) => ver && !/^\d+\.\d+\.\d+$/.test(ver));
     for (const [pkg] of unpinned) {
-        warnings.push(`${pkg} 未使用精确版本锁定，建议添加 == 版本约束`);
+        warnings.push(`${pkg} δʹ�þ�ȷ�汾�������������� == �汾Լ��`);
     }
     log.info(`Dependency audit: ${violations.length} violations, ${warnings.length} warnings`);
     return {
@@ -119,7 +119,7 @@ export async function auditDependencies(projectPath) {
     };
 }
 /**
- * 校验插件依赖是否在白名单内
+ * У���������Ƿ��ڰ�������
  */
 export function validatePluginDependencies(skillPath) {
     const requirementsPath = `${skillPath}/requirements.txt`;
@@ -143,13 +143,13 @@ export function validatePluginDependencies(skillPath) {
     };
 }
 /**
- * 生成锁定文件（兼容 poetry/npm/pip）
+ * ���������ļ������� poetry/npm/pip��
  */
 export async function generateLockfile(type, outputPath) {
     switch (type) {
         case "pip": {
             const output = execSync("pip freeze --all", { encoding: "utf-8" });
-            // 过滤到安全版本
+            // ���˵���ȫ�汾
             const safeDeps = output
                 .split("\n")
                 .filter((line) => {
@@ -157,7 +157,7 @@ export async function generateLockfile(type, outputPath) {
                 return pkg && !DEPENDENCY_POLICY.blockedPackages.includes(pkg.trim());
             })
                 .join("\n");
-            // 添加安全注释
+            // ���Ӱ�ȫע��
             const header = `# OpenOxygen Locked Dependencies
 # Generated: ${new Date().toISOString()}
 # Security Policy: ${DEPENDENCY_POLICY.requiredVersions["requests"]} enforced\n\n`;
@@ -166,7 +166,7 @@ export async function generateLockfile(type, outputPath) {
             break;
         }
         case "npm": {
-            // 使用 npm-shrinkwrap.json 或 package-lock.json
+            // ʹ�� npm-shrinkwrap.json �� package-lock.json
             const pkg = JSON.parse(readFileSync("package.json", "utf-8"));
             const locked = {
                 name: pkg.name,
@@ -183,7 +183,7 @@ export async function generateLockfile(type, outputPath) {
     log.info(`Generated ${type} lockfile: ${outputPath}`);
 }
 /**
- * 验证依赖包的完整性（SHA-256）
+ * ��֤�������������ԣ�SHA-256��
  */
 export function verifyPackageIntegrity(packagePath, expectedHash) {
     if (!existsSync(packagePath))
@@ -192,9 +192,9 @@ export function verifyPackageIntegrity(packagePath, expectedHash) {
     const actualHash = createHash("sha256").update(content).digest("hex");
     return actualHash === expectedHash;
 }
-// ═══════════════════════════════════════════════════════════════════════════
-// 辅助函数
-// ═══════════════════════════════════════════════════════════════════════════
+// �T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T
+// ��������
+// �T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T
 async function getInstalledDependencies(projectPath) {
     try {
         const output = execSync(projectPath ? `cd ${projectPath} && pip freeze` : "pip freeze", {

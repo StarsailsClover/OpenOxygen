@@ -1,8 +1,8 @@
 /**
- * OpenOxygen — Multi-Agent Communication (26w15aD Phase 5)
+ * OpenOxygen �?Multi-Agent Communication (26w15aD Phase 5)
  *
  * Agent 间通信协议
- * 消息传递、广播、负载均衡
+ * 消息传递、广播、负载均�?
  */
 import { createSubsystemLogger } from "../logging/index.js";
 import { generateId, nowMs } from "../utils/index.js";
