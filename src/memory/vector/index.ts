@@ -1,5 +1,5 @@
 /**
- * OpenOxygen — Memory System (Vector Store + Hybrid Search)
+ * OpenOxygen - Memory System (Vector Store + Hybrid Search)
  *
  * 分层记忆系统：向量检索 + BM25 关键词检索 + 生命周期管理。
  * 使用 better-sqlite3 作为本地存储后端。
@@ -17,7 +17,7 @@ import { generateId, nowMs } from "../../utils/index.js";
 
 const log = createSubsystemLogger("memory/vector");
 
-// ─── Vector Math ────────────────────────────────────────────────────────────
+// === Vector Math ===
 
 function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length) return 0;
@@ -33,7 +33,7 @@ function cosineSimilarity(a: number[], b: number[]): number {
   return denom === 0 ? 0 : dotProduct / denom;
 }
 
-// ─── BM25 Scoring ───────────────────────────────────────────────────────────
+// === BM25 Scoring ===
 
 const BM25_K1 = 1.2;
 const BM25_B = 0.75;
@@ -63,132 +63,224 @@ function computeBM25(
 
   for (const term of query) {
     const tf = termFreq.get(term) ?? 0;
-    if (tf === 0) continue;
-
     const df = docFrequencies.get(term) ?? 0;
     const idf = Math.log((totalDocs - df + 0.5) / (df + 0.5) + 1);
-    const tfNorm =
-      (tf * (BM25_K1 + 1)) /
-      (tf + BM25_K1 * (1 - BM25_B + BM25_B * (docLength / avgDocLength)));
+    const tfNorm = (tf * (BM25_K1 + 1)) / (tf + BM25_K1 * (1 - BM25_B + BM25_B * (docLength / avgDocLength)));
     score += idf * tfNorm;
   }
 
   return score;
 }
 
-// ─── In-Memory Vector Store ─────────────────────────────────────────────────
+// === Memory Store ===
 
-export class VectorStore {
-  private chunks: MemoryChunk[] = [];
-  private docFrequencies = new Map<string, number>();
-  private avgDocLength = 0;
+export class VectorMemoryStore {
+  private chunks: Map<string, MemoryChunk> = new Map();
+  private config: MemoryConfig;
 
-  addChunk(chunk: MemoryChunk): void {
-    this.chunks.push(chunk);
-    this.updateIndex(chunk);
-  }
-
-  addChunks(chunks: MemoryChunk[]): void {
-    for (const chunk of chunks) {
-      this.addChunk(chunk);
-    }
-  }
-
-  private updateIndex(chunk: MemoryChunk): void {
-    const tokens = tokenize(chunk.content);
-    const uniqueTokens = new Set(tokens);
-    for (const token of uniqueTokens) {
-      this.docFrequencies.set(token, (this.docFrequencies.get(token) ?? 0) + 1);
-    }
-    // Recalculate average document length
-    const totalTokens = this.chunks.reduce(
-      (sum, c) => sum + tokenize(c.content).length,
-      0,
-    );
-    this.avgDocLength =
-      this.chunks.length > 0 ? totalTokens / this.chunks.length : 0;
+  constructor(config: MemoryConfig = {}) {
+    this.config = {
+      dimension: 1536,
+      maxChunks: 10000,
+      similarityThreshold: 0.7,
+      ...config,
+    };
   }
 
   /**
-   * Hybrid search: combines vector similarity and BM25 keyword scoring.
+   * Store a memory chunk
    */
-  search(
+  async store(chunk: Omit<MemoryChunk, "id" | "createdAt">): Promise<MemoryChunk> {
+    const fullChunk: MemoryChunk = {
+      ...chunk,
+      id: generateId("mem"),
+      createdAt: nowMs(),
+    };
+
+    this.chunks.set(fullChunk.id, fullChunk);
+    log.debug(`Stored chunk: ${fullChunk.id}`);
+
+    // Trim if exceeding max
+    if (this.chunks.size > this.config.maxChunks!) {
+      const oldest = Array.from(this.chunks.entries())
+        .sort((a, b) => a[1].createdAt - b[1].createdAt)[0];
+      if (oldest) {
+        this.chunks.delete(oldest[0]);
+        log.debug(`Evicted oldest chunk: ${oldest[0]}`);
+      }
+    }
+
+    return fullChunk;
+  }
+
+  /**
+   * Search by vector similarity
+   */
+  async searchByVector(
+    queryVector: number[],
+    options: { topK?: number; threshold?: number } = {},
+  ): Promise<MemorySearchResult[]> {
+    const topK = options.topK ?? 5;
+    const threshold = options.threshold ?? this.config.similarityThreshold;
+
+    const results: MemorySearchResult[] = [];
+
+    for (const chunk of this.chunks.values()) {
+      if (!chunk.vector) continue;
+      
+      const similarity = cosineSimilarity(queryVector, chunk.vector);
+      if (similarity >= threshold) {
+        results.push({
+          chunk,
+          score: similarity,
+          method: "vector",
+        });
+      }
+    }
+
+    return results
+      .sort((a, b) => b.score - a.score)
+      .slice(0, topK);
+  }
+
+  /**
+   * Search by BM25 keyword matching
+   */
+  async searchByKeyword(
     query: string,
-    queryEmbedding?: number[],
-    opts?: { maxResults?: number; minScore?: number; sources?: MemorySource[] },
-  ): MemorySearchResult[] {
-    const maxResults = opts?.maxResults ?? 10;
-    const minScore = opts?.minScore ?? 0.1;
+    options: { topK?: number } = {},
+  ): Promise<MemorySearchResult[]> {
+    const topK = options.topK ?? 5;
     const queryTokens = tokenize(query);
 
-    let candidates = this.chunks;
-    if (opts?.sources) {
-      candidates = candidates.filter((c) => opts.sources!.includes(c.source));
-    }
+    // Build document frequency map
+    const docFreq = new Map<string, number>();
+    let totalLength = 0;
 
-    // Filter expired chunks
-    const now = nowMs();
-    candidates = candidates.filter((c) => !c.expiresAt || c.expiresAt > now);
-
-    const scored = candidates.map((chunk) => {
-      // BM25 score
-      const docTokens = tokenize(chunk.content);
-      const bm25Score = computeBM25(
-        queryTokens,
-        docTokens,
-        this.avgDocLength,
-        this.docFrequencies,
-        this.chunks.length,
-      );
-
-      // Vector similarity score
-      let vectorScore = 0;
-      if (queryEmbedding && chunk.embedding) {
-        vectorScore = cosineSimilarity(queryEmbedding, chunk.embedding);
+    for (const chunk of this.chunks.values()) {
+      const tokens = tokenize(chunk.content);
+      totalLength += tokens.length;
+      const unique = new Set(tokens);
+      for (const term of unique) {
+        docFreq.set(term, (docFreq.get(term) ?? 0) + 1);
       }
-
-      // Hybrid score: weighted combination
-      const hybridScore = queryEmbedding
-        ? vectorScore * 0.6 + bm25Score * 0.4
-        : bm25Score;
-
-      return { chunk, score: hybridScore };
-    });
-
-    // Sort by score descending
-    scored.sort((a, b) => b.score - a.score);
-
-    return scored
-      .filter((s) => s.score >= minScore)
-      .slice(0, maxResults)
-      .map((s) => ({
-        path: s.chunk.path,
-        startLine: s.chunk.startLine,
-        endLine: s.chunk.endLine,
-        score: s.score,
-        snippet: s.chunk.content.slice(0, 700),
-        source: s.chunk.source,
-      }));
-  }
-
-  getChunkCount(): number {
-    return this.chunks.length;
-  }
-
-  removeExpired(): number {
-    const now = nowMs();
-    const before = this.chunks.length;
-    this.chunks = this.chunks.filter((c) => !c.expiresAt || c.expiresAt > now);
-    const removed = before - this.chunks.length;
-    if (removed > 0) {
-      log.info(`Removed ${removed} expired chunks`);
     }
-    return removed;
+
+    const avgDocLength = totalLength / (this.chunks.size || 1);
+    const totalDocs = this.chunks.size;
+
+    const results: MemorySearchResult[] = [];
+
+    for (const chunk of this.chunks.values()) {
+      const docTokens = tokenize(chunk.content);
+      const score = computeBM25(queryTokens, docTokens, avgDocLength, docFreq, totalDocs);
+      
+      if (score > 0) {
+        results.push({
+          chunk,
+          score,
+          method: "bm25",
+        });
+      }
+    }
+
+    return results
+      .sort((a, b) => b.score - a.score)
+      .slice(0, topK);
   }
 
-  clear(): void {
-    this.chunks = [];
-    this.docFrequencies.clear();
-    this.avgDocLength = 0;
+  /**
+   * Hybrid search: vector + BM25
+   */
+  async search(
+    query: { vector?: number[]; text?: string },
+    options: { topK?: number; vectorWeight?: number } = {},
+  ): Promise<MemorySearchResult[]> {
+    const topK = options.topK ?? 5;
+    const vectorWeight = options.vectorWeight ?? 0.7;
+    const bm25Weight = 1 - vectorWeight;
+
+    const results = new Map<string, MemorySearchResult>();
+
+    // Vector search
+    if (query.vector) {
+      const vectorResults = await this.searchByVector(query.vector, { topK: topK * 2 });
+      for (const r of vectorResults) {
+        results.set(r.chunk.id, {
+          ...r,
+          score: r.score * vectorWeight,
+        });
+      }
+    }
+
+    // BM25 search
+    if (query.text) {
+      const bm25Results = await this.searchByKeyword(query.text, { topK: topK * 2 });
+      for (const r of bm25Results) {
+        const existing = results.get(r.chunk.id);
+        if (existing) {
+          existing.score += r.score * bm25Weight;
+        } else {
+          results.set(r.chunk.id, {
+            ...r,
+            score: r.score * bm25Weight,
+          });
+        }
+      }
+    }
+
+    return Array.from(results.values())
+      .sort((a, b) => b.score - a.score)
+      .slice(0, topK);
+  }
+
+  /**
+   * Delete a chunk
+   */
+  async delete(chunkId: string): Promise<boolean> {
+    const existed = this.chunks.has(chunkId);
+    this.chunks.delete(chunkId);
+    log.debug(`Deleted chunk: ${chunkId}`);
+    return existed;
+  }
+
+  /**
+   * Clear all chunks
+   */
+  async clear(): Promise<void> {
+    this.chunks.clear();
+    log.info("Cleared all memory chunks");
+  }
+
+  /**
+   * Get stats
+   */
+  getStats(): { totalChunks: number; totalTokens: number } {
+    let totalTokens = 0;
+    for (const chunk of this.chunks.values()) {
+      totalTokens += tokenize(chunk.content).length;
+    }
+    return {
+      totalChunks: this.chunks.size,
+      totalTokens,
+    };
   }
 }
+
+// === OpenClaw Compatibility ===
+
+export class MemorySearchManager extends VectorMemoryStore {
+  constructor(config?: MemoryConfig) {
+    super(config);
+    log.info("MemorySearchManager initialized (OpenClaw compatible)");
+  }
+}
+
+// === Default Export ===
+
+export const VectorMemory = {
+  Store: VectorMemoryStore,
+  SearchManager: MemorySearchManager,
+};
+
+export default VectorMemory;

@@ -9,9 +9,7 @@ import { createSubsystemLogger } from "../logging/index.js";
 
 const log = createSubsystemLogger("security/prompt-injection");
 
-// ============================================================================
-// Detection Types
-// ============================================================================
+// === Detection Types ===
 
 export interface InjectionDetectionResult {
   isInjection: boolean;
@@ -28,9 +26,7 @@ export interface DetectionConfig {
   blockedPatterns: RegExp[];
 }
 
-// ============================================================================
-// Injection Patterns
-// ============================================================================
+// === Injection Patterns ===
 
 const INJECTION_PATTERNS = [
   // System prompt override
@@ -60,36 +56,29 @@ const INJECTION_PATTERNS = [
   { pattern: /<\|system\|>/i, weight: 0.95 },
   { pattern: /<\|assistant\|>/i, weight: 0.95 },
   { pattern: /<\|user\|>/i, weight: 0.95 },
-
-  // Instruction override
-  { pattern: /new\s+instructions?:/i, weight: 0.85 },
-  { pattern: /override\s+(previous|default)\s+behavior/i, weight: 0.85 },
-  { pattern: /bypass\s+(restrictions|filters)/i, weight: 0.9 },
+  { pattern: /\[system\]/i, weight: 0.9 },
+  { pattern: /\[assistant\]/i, weight: 0.9 },
+  { pattern: /\[user\]/i, weight: 0.9 },
 
   // Jailbreak attempts
-  { pattern: /DAN\s*mode/i, weight: 0.95 },
-  { pattern: /developer\s*mode/i, weight: 0.9 },
-  { pattern: /sudo\s*mode/i, weight: 0.9 },
-  { pattern: /root\s*access/i, weight: 0.9 },
+  { pattern: /jailbreak/i, weight: 0.8 },
+  { pattern: /DAN\s*mode/i, weight: 0.8 },
+  { pattern: /developer\s+mode/i, weight: 0.7 },
+  { pattern: /ignore\s+ethical/i, weight: 0.9 },
+  { pattern: /ignore\s+legal/i, weight: 0.9 },
 
   // Encoding tricks
   { pattern: /base64\s*decode/i, weight: 0.6 },
   { pattern: /rot13/i, weight: 0.6 },
   { pattern: /hex\s*decode/i, weight: 0.6 },
-
-  // Multi-language
-  { pattern: /переведи|переключись|игнорируй/i, weight: 0.7 },
-  { pattern: /忽略|忘记|角色扮演/i, weight: 0.7 },
 ];
 
-// ============================================================================
-// Prompt Injection Detector
-// ============================================================================
+// === Detector ===
 
 export class PromptInjectionDetector {
   private config: DetectionConfig;
 
-  constructor(config?: Partial<DetectionConfig>) {
+  constructor(config: Partial<DetectionConfig> = {}) {
     this.config = {
       threshold: 0.7,
       maxLength: 10000,
@@ -100,41 +89,41 @@ export class PromptInjectionDetector {
   }
 
   /**
-   * Detect prompt injection
+   * Detect injection in input
    */
   detect(input: string): InjectionDetectionResult {
     // Check length
     if (input.length > this.config.maxLength) {
       return {
         isInjection: true,
-        confidence: 1.0,
+        confidence: 1,
         patterns: ["excessive_length"],
-        sanitized: input.slice(0, this.config.maxLength),
+        sanitized: input.substring(0, this.config.maxLength),
         action: "block",
       };
     }
 
-    const detectedPatterns: string[] = [];
-    let totalWeight = 0;
-
     // Check patterns
+    let totalWeight = 0;
+    const matchedPatterns: string[] = [];
+
     for (const { pattern, weight } of INJECTION_PATTERNS) {
       if (pattern.test(input)) {
-        detectedPatterns.push(pattern.source);
         totalWeight += weight;
+        matchedPatterns.push(pattern.source);
       }
     }
 
     // Check custom blocked patterns
     for (const pattern of this.config.blockedPatterns) {
       if (pattern.test(input)) {
-        detectedPatterns.push(`custom:${pattern.source}`);
-        totalWeight += 1.0;
+        totalWeight += 1;
+        matchedPatterns.push(`custom:${pattern.source}`);
       }
     }
 
-    // Calculate confidence
-    const confidence = Math.min(totalWeight, 1.0);
+    // Normalize confidence (cap at 1.0)
+    const confidence = Math.min(totalWeight, 1);
     const isInjection = confidence >= this.config.threshold;
 
     // Determine action
@@ -145,93 +134,68 @@ export class PromptInjectionDetector {
       action = "warn";
     }
 
-    // Sanitize input
+    // Sanitize
     const sanitized = this.sanitize(input);
 
-    const result: InjectionDetectionResult = {
+    return {
       isInjection,
       confidence,
-      patterns: detectedPatterns,
+      patterns: matchedPatterns,
       sanitized,
       action,
     };
-
-    if (isInjection) {
-      log.warn(
-        `Prompt injection detected: ${confidence.toFixed(2)} confidence`,
-        {
-          patterns: detectedPatterns,
-        },
-      );
-    }
-
-    return result;
   }
 
   /**
    * Sanitize input
    */
-  private sanitize(input: string): string {
+  sanitize(input: string): string {
     let sanitized = input;
 
-    // Remove control characters
-    sanitized = sanitized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
+    // Escape delimiter sequences
+    sanitized = sanitized.replace(/```/g, "` ` `");
+    sanitized = sanitized.replace(/<\|/g, "< |");
+    sanitized = sanitized.replace(/\|>/g, "| >");
+    sanitized = sanitized.replace(/\[system\]/gi, "[ system ]");
+    sanitized = sanitized.replace(/\[assistant\]/gi, "[ assistant ]");
+    sanitized = sanitized.replace(/\[user\]/gi, "[ user ]");
 
     // Normalize whitespace
-    sanitized = sanitized.replace(/\s+/g, " ");
-
-    // Remove potential delimiter injections
-    sanitized = sanitized.replace(/```[\s\S]*?```/g, "[CODE_BLOCK_REMOVED]");
-    sanitized = sanitized.replace(/<\|.*?\|>/g, "[DELIMITER_REMOVED]");
-
-    // Escape HTML
-    sanitized = sanitized
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#x27;");
+    sanitized = sanitized.replace(/\s+/g, " ").trim();
 
     return sanitized;
   }
 
   /**
-   * Validate prompt
+   * Quick check (returns true if safe)
    */
-  validate(prompt: string): { valid: boolean; message?: string } {
-    const result = this.detect(prompt);
-
-    if (result.action === "block") {
-      return {
-        valid: false,
-        message: `Prompt injection detected (${(result.confidence * 100).toFixed(0)}% confidence). Patterns: ${result.patterns.join(", ")}`,
-      };
-    }
-
-    if (result.action === "warn") {
-      log.warn("Suspicious prompt detected", { confidence: result.confidence });
-    }
-
-    return { valid: true };
+  isSafe(input: string): boolean {
+    const result = this.detect(input);
+    return !result.isInjection;
   }
 
   /**
-   * Add custom blocked pattern
+   * Update config
    */
-  addBlockedPattern(pattern: RegExp): void {
-    this.config.blockedPatterns.push(pattern);
-  }
-
-  /**
-   * Update threshold
-   */
-  setThreshold(threshold: number): void {
-    this.config.threshold = Math.max(0, Math.min(1, threshold));
+  updateConfig(config: Partial<DetectionConfig>): void {
+    this.config = { ...this.config, ...config };
   }
 }
 
-// ============================================================================
-// Singleton Export
-// ============================================================================
+// === Factory ===
 
-export const promptInjectionDetector = new PromptInjectionDetector();
+export function createPromptInjectionDetector(
+  config?: Partial<DetectionConfig>,
+): PromptInjectionDetector {
+  return new PromptInjectionDetector(config);
+}
+
+// === Exports ===
+
+export {
+  createPromptInjectionDetector,
+  PromptInjectionDetector,
+  INJECTION_PATTERNS,
+};
+
+export default PromptInjectionDetector;

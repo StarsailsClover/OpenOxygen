@@ -1,5 +1,5 @@
 /**
- * OpenOxygen — Security Audit System
+ * OpenOxygen - Security Audit System
  *
  * 全链路审计：记录所有系统操作，支持查询、告警和事务回滚。
  */
@@ -18,7 +18,7 @@ import { resolveStateDir } from "../../core/config/index.js";
 
 const log = createSubsystemLogger("security/audit");
 
-// ─── Audit Store ────────────────────────────────────────────────────────────
+// === Audit Store ===
 
 const AUDIT_FILENAME = "audit.jsonl";
 const MAX_MEMORY_ENTRIES = 10_000;
@@ -63,98 +63,152 @@ export class AuditTrail {
 
     // Trim in-memory buffer
     if (this.entries.length > MAX_MEMORY_ENTRIES) {
-      this.entries = this.entries.slice(-MAX_MEMORY_ENTRIES);
+      this.entries = this.entries.slice(-MAX_MEMORY_ENTRIES / 2);
     }
 
-    // Persist to file
-    if (this.config.auditEnabled) {
-      await this.appendToFile(entry);
-    }
+    // Persist to disk
+    await this.persist(entry);
 
-    // Alert on critical entries
-    if (entry.severity === "critical") {
-      log.error(
-        `CRITICAL AUDIT: ${entry.operation} by ${entry.actor} on ${entry.target}`,
-      );
+    // Log high severity events
+    if (entry.severity === "high" || entry.severity === "critical") {
+      log.warn(`High severity audit: ${entry.operation} by ${entry.actor}`);
     }
 
     return entry;
   }
 
   /**
-   * Query audit entries.
+   * Query audit log.
    */
-  query(params?: {
+  async query(filters: {
     operation?: string;
     actor?: string;
+    target?: string;
     severity?: AuditSeverity;
     since?: number;
+    until?: number;
     limit?: number;
-  }): AuditEntry[] {
-    let results = [...this.entries];
+  }): Promise<AuditEntry[]> {
+    let results = this.entries;
 
-    if (params?.operation) {
-      results = results.filter((e) => e.operation === params.operation);
+    if (filters.operation) {
+      results = results.filter(e => e.operation === filters.operation);
     }
-    if (params?.actor) {
-      results = results.filter((e) => e.actor === params.actor);
+    if (filters.actor) {
+      results = results.filter(e => e.actor === filters.actor);
     }
-    if (params?.severity) {
-      results = results.filter((e) => e.severity === params.severity);
+    if (filters.target) {
+      results = results.filter(e => e.target === filters.target);
     }
-    if (params?.since) {
-      results = results.filter((e) => e.timestamp >= params.since!);
+    if (filters.severity) {
+      results = results.filter(e => e.severity === filters.severity);
+    }
+    if (filters.since) {
+      results = results.filter(e => e.timestamp >= filters.since!);
+    }
+    if (filters.until) {
+      results = results.filter(e => e.timestamp <= filters.until!);
     }
 
+    // Sort by timestamp descending
     results.sort((a, b) => b.timestamp - a.timestamp);
 
-    if (params?.limit) {
-      results = results.slice(0, params.limit);
+    if (filters.limit) {
+      results = results.slice(0, filters.limit);
     }
 
     return results;
   }
 
   /**
-   * Get rollbackable entries for undo operations.
+   * Get statistics.
    */
-  getRollbackable(limit = 10): AuditEntry[] {
-    return this.entries
-      .filter((e) => e.rollbackable)
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, limit);
+  getStats(): {
+    totalEntries: number;
+    bySeverity: Record<AuditSeverity, number>;
+    byOperation: Record<string, number>;
+  } {
+    const bySeverity: Record<AuditSeverity, number> = {
+      info: 0,
+      low: 0,
+      medium: 0,
+      high: 0,
+      critical: 0,
+    };
+    const byOperation: Record<string, number> = {};
+
+    for (const entry of this.entries) {
+      bySeverity[entry.severity]++;
+      byOperation[entry.operation] = (byOperation[entry.operation] || 0) + 1;
+    }
+
+    return {
+      totalEntries: this.entries.length,
+      bySeverity,
+      byOperation,
+    };
   }
 
-  private async appendToFile(entry: AuditEntry): Promise<void> {
+  /**
+   * Persist entry to disk.
+   */
+  private async persist(entry: AuditEntry): Promise<void> {
+    if (!this.config.auditEnabled) return;
+
     try {
-      const dir = path.dirname(this.filePath);
-      await fs.mkdir(dir, { recursive: true });
-      await fs.appendFile(this.filePath, JSON.stringify(entry) + "\n", "utf-8");
-    } catch (err) {
-      log.error("Failed to write audit entry:", err);
+      const line = JSON.stringify(entry) + "\n";
+      await fs.appendFile(this.filePath, line, "utf-8");
+    } catch (error) {
+      log.error(`Failed to persist audit entry: ${error}`);
     }
   }
 
   /**
-   * Load audit history from file.
+   * Load from disk.
    */
-  async loadFromFile(): Promise<number> {
+  async load(): Promise<void> {
     try {
       const content = await fs.readFile(this.filePath, "utf-8");
-      const lines = content.trim().split("\n").filter(Boolean);
-      this.entries = lines.map((line) => JSON.parse(line) as AuditEntry);
-      log.info(`Loaded ${this.entries.length} audit entries from file`);
-      return this.entries.length;
-    } catch {
-      return 0;
+      const lines = content.split("\n").filter(l => l.trim());
+      
+      this.entries = lines
+        .map(line => {
+          try {
+            return JSON.parse(line) as AuditEntry;
+          } catch {
+            return null;
+          }
+        })
+        .filter((e): e is AuditEntry => e !== null);
+
+      log.info(`Loaded ${this.entries.length} audit entries`);
+    } catch (error) {
+      // File may not exist yet
+      log.debug("No existing audit log found");
     }
   }
 
-  getStats(): { total: number; critical: number; rollbackable: number } {
-    return {
-      total: this.entries.length,
-      critical: this.entries.filter((e) => e.severity === "critical").length,
-      rollbackable: this.entries.filter((e) => e.rollbackable).length,
-    };
+  /**
+   * Clear all entries.
+   */
+  async clear(): Promise<void> {
+    this.entries = [];
+    try {
+      await fs.unlink(this.filePath);
+    } catch {
+      // File may not exist
+    }
+    log.info("Audit log cleared");
   }
 }
+
+// === Factory ===
+
+export function createAuditTrail(config: SecurityConfig): AuditTrail {
+  return new AuditTrail(config);
+}
+
+// === Exports ===
+
+export { createAuditTrail, AuditTrail };
+export default AuditTrail;

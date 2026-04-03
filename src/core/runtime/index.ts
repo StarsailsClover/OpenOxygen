@@ -1,8 +1,8 @@
 /**
- * OpenOxygen — Runtime Environment
+ * OpenOxygen - Runtime Environment
  *
  * 运行时环境管理：进程生命周期、平台检测、终端状态恢复。
- * 独立实现，参考 OpenClaw runtime.ts 的接口契约但重写全部逻辑。
+ * 独立实现，参考 OpenClaw runtime.ts 的接口合约但重写全部逻辑。
  */
 
 import os from "node:os";
@@ -12,7 +12,7 @@ import { createSubsystemLogger } from "../../logging/index.js";
 
 const log = createSubsystemLogger("runtime");
 
-// ─── Platform Detection ────────────────────────────────────────────────────
+// === Platform Detection ===
 
 function detectPlatform(): OxygenRuntimeEnv["platform"] {
   const p = process.platform;
@@ -32,7 +32,7 @@ export function assertSupportedRuntime(): void {
   }
 }
 
-// ─── Terminal State ─────────────────────────────────────────────────────────
+// === Terminal State ===
 
 let terminalRawMode = false;
 
@@ -42,7 +42,7 @@ export function setTerminalRawMode(enabled: boolean): void {
       process.stdin.setRawMode(enabled);
       terminalRawMode = enabled;
     } catch {
-      // Ignore — stdin may already be destroyed
+      // Ignore - stdin may already be destroyed
     }
   }
 }
@@ -63,83 +63,121 @@ export function restoreTerminalState(reason: string): void {
   }
 }
 
-// ─── Runtime Factory ────────────────────────────────────────────────────────
+// === Global Error Handlers ===
 
-function createRuntimeIO(): Pick<OxygenRuntimeEnv, "log" | "error" | "warn"> {
-  const rtLog = createSubsystemLogger("oxygen");
+export function installGlobalErrorHandlers(): void {
+  // Unhandled promise rejections
+  process.on("unhandledRejection", (reason, promise) => {
+    log.error("Unhandled Rejection at:", promise, "reason:", reason);
+    // Don't exit - let the application handle it
+  });
+
+  // Uncaught exceptions
+  process.on("uncaughtException", (error) => {
+    log.error("Uncaught Exception:", error);
+    restoreTerminalState("uncaught exception");
+    process.exit(1);
+  });
+
+  // SIGINT (Ctrl+C)
+  process.on("SIGINT", () => {
+    log.info("Received SIGINT, shutting down gracefully...");
+    restoreTerminalState("SIGINT");
+    process.exit(0);
+  });
+
+  // SIGTERM
+  process.on("SIGTERM", () => {
+    log.info("Received SIGTERM, shutting down gracefully...");
+    restoreTerminalState("SIGTERM");
+    process.exit(0);
+  });
+
+  // Before exit
+  process.on("beforeExit", () => {
+    restoreTerminalState("beforeExit");
+  });
+
+  log.debug("Global error handlers installed");
+}
+
+// === Runtime Environment ===
+
+export interface Runtime {
+  platform: OxygenRuntimeEnv["platform"];
+  nodeVersion: string;
+  cpus: number;
+  totalMemory: number;
+  freeMemory: number;
+  startTime: number;
+}
+
+export function createRuntime(): Runtime {
   return {
-    log: (...args: unknown[]) => rtLog.info(...args),
-    error: (...args: unknown[]) => rtLog.error(...args),
-    warn: (...args: unknown[]) => rtLog.warn(...args),
+    platform: detectPlatform(),
+    nodeVersion: process.versions.node,
+    cpus: os.cpus().length,
+    totalMemory: os.totalmem(),
+    freeMemory: os.freemem(),
+    startTime: Date.now(),
   };
 }
 
-/**
- * Default runtime — used in production.
- * Restores terminal state before exit.
- */
 export const defaultRuntime: OxygenRuntimeEnv = {
-  ...createRuntimeIO(),
+  log: (...args: unknown[]) => console.log(...args),
+  error: (...args: unknown[]) => console.error(...args),
+  warn: (...args: unknown[]) => console.warn(...args),
+  exit: (code: number) => process.exit(code),
   platform: detectPlatform(),
-  exit: (code: number) => {
-    restoreTerminalState("runtime exit");
-    process.exit(code);
-  },
 };
 
+// === Process Utilities ===
+
 /**
- * Non-exiting runtime — used in tests.
- * Throws instead of calling process.exit.
+ * Get process memory usage in MB
  */
-export function createTestRuntime(): OxygenRuntimeEnv {
+export function getMemoryUsage(): {
+  rss: number;
+  heapTotal: number;
+  heapUsed: number;
+  external: number;
+} {
+  const usage = process.memoryUsage();
   return {
-    ...createRuntimeIO(),
-    platform: detectPlatform(),
-    exit: (code: number) => {
-      throw new Error(`exit ${code}`);
-    },
+    rss: Math.round(usage.rss / 1024 / 1024),
+    heapTotal: Math.round(usage.heapTotal / 1024 / 1024),
+    heapUsed: Math.round(usage.heapUsed / 1024 / 1024),
+    external: Math.round(usage.external / 1024 / 1024),
   };
 }
 
-// ─── Global Error Handlers ──────────────────────────────────────────────────
-
-export function installGlobalErrorHandlers(runtime: OxygenRuntimeEnv): void {
-  process.on("uncaughtException", (err) => {
-    runtime.error(
-      "Uncaught exception:",
-      err instanceof Error ? (err.stack ?? err.message) : err,
-    );
-    restoreTerminalState("uncaught exception");
-    runtime.exit(1);
-  });
-
-  process.on("unhandledRejection", (reason) => {
-    runtime.error("Unhandled rejection:", reason);
-    // Don't exit — log and continue, matching OpenClaw behavior
-  });
-
-  // Graceful shutdown on SIGINT / SIGTERM
-  const shutdown = (signal: string) => {
-    runtime.log(`Received ${signal}, shutting down...`);
-    restoreTerminalState(signal);
-    runtime.exit(0);
-  };
-
-  process.on("SIGINT", () => shutdown("SIGINT"));
-  process.on("SIGTERM", () => shutdown("SIGTERM"));
+/**
+ * Get uptime in seconds
+ */
+export function getUptime(): number {
+  return Math.round(process.uptime());
 }
 
-// ─── System Info ────────────────────────────────────────────────────────────
+// === Exports ===
 
-export function getSystemInfo(): Record<string, string | number> {
-  return {
-    platform: process.platform,
-    arch: process.arch,
-    nodeVersion: process.versions.node,
-    hostname: os.hostname(),
-    cpus: os.cpus().length,
-    totalMemoryMB: Math.round(os.totalmem() / 1024 / 1024),
-    freeMemoryMB: Math.round(os.freemem() / 1024 / 1024),
-    uptime: Math.round(os.uptime()),
-  };
-}
+export {
+  assertSupportedRuntime,
+  setTerminalRawMode,
+  restoreTerminalState,
+  installGlobalErrorHandlers,
+  createRuntime,
+  getMemoryUsage,
+  getUptime,
+  defaultRuntime,
+};
+
+export default {
+  assertSupported: assertSupportedRuntime,
+  setTerminalRawMode,
+  restoreTerminalState,
+  installGlobalErrorHandlers,
+  create: createRuntime,
+  getMemoryUsage,
+  getUptime,
+  default: defaultRuntime,
+};

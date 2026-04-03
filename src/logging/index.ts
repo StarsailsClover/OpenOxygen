@@ -1,5 +1,5 @@
 /**
- * OpenOxygen — Logging Subsystem
+ * OpenOxygen - Logging Subsystem
  *
  * 结构化日志系统，支持子系统标签、级别过滤和控制台捕获。
  * 独立实现，不依赖 OpenClaw 的 logging 模块。
@@ -71,13 +71,23 @@ export type SubsystemLogger = {
 export function createSubsystemLogger(subsystem: string): SubsystemLogger {
   const emit = (level: LogLevel, args: unknown[]) => {
     if (!shouldEmit(level)) return;
+
     const formatted = formatMessage(subsystem, level, args);
-    if (level === "error" || level === "fatal") {
-      originalConsole.error(formatted);
-    } else if (level === "warn") {
-      originalConsole.warn(formatted);
-    } else {
-      originalConsole.log(formatted);
+
+    switch (level) {
+      case "debug":
+        originalConsole.debug(formatted);
+        break;
+      case "info":
+        originalConsole.log(formatted);
+        break;
+      case "warn":
+        originalConsole.warn(formatted);
+        break;
+      case "error":
+      case "fatal":
+        originalConsole.error(formatted);
+        break;
     }
   };
 
@@ -91,49 +101,64 @@ export function createSubsystemLogger(subsystem: string): SubsystemLogger {
 }
 
 /**
- * Capture all console.log/warn/error into structured logging.
- * Preserves original stdout/stderr behavior.
+ * Enable capturing of console output
  */
 export function enableConsoleCapture(): void {
   if (consoleCapturing) return;
+
+  const mainLogger = createSubsystemLogger("console");
+
+  console.log = (...args: unknown[]) => mainLogger.info(...args);
+  console.warn = (...args: unknown[]) => mainLogger.warn(...args);
+  console.error = (...args: unknown[]) => mainLogger.error(...args);
+  console.debug = (...args: unknown[]) => mainLogger.debug(...args);
+
   consoleCapturing = true;
-
-  const captureLogger = createSubsystemLogger("console");
-
-  console.log = (...args: unknown[]) => {
-    captureLogger.info(...args);
-  };
-  console.warn = (...args: unknown[]) => {
-    captureLogger.warn(...args);
-  };
-  console.error = (...args: unknown[]) => {
-    captureLogger.error(...args);
-  };
-  console.debug = (...args: unknown[]) => {
-    captureLogger.debug(...args);
-  };
 }
 
 /**
- * Restore original console methods.
+ * Disable capturing and restore original console
  */
 export function disableConsoleCapture(): void {
   if (!consoleCapturing) return;
-  consoleCapturing = false;
+
   console.log = originalConsole.log;
   console.warn = originalConsole.warn;
   console.error = originalConsole.error;
   console.debug = originalConsole.debug;
+
+  consoleCapturing = false;
 }
 
 /**
- * Initialize log level from environment variable.
+ * Initialize log level from environment
  */
-export function initLogLevelFromEnv(
-  env: NodeJS.ProcessEnv = process.env,
-): void {
-  const raw = env["OPENOXYGEN_LOG_LEVEL"];
-  if (raw && raw in LOG_LEVEL_PRIORITY) {
-    setLogLevel(raw as LogLevel);
+export function initLogLevelFromEnv(): void {
+  const envLevel = process.env.OPENOXYGEN_LOG_LEVEL?.toLowerCase() as LogLevel;
+  if (envLevel && LOG_LEVEL_PRIORITY[envLevel] !== undefined) {
+    setLogLevel(envLevel);
   }
 }
+
+// Initialize on module load
+initLogLevelFromEnv();
+
+// === Exports ===
+
+export {
+  setLogLevel,
+  getLogLevel,
+  createSubsystemLogger,
+  enableConsoleCapture,
+  disableConsoleCapture,
+  initLogLevelFromEnv,
+};
+
+export default {
+  setLevel: setLogLevel,
+  getLevel: getLogLevel,
+  create: createSubsystemLogger,
+  enableCapture: enableConsoleCapture,
+  disableCapture: disableConsoleCapture,
+  initFromEnv: initLogLevelFromEnv,
+};

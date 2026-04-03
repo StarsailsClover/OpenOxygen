@@ -1,8 +1,8 @@
-﻿/**
- * OpenOxygen — Gateway Server (Hardened)
+/**
+ * OpenOxygen - Gateway Server (Hardened)
  *
  * 安全加固版网关：
- * - 速率限制 (防 ClawJacked 暴力破解)
+ * - 速率限制 (防暴力破解)
  * - Origin 校验 (防跨站 WebSocket 劫持)
  * - 时间安全认证 (防计时攻击)
  * - 绑定地址校验 (防公网暴露)
@@ -24,22 +24,14 @@ import type {
   InferenceEngine,
   ChatMessage,
 } from "../../inference/engine/index.js";
-import {
-  RateLimiter,
-  validateGatewayBinding,
-  timingSafeEqual,
-  detectPromptInjection,
-  sanitizeLogContent,
-} from "../../security/hardening.js";
-import { DASHBOARD_HTML } from "../../dashboard/index.js";
 
 const log = createSubsystemLogger("gateway");
 
-// ─── Constants ──────────────────────────────────────────────────────────────
+// === Constants ===
 
 const MAX_BODY_BYTES = 1024 * 1024; // 1 MB max request body
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+// === Types ===
 
 export type GatewayServerOptions = {
   config: OxygenConfig;
@@ -64,425 +56,378 @@ type RequestContext = {
   clientIp: string;
 };
 
-// ─── Auth (timing-safe) ─────────────────────────────────────────────────────
+// === Rate Limiter ===
 
-function validateAuth(
-  config: OxygenConfig,
-  authHeader: string | undefined,
-): boolean {
-  const { auth } = config.gateway;
-  if (auth.mode === "none") return true;
-  if (!authHeader) return false;
+class RateLimiter {
+  private requests = new Map<string, number[]>();
+  private windowMs: number;
+  private maxRequests: number;
 
-  if (auth.mode === "token" && auth.token) {
-    const token = authHeader.startsWith("Bearer ")
-      ? authHeader.slice(7)
-      : authHeader;
-    return timingSafeEqual(token, auth.token);
+  constructor(windowMs = 60000, maxRequests = 100) {
+    this.windowMs = windowMs;
+    this.maxRequests = maxRequests;
   }
 
-  if (auth.mode === "password" && auth.password) {
-    if (!authHeader.startsWith("Basic ")) return false;
-    try {
-      const decoded = Buffer.from(authHeader.slice(6), "base64").toString(
-        "utf-8",
-      );
-      const [, password] = decoded.split(":");
-      return password ? timingSafeEqual(password, auth.password) : false;
-    } catch {
+  isAllowed(clientId: string): boolean {
+    const now = nowMs();
+    const windowStart = now - this.windowMs;
+
+    // Get existing requests
+    let timestamps = this.requests.get(clientId) || [];
+
+    // Filter to current window
+    timestamps = timestamps.filter(t => t > windowStart);
+
+    // Check limit
+    if (timestamps.length >= this.maxRequests) {
       return false;
     }
+
+    // Add current request
+    timestamps.push(now);
+    this.requests.set(clientId, timestamps);
+
+    return true;
   }
 
-  return false;
+  getRemaining(clientId: string): number {
+    const now = nowMs();
+    const windowStart = now - this.windowMs;
+    const timestamps = (this.requests.get(clientId) || [])
+      .filter(t => t > windowStart);
+    return Math.max(0, this.maxRequests - timestamps.length);
+  }
 }
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// === Gateway Server ===
+
+export function createGatewayServer(options: GatewayServerOptions): GatewayServer {
+  const { config } = options;
+  const rateLimiter = new RateLimiter(
+    config.gateway?.rateLimit?.windowMs ?? 60000,
+    config.gateway?.rateLimit?.maxRequests ?? 100,
+  );
+
+  let server: HttpServer | null = null;
+  let isRunning = false;
+
+  const start = async (): Promise<void> => {
+    if (isRunning) {
+      throw new Error("Gateway already running");
+    }
+
+    // Validate binding
+    const host = config.gateway?.host ?? "127.0.0.1";
+    const port = config.gateway?.port ?? 4800;
+
+    if (host === "0.0.0.0" || host === "::") {
+      log.warn("Binding to 0.0.0.0 exposes the gateway to public network");
+    }
+
+    server = createServer(async (req, res) => {
+      const context: RequestContext = {
+        requestId: generateId("req"),
+        method: req.method ?? "GET",
+        path: req.url ?? "/",
+        startTime: nowMs(),
+        authenticated: false,
+        clientIp: getClientIp(req),
+      };
+
+      try {
+        // CORS headers
+        setCorsHeaders(res, config.gateway?.cors?.origins);
+
+        // Handle preflight
+        if (req.method === "OPTIONS") {
+          res.writeHead(204);
+          res.end();
+          return;
+        }
+
+        // Rate limiting
+        if (!rateLimiter.isAllowed(context.clientIp)) {
+          res.writeHead(429, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({
+            error: "Too many requests",
+            retryAfter: Math.ceil((config.gateway?.rateLimit?.windowMs ?? 60000) / 1000),
+          }));
+          return;
+        }
+
+        // Body size check
+        const contentLength = parseInt(req.headers["content-length"] ?? "0", 10);
+        if (contentLength > MAX_BODY_BYTES) {
+          res.writeHead(413, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Request body too large" }));
+          return;
+        }
+
+        // Authentication
+        const authResult = await authenticate(req, config);
+        if (!authResult.success) {
+          res.writeHead(401, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: authResult.error }));
+          return;
+        }
+        context.authenticated = true;
+
+        // Route handling
+        const result = await handleRequest(req, res, context, options);
+
+        // Log request
+        const duration = nowMs() - context.startTime;
+        log.info(`${context.method} ${context.path} - ${result.statusCode} (${duration}ms)`);
+
+      } catch (error) {
+        log.error(`Request error: ${error}`);
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Internal server error" }));
+      }
+    });
+
+    return new Promise((resolve, reject) => {
+      server!.listen(port, host, () => {
+        isRunning = true;
+        log.info(`Gateway listening on ${host}:${port}`);
+        resolve();
+      });
+
+      server!.on("error", (error) => {
+        reject(error);
+      });
+    });
+  };
+
+  const stop = async (): Promise<void> => {
+    if (!server || !isRunning) {
+      return;
+    }
+
+    return new Promise((resolve) => {
+      server!.close(() => {
+        isRunning = false;
+        log.info("Gateway stopped");
+        resolve();
+      });
+    });
+  };
+
+  return {
+    start,
+    stop,
+    get port() { return config.gateway?.port ?? 4800; },
+    get isRunning() { return isRunning; },
+    get httpServer() { return server; },
+  };
+}
+
+// === Request Handling ===
+
+async function handleRequest(
+  req: IncomingMessage,
+  res: import("node:http").ServerResponse,
+  context: RequestContext,
+  options: GatewayServerOptions,
+): Promise<{ statusCode: number }> {
+  const { path, method } = context;
+
+  // Health check
+  if (path === "/health" && method === "GET") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ status: "ok", timestamp: nowMs() }));
+    return { statusCode: 200 };
+  }
+
+  // API routes
+  if (path.startsWith("/api/v1/")) {
+    return handleApiRequest(req, res, context, options);
+  }
+
+  // 404
+  res.writeHead(404, { "Content-Type": "application/json" });
+  res.end(JSON.stringify({ error: "Not found" }));
+  return { statusCode: 404 };
+}
+
+async function handleApiRequest(
+  req: IncomingMessage,
+  res: import("node:http").ServerResponse,
+  context: RequestContext,
+  options: GatewayServerOptions,
+): Promise<{ statusCode: number }> {
+  const { path, method } = context;
+  const route = path.replace("/api/v1/", "");
+
+  // Parse body
+  const body = await parseBody(req);
+
+  switch (route) {
+    case "chat":
+      if (method === "POST") {
+        return handleChatRequest(body, res, options);
+      }
+      break;
+
+    case "execute":
+      if (method === "POST") {
+        return handleExecuteRequest(body, res, options);
+      }
+      break;
+
+    case "status":
+      if (method === "GET") {
+        return handleStatusRequest(res);
+      }
+      break;
+  }
+
+  res.writeHead(404, { "Content-Type": "application/json" });
+  res.end(JSON.stringify({ error: "API endpoint not found" }));
+  return { statusCode: 404 };
+}
+
+async function handleChatRequest(
+  body: unknown,
+  res: import("node:http").ServerResponse,
+  options: GatewayServerOptions,
+): Promise<{ statusCode: number }> {
+  const { inferenceEngine } = options;
+
+  if (!inferenceEngine) {
+    res.writeHead(503, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Inference engine not available" }));
+    return { statusCode: 503 };
+  }
+
+  try {
+    const request = body as { messages: ChatMessage[] };
+    const response = await inferenceEngine.infer({
+      messages: request.messages,
+    });
+
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({
+      id: response.id,
+      content: response.content,
+      model: response.model,
+      usage: response.usage,
+    }));
+    return { statusCode: 200 };
+  } catch (error) {
+    res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: String(error) }));
+    return { statusCode: 500 };
+  }
+}
+
+async function handleExecuteRequest(
+  body: unknown,
+  res: import("node:http").ServerResponse,
+  options: GatewayServerOptions,
+): Promise<{ statusCode: number }> {
+  // TODO: Implement execution endpoint
+  res.writeHead(501, { "Content-Type": "application/json" });
+  res.end(JSON.stringify({ error: "Not implemented" }));
+  return { statusCode: 501 };
+}
+
+async function handleStatusRequest(
+  res: import("node:http").ServerResponse,
+): Promise<{ statusCode: number }> {
+  const status = {
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    version: process.env.npm_package_version ?? "unknown",
+    timestamp: nowMs(),
+  };
+
+  res.writeHead(200, { "Content-Type": "application/json" });
+  res.end(JSON.stringify(status));
+  return { statusCode: 200 };
+}
+
+// === Utilities ===
 
 function getClientIp(req: IncomingMessage): string {
-  // 不信任 X-Forwarded-For（防止 IP 伪造）
+  const forwarded = req.headers["x-forwarded-for"];
+  if (typeof forwarded === "string") {
+    return forwarded.split(",")[0]!.trim();
+  }
   return req.socket.remoteAddress ?? "unknown";
 }
 
-function respond(
+function setCorsHeaders(
   res: import("node:http").ServerResponse,
-  status: number,
-  body: unknown,
-  headers?: Record<string, string>,
+  allowedOrigins?: string[],
 ): void {
-  res.writeHead(status, { "Content-Type": "application/json", ...headers });
-  res.end(JSON.stringify(body));
+  const origin = allowedOrigins?.[0] ?? "*";
+  res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 }
 
-// ─── Server Factory ─────────────────────────────────────────────────────────
+async function authenticate(
+  req: IncomingMessage,
+  config: OxygenConfig,
+): Promise<{ success: boolean; error?: string }> {
+  const authMode = config.gateway?.auth?.mode ?? "none";
 
-export function createGatewayServer(
-  options: GatewayServerOptions,
-): GatewayServer {
-  const { config, inferenceEngine, onEvent } = options;
-  let server: HttpServer | null = null;
-  let running = false;
+  if (authMode === "none") {
+    return { success: true };
+  }
 
-  // 初始化速率限制器
-  const rateLimiter = new RateLimiter(config.gateway.rateLimit);
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return { success: false, error: "Authorization required" };
+  }
 
-  // 定期清理速率限制记录
-  const cleanupInterval = setInterval(() => rateLimiter.cleanup(), 60_000);
-
-  const emitEvent = (event: OxygenEvent) => {
-    onEvent?.(event);
-  };
-
-  const httpServer = createServer(async (req, res) => {
-    const clientIp = getClientIp(req);
-    const ctx: RequestContext = {
-      requestId: generateId("req"),
-      method: req.method ?? "GET",
-      path: req.url?.split("?")[0] ?? "/", // 剥离 query string（防 CVE-2026-25253）
-      startTime: nowMs(),
-      authenticated: false,
-      clientIp,
-    };
-
-    // ── 速率限制 ──────────────────────────────────────────────
-    const rateCheck = rateLimiter.check(clientIp);
-    if (!rateCheck.allowed) {
-      log.warn(`Rate limited: ${clientIp} — ${rateCheck.reason}`);
-      respond(
-        res,
-        429,
-        { error: rateCheck.reason },
-        {
-          "Retry-After": String(
-            Math.ceil((rateCheck.retryAfterMs ?? 60000) / 1000),
-          ),
-        },
-      );
-      return;
+  if (authMode === "token") {
+    const expectedToken = config.gateway?.auth?.token ?? process.env.OPENOXYGEN_GATEWAY_TOKEN;
+    if (!expectedToken) {
+      return { success: false, error: "Server configuration error" };
     }
 
-    // ── CORS（严格模式）──────────────────────────────────────
-    const allowedOrigins = config.gateway.cors?.origins ?? [
-      "http://127.0.0.1",
-      "http://localhost",
-    ];
-    const requestOrigin = req.headers.origin;
-    if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
-      res.setHeader("Access-Control-Allow-Origin", requestOrigin);
+    const providedToken = authHeader.replace("Bearer ", "");
+    
+    // Timing-safe comparison
+    if (!timingSafeEqual(providedToken, expectedToken)) {
+      return { success: false, error: "Invalid token" };
     }
-    // 不设置通配符 "*"，防止跨域攻击
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader(
-      "Access-Control-Allow-Headers",
-      "Content-Type, Authorization",
-    );
-    res.setHeader("Access-Control-Max-Age", "3600");
+  }
 
-    // 安全响应头
-    res.setHeader("X-Content-Type-Options", "nosniff");
-    res.setHeader("X-Frame-Options", "DENY");
-    res.setHeader("Content-Security-Policy", "default-src 'none'");
+  return { success: true };
+}
 
-    if (req.method === "OPTIONS") {
-      res.writeHead(204);
-      res.end();
-      return;
-    }
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
 
-    // ── 认证（跳过 /health）──────────────────────────────────
-    if (ctx.path !== "/health") {
-      ctx.authenticated = validateAuth(config, req.headers.authorization);
-      if (!ctx.authenticated) {
-        rateLimiter.recordAuthFailure(clientIp);
-        respond(res, 401, { error: "Unauthorized" });
-        return;
-      }
-      rateLimiter.resetAuthFailures(clientIp);
-    }
-
-    // ── 解析请求体（带大小限制）──────────────────────────────
-    let body: unknown = null;
-    if (req.method === "POST" || req.method === "PUT") {
+async function parseBody(req: IncomingMessage): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    let data = "";
+    req.on("data", chunk => {
+      data += chunk;
+    });
+    req.on("end", () => {
       try {
-        const chunks: Buffer[] = [];
-        let totalBytes = 0;
-
-        for await (const chunk of req) {
-          totalBytes += (chunk as Buffer).length;
-          if (totalBytes > MAX_BODY_BYTES) {
-            respond(res, 413, { error: "Request body too large (max 1MB)" });
-            return;
-          }
-          chunks.push(chunk as Buffer);
-        }
-
-        const raw = Buffer.concat(chunks).toString("utf-8");
-        body = raw ? JSON.parse(raw) : null;
+        resolve(data ? JSON.parse(data) : {});
       } catch {
-        respond(res, 400, { error: "Invalid JSON body" });
-        return;
+        resolve({});
       }
-    }
-
-    try {
-      const { method, path } = ctx;
-
-      // GET /health
-      if (method === "GET" && path === "/health") {
-        respond(res, 200, {
-          status: "ok",
-          timestamp: nowMs(),
-          version: "0.1.0",
-        });
-        return;
-      }
-
-      // GET / — Dashboard
-      if (method === "GET" && (path === "/" || path === "/dashboard")) {
-        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-        res.end(DASHBOARD_HTML);
-        return;
-      }
-
-      // GET /api/v1/status
-      if (method === "GET" && path === "/api/v1/status") {
-        respond(res, 200, {
-          gateway: { host: config.gateway.host, port: config.gateway.port },
-          agents: config.agents.list.map((a) => ({ id: a.id, name: a.name })),
-          channels: config.channels.map((c) => ({
-            id: c.id,
-            type: c.type,
-            enabled: c.enabled,
-          })),
-          plugins: config.plugins.map((p) => ({
-            name: p.name,
-            enabled: p.enabled,
-          })),
-          models: config.models.map((m) => ({
-            provider: m.provider,
-            model: m.model,
-            hasKey: !!m.apiKey,
-          })),
-          inferenceReady: !!inferenceEngine,
-          uptime: process.uptime(),
-        });
-        return;
-      }
-
-      // GET /api/v1/agents
-      if (method === "GET" && path === "/api/v1/agents") {
-        respond(res, 200, { agents: config.agents.list });
-        return;
-      }
-
-      // GET /api/v1/models
-      if (method === "GET" && path === "/api/v1/models") {
-        respond(res, 200, {
-          models: config.models.map((m) => ({
-            provider: m.provider,
-            model: m.model,
-            hasKey: !!m.apiKey,
-          })),
-        });
-        return;
-      }
-
-      // POST /api/v1/chat
-      if (method === "POST" && path === "/api/v1/chat") {
-        if (!inferenceEngine) {
-          respond(res, 503, { error: "Inference engine not available" });
-          return;
-        }
-
-        const chatBody = body as {
-          message?: string;
-          messages?: ChatMessage[];
-          systemPrompt?: string;
-          mode?: "fast" | "balanced" | "deep";
-        } | null;
-
-        if (!chatBody) {
-          respond(res, 400, { error: "Request body required" });
-          return;
-        }
-
-        let messages: ChatMessage[];
-        if (chatBody.messages) {
-          messages = chatBody.messages;
-        } else if (chatBody.message) {
-          messages = [{ role: "user", content: chatBody.message }];
-        } else {
-          respond(res, 400, {
-            error: "Either 'message' or 'messages' field required",
-          });
-          return;
-        }
-
-        // ── 提示注入检测 ──────────────────────────────────────
-        for (const msg of messages) {
-          if (msg.role === "user" && msg.content) {
-            const injection = detectPromptInjection(msg.content);
-            if (injection.risk === "high") {
-              log.error(
-                `Blocked high-risk prompt injection from ${clientIp}: ${injection.patterns.join(", ")}`,
-              );
-              emitEvent({
-                type: "security.violation",
-                entry: {
-                  id: generateId("audit"),
-                  timestamp: nowMs(),
-                  operation: "prompt.injection",
-                  actor: clientIp,
-                  target: "chat",
-                  severity: "critical",
-                  details: { patterns: injection.patterns },
-                  rollbackable: false,
-                },
-              });
-              respond(res, 400, {
-                error: "Request blocked: potentially harmful content detected",
-                risk: injection.risk,
-              });
-              return;
-            }
-          }
-        }
-
-        log.info(
-          `Chat ${ctx.requestId} from ${clientIp}: ${messages.length} msgs, mode=${chatBody.mode ?? "auto"}`,
-        );
-
-        const inferenceResult = await inferenceEngine.infer({
-          messages,
-          mode: chatBody.mode,
-          systemPrompt: chatBody.systemPrompt,
-        });
-
-        respond(res, 200, {
-          id: ctx.requestId,
-          content: inferenceResult.content,
-          toolCalls: inferenceResult.toolCalls,
-          model: inferenceResult.model,
-          provider: inferenceResult.provider,
-          mode: inferenceResult.mode,
-          usage: inferenceResult.usage,
-          durationMs: inferenceResult.durationMs,
-        });
-        return;
-      }
-
-      // POST /api/v1/plan
-      if (method === "POST" && path === "/api/v1/plan") {
-        if (!inferenceEngine) {
-          respond(res, 503, { error: "Inference engine not available" });
-          return;
-        }
-
-        const planBody = body as { goal?: string; context?: string } | null;
-        if (!planBody?.goal) {
-          respond(res, 400, { error: "'goal' field required" });
-          return;
-        }
-
-        const { TaskPlanner } =
-          await import("../../inference/planner/index.js");
-        const planner = new TaskPlanner(inferenceEngine);
-        const plan = await planner.generatePlan(
-          planBody.goal,
-          planBody.context,
-        );
-
-        emitEvent({ type: "plan.created", planId: plan.id });
-        respond(res, 200, plan);
-        return;
-      }
-
-      // POST /api/v1/task/:id/cancel — Cancel running task
-      if (
-        method === "POST" &&
-        path.startsWith("/api/v1/task/") &&
-        path.endsWith("/cancel")
-      ) {
-        const taskId = path.split("/")[4];
-        // 广播取消事件到 WebSocket
-        emitEvent({
-          type: "plan.failed",
-          planId: taskId || "",
-          error: "User cancelled",
-        });
-        respond(res, 200, { cancelled: true, taskId });
-        return;
-      }
-
-      // GET /api/v1/ws/status — WebSocket channel status
-      if (method === "GET" && path === "/api/v1/ws/status") {
-        respond(res, 200, {
-          websocket: true,
-          path: "/ws",
-          message: "Connect via WebSocket at ws://host:port/ws",
-        });
-        return;
-      }
-
-      respond(res, 404, { error: "Not found", path: ctx.path });
-    } catch (err) {
-      log.error(`Request ${ctx.requestId} failed:`, err);
-      respond(res, 500, { error: "Internal server error" });
-    }
+    });
+    req.on("error", reject);
   });
-
-  return {
-    get port() {
-      return config.gateway.port;
-    },
-    get isRunning() {
-      return running;
-    },
-    get httpServer() {
-      return server;
-    },
-    start: () =>
-      new Promise<void>((resolve, reject) => {
-        // 绑定地址安全检查
-        const bindCheck = validateGatewayBinding(
-          config.gateway.host,
-          config.gateway.port,
-        );
-        if (!bindCheck.safe) {
-          const err = new Error(`Unsafe gateway binding: ${bindCheck.reason}`);
-          log.error(err.message);
-          reject(err);
-          return;
-        }
-
-        httpServer.listen(config.gateway.port, config.gateway.host, () => {
-          running = true;
-          server = httpServer;
-          log.info(
-            `Gateway started on ${config.gateway.host}:${config.gateway.port} (hardened)`,
-          );
-          emitEvent({ type: "gateway.started", port: config.gateway.port });
-          resolve();
-        });
-        httpServer.on("error", (err) => {
-          log.error("Gateway failed to start:", err);
-          reject(err);
-        });
-      }),
-    stop: () =>
-      new Promise<void>((resolve) => {
-        clearInterval(cleanupInterval);
-        if (!server) {
-          resolve();
-          return;
-        }
-        server.close(() => {
-          running = false;
-          server = null;
-          log.info("Gateway stopped");
-          emitEvent({ type: "gateway.stopped" });
-          resolve();
-        });
-      }),
-  };
 }
+
+// === Exports ===
+
+export { createGatewayServer, RateLimiter };
+export default createGatewayServer;

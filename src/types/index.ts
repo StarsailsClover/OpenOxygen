@@ -1,11 +1,11 @@
 /**
- * OpenOxygen — Core Type Definitions
+ * OpenOxygen - Core Type Definitions
  *
  * 全局基础类型，所有模块共享。
  * 设计原则：与 OpenClaw 接口协议对齐但完全独立实现。
  */
 
-// ─── Runtime ────────────────────────────────────────────────────────────────
+// === Runtime ===
 
 export type OxygenRuntimeEnv = {
   log: (...args: unknown[]) => void;
@@ -15,7 +15,7 @@ export type OxygenRuntimeEnv = {
   platform: "win32" | "linux" | "darwin";
 };
 
-// ─── Config ─────────────────────────────────────────────────────────────────
+// === Config ===
 
 export type ModelProvider =
   | "openai"
@@ -26,7 +26,7 @@ export type ModelProvider =
   | "stepfun"
   | "custom";
 
-// ─── Task Execution Strategies ──────────────────────────────────────────────
+// === Task Execution Strategies ===
 
 export type ExecutionMode = "terminal" | "gui" | "browser" | "hybrid" | "auto";
 
@@ -66,64 +66,50 @@ export type GatewayConfig = {
 export type SecurityConfig = {
   /** Minimum privilege level for system operations */
   privilegeLevel: "minimal" | "standard" | "elevated";
-  /** Enable full audit trail */
+  /** Enable audit logging */
   auditEnabled: boolean;
-  /** Allowed filesystem paths (glob patterns) */
-  allowedPaths?: string[];
-  /** Blocked executable patterns */
-  blockedExecutables?: string[];
-  /** Enable transaction rollback for destructive ops */
+  /** Enable rollback for operations */
   rollbackEnabled: boolean;
 };
 
 export type MemoryConfig = {
-  backend: "builtin" | "external";
-  embeddingProvider?: ModelProvider;
-  embeddingModel?: string;
-  /** Max chunks in vector store */
-  maxChunks?: number;
-  /** Lifecycle: auto-expire after N days */
-  ttlDays?: number;
-  /** Hybrid search: vector + keyword */
+  /** Memory backend type */
+  backend: "builtin" | "redis" | "sqlite";
+  /** Enable hybrid search (vector + keyword) */
   hybridSearch: boolean;
-  /** Extra memory paths to index */
-  extraPaths?: string[];
+  /** Max memory entries */
+  maxEntries?: number;
 };
 
 export type VisionConfig = {
+  /** Enable vision capabilities */
   enabled: boolean;
-  /** Dual-pipeline: fast (lightweight) + precise (heavy model) */
-  fastModel?: string;
-  preciseModel?: string;
-  /** Screenshot capture interval in ms */
-  captureIntervalMs?: number;
-  /** UI element detection confidence threshold */
-  confidenceThreshold?: number;
+  /** Primary VLM model */
+  primaryModel?: string;
+  /** Enable UIA fallback */
+  uiaFallback?: boolean;
 };
 
-export type AgentEntry = {
-  id: string;
-  name?: string;
-  workspace?: string;
-  model?: ModelConfig;
-  skills?: string[];
-  memorySearch?: Partial<MemoryConfig>;
-  identity?: { systemPrompt?: string; persona?: string };
-  sandbox?: { enabled: boolean; timeoutMs?: number };
-  tools?: string[];
+export type AgentConfig = {
+  list: Array<{
+    id: string;
+    name: string;
+    type: "worker" | "coordinator" | "specialist";
+    capabilities: string[];
+  }>;
 };
 
 export type ChannelConfig = {
   id: string;
-  type: string;
+  type: "websocket" | "sse" | "http";
   enabled: boolean;
-  config?: Record<string, unknown>;
 };
 
 export type PluginConfig = {
+  id: string;
   name: string;
+  version: string;
   enabled: boolean;
-  path?: string;
   config?: Record<string, unknown>;
 };
 
@@ -134,184 +120,84 @@ export type OxygenConfig = {
   memory: MemoryConfig;
   vision: VisionConfig;
   models: ModelConfig[];
-  agents: { default?: string; list: AgentEntry[] };
+  agents: AgentConfig;
   channels: ChannelConfig[];
   plugins: PluginConfig[];
-  /** OpenClaw compatibility mode */
-  compat?: { openclaw?: { enabled: boolean; configPath?: string } };
-  /** Raw env overrides */
-  env?: Record<string, string>;
 };
 
-// ─── Session & Routing ──────────────────────────────────────────────────────
+// === Tool System ===
 
-export type SessionScope = "per-sender" | "global" | "per-channel";
+export type ToolResult = {
+  success: boolean;
+  data?: unknown;
+  error?: string;
+  message?: string;
+};
+
+export type ToolInvocation = {
+  id: string;
+  name: string;
+  arguments: Record<string, unknown>;
+  timestamp: number;
+};
+
+// === Memory System ===
+
+export type MemoryChunk = {
+  id: string;
+  content: string;
+  vector?: number[];
+  metadata?: Record<string, unknown>;
+  source?: string;
+  createdAt: number;
+};
+
+export type MemoryConfig = {
+  dimension?: number;
+  maxChunks?: number;
+  similarityThreshold?: number;
+};
+
+export type MemorySearchResult = {
+  chunk: MemoryChunk;
+  score: number;
+  method: "vector" | "bm25" | "hybrid";
+};
+
+export type MemorySource = {
+  type: "conversation" | "document" | "code" | "web";
+  id: string;
+  title?: string;
+};
+
+// === Session System ===
 
 export type SessionEntry = {
   id: string;
   key: string;
   agentId: string;
-  channelId?: string;
+  accountId?: string;
   createdAt: number;
   lastActiveAt: number;
   metadata?: Record<string, unknown>;
 };
 
-export type RouteMatch =
-  | "binding.peer"
-  | "binding.channel"
-  | "binding.account"
-  | "default";
+// === Audit System ===
 
-export type ResolvedRoute = {
-  agentId: string;
-  channelId: string;
-  accountId: string;
-  sessionKey: string;
-  mainSessionKey: string;
-  matchedBy: RouteMatch;
-};
-
-// ─── Inference & Planning ───────────────────────────────────────────────────
-
-export type InferenceMode = "fast" | "balanced" | "deep";
-
-export type PlanStep = {
-  id: string;
-  action: string;
-  params: Record<string, unknown>;
-  dependencies: string[];
-  status: "pending" | "running" | "completed" | "failed" | "skipped";
-  result?: unknown;
-  error?: string;
-};
-
-export type ExecutionPlan = {
-  id: string;
-  goal: string;
-  steps: PlanStep[];
-  createdAt: number;
-  updatedAt: number;
-  status: "planning" | "executing" | "reflecting" | "completed" | "failed";
-  reflections: ReflectionEntry[];
-};
-
-export type ReflectionEntry = {
-  stepId: string;
-  observation: string;
-  adjustment?: string;
-  timestamp: number;
-};
-
-// ─── Execution ──────────────────────────────────────────────────────────────
-
-export type ToolInvocation = {
-  toolName: string;
-  params: Record<string, unknown>;
-  timeout?: number;
-};
-
-export type ToolResult = {
-  success: boolean;
-  output?: unknown;
-  error?: string;
-  durationMs: number;
-};
+export type AuditSeverity = "info" | "low" | "medium" | "high" | "critical";
 
 export type SystemOperation =
   | "file.read"
   | "file.write"
   | "file.delete"
-  | "file.list"
-  | "process.start"
-  | "process.kill"
-  | "process.list"
-  | "registry.read"
-  | "registry.write"
   | "network.request"
-  | "clipboard.read"
-  | "clipboard.write"
-  | "screen.capture"
-  | "input.keyboard"
-  | "input.mouse";
-
-// ─── Memory ─────────────────────────────────────────────────────────────────
-
-export type MemorySource = "memory" | "sessions" | "workspace";
-
-export type MemorySearchResult = {
-  path: string;
-  startLine: number;
-  endLine: number;
-  score: number;
-  snippet: string;
-  source: MemorySource;
-  citation?: string;
-};
-
-export type MemoryChunk = {
-  id: string;
-  content: string;
-  embedding?: number[];
-  source: MemorySource;
-  path: string;
-  startLine: number;
-  endLine: number;
-  createdAt: number;
-  expiresAt?: number;
-};
-
-// ─── Plugin SDK ─────────────────────────────────────────────────────────────
-
-export type PluginManifest = {
-  name: string;
-  version: string;
-  description?: string;
-  author?: string;
-  entryPoint: string;
-  permissions?: SystemOperation[];
-  configSchema?: Record<string, unknown>;
-};
-
-export type PluginContext = {
-  config: Record<string, unknown>;
-  logger: Pick<OxygenRuntimeEnv, "log" | "error" | "warn">;
-  runtime: OxygenRuntimeEnv;
-};
-
-export type PluginHookPhase =
-  | "before-inference"
-  | "after-inference"
-  | "before-execution"
-  | "after-execution"
-  | "on-message"
-  | "on-error";
-
-export type PluginHook = {
-  phase: PluginHookPhase;
-  priority?: number;
-  handler: (ctx: PluginContext, payload: unknown) => Promise<unknown>;
-};
-
-export type OxygenPluginDefinition = {
-  manifest: PluginManifest;
-  hooks?: PluginHook[];
-  tools?: Array<{
-    name: string;
-    description: string;
-    parameters: Record<string, unknown>;
-    execute: (
-      params: Record<string, unknown>,
-      ctx: PluginContext,
-    ) => Promise<ToolResult>;
-  }>;
-  activate?: (ctx: PluginContext) => Promise<void>;
-  deactivate?: (ctx: PluginContext) => Promise<void>;
-};
-
-// ─── Audit ──────────────────────────────────────────────────────────────────
-
-export type AuditSeverity = "info" | "warn" | "critical";
+  | "process.spawn"
+  | "process.kill"
+  | "plugin.load"
+  | "plugin.unload"
+  | "config.update"
+  | "auth.login"
+  | "auth.logout";
 
 export type AuditEntry = {
   id: string;
@@ -324,26 +210,106 @@ export type AuditEntry = {
   rollbackable: boolean;
 };
 
-// ─── Events ─────────────────────────────────────────────────────────────────
+// === Event System ===
 
-export type OxygenEvent =
-  | { type: "gateway.started"; port: number }
-  | { type: "gateway.stopped" }
-  | {
-      type: "agent.message";
-      agentId: string;
-      sessionKey: string;
-      content: string;
-    }
-  | { type: "agent.tool-call"; agentId: string; tool: string }
-  | { type: "plan.created"; planId: string }
-  | { type: "plan.step-completed"; planId: string; stepId: string }
-  | { type: "plan.completed"; planId: string }
-  | { type: "plan.failed"; planId: string; error: string }
-  | { type: "memory.synced"; chunks: number }
-  | { type: "plugin.loaded"; name: string }
-  | { type: "plugin.error"; name: string; error: string }
-  | { type: "security.violation"; entry: AuditEntry }
-  | { type: "vision.capture"; timestamp: number };
+export type OxygenEvent = {
+  type: string;
+  id: string;
+  timestamp: number;
+  source: string;
+  data: unknown;
+};
 
 export type OxygenEventHandler = (event: OxygenEvent) => void | Promise<void>;
+
+// === Permission System ===
+
+export type Permission = {
+  resource: string;
+  action: string;
+  allowed: boolean;
+};
+
+export type PermissionCheck = {
+  granted: boolean;
+  reason?: string;
+};
+
+export type PermissionContext = Record<string, unknown>;
+
+// === Inference ===
+
+export type InferenceMode = "fast" | "balanced" | "deep";
+
+// === Execution ===
+
+export type ExecutionPlan = {
+  id: string;
+  goal: string;
+  steps: PlanStep[];
+  createdAt: number;
+  updatedAt: number;
+  status: "planning" | "executing" | "completed" | "failed";
+  reflections: ReflectionEntry[];
+};
+
+export type PlanStep = {
+  id: string;
+  action: string;
+  params: Record<string, unknown>;
+  dependencies: string[];
+  status: "pending" | "running" | "completed" | "failed" | "skipped";
+  result?: unknown;
+  error?: string;
+};
+
+export type ReflectionEntry = {
+  stepId: string;
+  observation: string;
+  adjustment?: string;
+  timestamp: number;
+};
+
+// === Plugin System ===
+
+export type PluginManifest = {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  author: string;
+  permissions: string[];
+  entry: string;
+};
+
+export type PluginHookPhase =
+  | "before_init"
+  | "after_init"
+  | "before_execute"
+  | "after_execute"
+  | "before_shutdown";
+
+export type PluginHook = {
+  phase: PluginHookPhase;
+  handler: () => void | Promise<void>;
+  priority: number;
+};
+
+export type PluginContext = {
+  config: Record<string, unknown>;
+  logger: {
+    info: (...args: unknown[]) => void;
+    warn: (...args: unknown[]) => void;
+    error: (...args: unknown[]) => void;
+  };
+};
+
+export type OxygenPluginDefinition = {
+  manifest: PluginManifest;
+  init: (context: PluginContext) => void | Promise<void>;
+  hooks?: PluginHook[];
+};
+
+// === Exports ===
+
+export {};

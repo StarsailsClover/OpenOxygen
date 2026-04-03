@@ -1,7 +1,7 @@
 /**
- * OpenOxygen — Vision-Language Fusion Pipeline (26w11aE_P3)
+ * OpenOxygen - Vision-Language Fusion Pipeline
  *
- * 整合 OxygenUltraVision + qwen3-vl:4b 的完整视觉理解管道
+ * 整合 OxygenUltraVision + qwen3-vl:4b 的完整视觉理解管线
  */
 
 import { createSubsystemLogger } from "../../logging/index.js";
@@ -10,13 +10,10 @@ import type {
   ChatMessage,
 } from "../../inference/engine/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
-import type { NativeModule } from "../../native-bridge.js";
 
 const log = createSubsystemLogger("vision/fusion");
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Types
-// ═══════════════════════════════════════════════════════════════════════════
+// === Types ===
 
 export type FusionMode = "fast" | "precise" | "full";
 
@@ -43,317 +40,218 @@ export type VisionLanguageResult = {
   latencyMs: number;
 };
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Vision-Language Fusion Engine
-// ═══════════════════════════════════════════════════════════════════════════
+// === Vision-Language Fusion Engine ===
 
 export class VisionLanguageFusion {
   private inferenceEngine: InferenceEngine;
-  private native: NativeModule | null = null;
   private screenshotDir: string;
 
   constructor(
     inferenceEngine: InferenceEngine,
-    screenshotDir = "D:\\Coding\\OpenOxygen\\.state\\screenshots",
+    screenshotDir = "./.state/screenshots",
   ) {
     this.inferenceEngine = inferenceEngine;
     this.screenshotDir = screenshotDir;
-    this.loadNative();
-  }
-
-  private loadNative(): void {
-    try {
-      const { loadNativeModule } = require("../../native-bridge.js");
-      this.native = loadNativeModule();
-    } catch {
-      log.warn("Native module not available for vision fusion");
-    }
+    log.info("VisionLanguageFusion initialized");
   }
 
   /**
-   * 执行视觉-语言融合分析
+   * Analyze screenshot with VLM
    */
-  async analyze(params: {
-    instruction: string;
-    mode?: FusionMode;
-    screenshotPath?: string;
-    context?: string;
-  }): Promise<VisionLanguageResult> {
+  async analyze(
+    screenshotBase64: string,
+    options: {
+      mode?: FusionMode;
+      instruction?: string;
+      previousActions?: string[];
+    } = {},
+  ): Promise<VisionLanguageResult> {
     const startTime = nowMs();
-    const mode = params.mode ?? "fast";
+    const mode = options.mode || "balanced";
 
-    // 1. 获取截图
-    const screenshotPath =
-      params.screenshotPath ?? (await this.captureScreenshot());
+    log.info(`Analyzing screenshot: mode=${mode}`);
 
-    // 2. 获取 UI 元素（UIA）
-    const uiaElements = this.getUIAElements();
-
-    // 3. 压缩图像
-    const compressed = this.compressImage(screenshotPath);
-
-    // 4. 构建多模态提示
-    const prompt = this.buildMultimodalPrompt(
-      params.instruction,
-      uiaElements,
-      compressed,
-    );
-
-    // 5. 调用视觉模型
-    const response = await this.callVisionModel(prompt, mode);
-
-    // 6. 解析视觉定位结果
-    const grounding = this.parseGrounding(response.content, uiaElements);
-
-    // 7. 构建结果
-    const result: VisionLanguageResult = {
-      id: generateId("vlf"),
-      timestamp: nowMs(),
-      description: response.content,
-      elements: grounding,
-      suggestedAction: this.inferAction(params.instruction, grounding),
-      rawResponse: response.content,
-      latencyMs: nowMs() - startTime,
-    };
-
-    log.info(
-      `Vision-Language fusion completed in ${result.latencyMs}ms, found ${grounding.length} elements`,
-    );
-
-    return result;
-  }
-
-  /**
-   * 捕获屏幕截图
-   */
-  private async captureScreenshot(): Promise<string> {
-    if (!this.native) {
-      throw new Error("Native module required for screenshot");
-    }
-
-    const fs = await import("node:fs");
-    const path = await import("node:path");
-
-    if (!fs.existsSync(this.screenshotDir)) {
-      fs.mkdirSync(this.screenshotDir, { recursive: true });
-    }
-
-    const filename = `fusion_${Date.now()}.png`;
-    const filepath = path.join(this.screenshotDir, filename);
-
-    const result = this.native.captureScreen(filepath);
-    if (!result.success) {
-      throw new Error(`Screenshot failed: ${result.error}`);
-    }
-
-    return filepath;
-  }
-
-  /**
-   * 获取 UI Automation 元素
-   */
-  private getUIAElements(): Array<{
-    id: string;
-    type: string;
-    label: string;
-    bounds: { x: number; y: number; width: number; height: number };
-    confidence: number;
-  }> {
-    if (!this.native) return [];
+    // Build prompt based on mode
+    const prompt = this.buildPrompt(mode, options.instruction, options.previousActions);
 
     try {
-      const elements = this.native.getUiElements(null);
-      return elements
-        .filter((e: any) => e.name && !e.isOffscreen)
-        .map((e: any, idx: number) => ({
-          id: e.automationId || `elem_${idx}`,
-          type: e.controlType,
-          label: e.name,
-          bounds: { x: e.x, y: e.y, width: e.width, height: e.height },
-          confidence: e.isEnabled ? 1.0 : 0.5,
-        }));
-    } catch {
-      return [];
-    }
-  }
+      // Call VLM via inference engine
+      const response = await this.inferenceEngine.infer({
+        messages: [
+          {
+            role: "system",
+            content: "You are a UI automation assistant. Analyze the screenshot and provide structured output.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        mode: mode === "fast" ? "fast" : "balanced",
+      });
 
-  /**
-   * 压缩图像
-   */
-  private compressImage(screenshotPath: string): {
-    base64: string;
-    width: number;
-    height: number;
-  } {
-    if (!this.native) {
-      return { base64: "", width: 0, height: 0 };
-    }
+      // Parse VLM response
+      const parsed = this.parseResponse(response.content);
 
-    try {
-      const compressed = (this.native as any).compressScreenshot(
-        screenshotPath,
-        896,
-        85,
-      );
-      const base64 = (this.native as any).imageToBase64(compressed.data);
       return {
-        base64,
-        width: compressed.compressedWidth,
-        height: compressed.compressedHeight,
+        id: generateId("vlm"),
+        timestamp: nowMs(),
+        description: parsed.description,
+        elements: parsed.elements,
+        suggestedAction: parsed.suggestedAction,
+        rawResponse: response.content,
+        latencyMs: nowMs() - startTime,
       };
-    } catch {
-      return { base64: "", width: 0, height: 0 };
+    } catch (error) {
+      log.error(`Vision analysis failed: ${error}`);
+      throw error;
     }
   }
 
   /**
-   * 构建多模态提示
+   * Build analysis prompt
    */
-  private buildMultimodalPrompt(
-    instruction: string,
-    elements: Array<{ id: string; type: string; label: string; bounds: any }>,
-    compressed: { base64: string; width: number; height: number },
+  private buildPrompt(
+    mode: FusionMode,
+    instruction?: string,
+    previousActions?: string[],
   ): string {
-    const parts: string[] = [];
+    let prompt = "Analyze this screenshot and provide a structured response.\n\n";
 
-    // 图像标记
-    if (compressed.base64) {
-      parts.push(`[IMAGE: ${compressed.width}x${compressed.height}]`);
+    if (instruction) {
+      prompt += `User instruction: ${instruction}\n\n`;
     }
 
-    // UI 元素列表
-    if (elements.length > 0) {
-      parts.push("\nUI Elements:");
-      for (const elem of elements.slice(0, 30)) {
-        parts.push(
-          `  [${elem.type}] "${elem.label}" at (${elem.bounds.x},${elem.bounds.y})`,
-        );
+    if (previousActions && previousActions.length > 0) {
+      prompt += `Previous actions:\n${previousActions.map(a => `- ${a}`).join("\n")}\n\n`;
+    }
+
+    prompt += "Provide output in this JSON format:\n";
+    prompt += JSON.stringify({
+      description: "Brief description of the current screen state",
+      elements: [
+        {
+          elementId: "unique-id",
+          elementType: "button|input|link|text|image|other",
+          label: "Visible text or description",
+          bounds: { x: 0, y: 0, width: 100, height: 30 },
+          confidence: 0.95,
+          clickCoordinates: { x: 50, y: 15 },
+        },
+      ],
+      suggestedAction: {
+        type: "click|type|scroll|wait",
+        target: { elementId: "target-id" },
+        params: { text: "if typing" },
+      },
+    }, null, 2);
+
+    if (mode === "precise" || mode === "full") {
+      prompt += "\n\nBe precise with coordinates. Include all interactive elements.";
+    }
+
+    return prompt;
+  }
+
+  /**
+   * Parse VLM response
+   */
+  private parseResponse(content: string): {
+    description: string;
+    elements: VisualGroundingResult[];
+    suggestedAction?: VisionLanguageResult["suggestedAction"];
+  } {
+    try {
+      // Try to extract JSON from response
+      const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) ||
+                       content.match(/\{[\s\S]*\}/);
+      
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[1] || jsonMatch[0]!);
+        return {
+          description: parsed.description || "No description provided",
+          elements: (parsed.elements || []).map((e: any) => ({
+            elementId: e.elementId || generateId("elem"),
+            elementType: e.elementType || "unknown",
+            label: e.label || "",
+            bounds: e.bounds || { x: 0, y: 0, width: 0, height: 0 },
+            confidence: e.confidence || 0.5,
+            clickCoordinates: e.clickCoordinates || {
+              x: (e.bounds?.x || 0) + (e.bounds?.width || 0) / 2,
+              y: (e.bounds?.y || 0) + (e.bounds?.height || 0) / 2,
+            },
+          })),
+          suggestedAction: parsed.suggestedAction,
+        };
       }
+    } catch (error) {
+      log.warn(`Failed to parse JSON response: ${error}`);
     }
 
-    // 用户指令
-    parts.push(`\nInstruction: ${instruction}`);
-    parts.push(
-      "\nRespond with: 1) Description of what you see, 2) Target element ID if applicable",
+    // Fallback: return raw content as description
+    return {
+      description: content.slice(0, 500),
+      elements: [],
+    };
+  }
+
+  /**
+   * Find element by description
+   */
+  async findElement(
+    screenshotBase64: string,
+    description: string,
+  ): Promise<VisualGroundingResult | null> {
+    const analysis = await this.analyze(screenshotBase64, {
+      instruction: `Find the element: ${description}`,
+      mode: "precise",
+    });
+
+    // Find best matching element
+    const match = analysis.elements.find(e =>
+      e.label.toLowerCase().includes(description.toLowerCase()) ||
+      description.toLowerCase().includes(e.label.toLowerCase()),
     );
 
-    return parts.join("\n");
+    return match || null;
   }
 
   /**
-   * 调用视觉模型
+   * Wait for element to appear
    */
-  private async callVisionModel(prompt: string, mode: FusionMode) {
-    const messages: ChatMessage[] = [
-      {
-        role: "user",
-        content: prompt,
-      },
-    ];
+  async waitForElement(
+    screenshotProvider: () => Promise<string>,
+    description: string,
+    options: { timeout?: number; interval?: number } = {},
+  ): Promise<VisualGroundingResult | null> {
+    const timeout = options.timeout || 30000;
+    const interval = options.interval || 1000;
+    const startTime = nowMs();
 
-    return this.inferenceEngine.infer({
-      messages,
-      model: { provider: "ollama", model: "qwen3-vl:4b" },
-      mode: mode === "full" ? "deep" : mode === "precise" ? "balanced" : "fast",
-    });
-  }
-
-  /**
-   * 解析视觉定位结果
-   */
-  private parseGrounding(
-    response: string,
-    elements: Array<{
-      id: string;
-      type: string;
-      label: string;
-      bounds: any;
-      confidence: number;
-    }>,
-  ): VisualGroundingResult[] {
-    const results: VisualGroundingResult[] = [];
-
-    // 简单启发式：查找元素 ID 或标签匹配
-    for (const elem of elements) {
-      const labelLower = elem.label.toLowerCase();
-      const responseLower = response.toLowerCase();
-
-      // 检查响应中是否提到该元素
-      if (
-        responseLower.includes(labelLower) ||
-        responseLower.includes(elem.id.toLowerCase())
-      ) {
-        results.push({
-          elementId: elem.id,
-          elementType: elem.type,
-          label: elem.label,
-          bounds: elem.bounds,
-          confidence: elem.confidence,
-          clickCoordinates: {
-            x: elem.bounds.x + elem.bounds.width / 2,
-            y: elem.bounds.y + elem.bounds.height / 2,
-          },
-        });
+    while (nowMs() - startTime < timeout) {
+      const screenshot = await screenshotProvider();
+      const element = await this.findElement(screenshot, description);
+      
+      if (element) {
+        return element;
       }
+
+      await new Promise(r => setTimeout(r, interval));
     }
 
-    return results;
-  }
-
-  /**
-   * 推断建议动作
-   */
-  private inferAction(
-    instruction: string,
-    grounding: VisualGroundingResult[],
-  ): VisionLanguageResult["suggestedAction"] {
-    const lower = instruction.toLowerCase();
-
-    // 点击操作
-    if (/click|press|tap|点击/.test(lower)) {
-      const target = grounding[0];
-      if (target) {
-        return {
-          type: "click",
-          target,
-          params: {
-            x: target.clickCoordinates.x,
-            y: target.clickCoordinates.y,
-          },
-        };
-      }
-    }
-
-    // 输入操作
-    if (/type|input|enter|输入/.test(lower)) {
-      const target = grounding.find(
-        (g) => g.elementType === "Edit" || g.elementType === "input",
-      );
-      if (target) {
-        return {
-          type: "type",
-          target,
-          params: {
-            x: target.clickCoordinates.x,
-            y: target.clickCoordinates.y,
-            text: instruction.replace(/type|input|enter|输入/gi, "").trim(),
-          },
-        };
-      }
-    }
-
-    // 滚动操作
-    if (/scroll|滚动/.test(lower)) {
-      return {
-        type: "scroll",
-        params: {
-          direction:
-            lower.includes("down") || lower.includes("下") ? "down" : "up",
-          amount: 3,
-        },
-      };
-    }
-
-    return undefined;
+    return null;
   }
 }
+
+// === Factory ===
+
+export function createVisionLanguageFusion(
+  inferenceEngine: InferenceEngine,
+  screenshotDir?: string,
+): VisionLanguageFusion {
+  return new VisionLanguageFusion(inferenceEngine, screenshotDir);
+}
+
+// === Exports ===
+
+export default VisionLanguageFusion;

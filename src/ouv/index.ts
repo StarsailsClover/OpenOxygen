@@ -1,5 +1,5 @@
 /**
- * OpenOxygen - OUV (OxygenUltraVision) Core Module
+ * OpenOxygen - OUV Core Module
  *
  * Based on 26w15aB-26w15aHRoadmap.md refactoring
  *
@@ -74,538 +74,427 @@ export interface UIElement {
   metadata?: Record<string, unknown>;
 }
 
-// OUV Task Interface
-export interface OUVTask {
-  id: string;
-  instruction: string;
-  targetElement?: string;
-  action: "click" | "type" | "scroll" | "drag" | "read" | "wait";
-  parameters?: Record<string, unknown>;
-  context?: {
-    screenshot?: string;
-    appName?: string;
-    windowTitle?: string;
+// OUV State
+interface OUVState {
+  db: Database.Database | null;
+  config: OUVConfig;
+  initialized: boolean;
+}
+
+// Global state
+const state: OUVState = {
+  db: null,
+  config: {
+    vlmProviders: [],
+    primaryVLM: "qwen3-vl:4b",
+    uiaTimeout: 5000,
+    uiaRetryCount: 3,
+    osrEnabled: true,
+    osrAutoRecord: false,
+    vectorDbPath: "./.state/ouv.db",
+    vectorDimension: 1536,
+    memoryEnabled: true,
+    reflectionEnabled: true,
+    predictionEnabled: true,
+  },
+  initialized: false,
+};
+
+// === Initialization ===
+
+/**
+ * Initialize OUV system
+ */
+export async function initializeOUV(config?: Partial<OUVConfig>): Promise<void> {
+  if (state.initialized) {
+    log.warn("OUV already initialized");
+    return;
+  }
+
+  // Merge config
+  state.config = { ...state.config, ...config };
+
+  // Initialize vector database
+  await initializeVectorDB();
+
+  // Initialize memory
+  if (state.config.memoryEnabled) {
+    await initializeMemory();
+  }
+
+  state.initialized = true;
+  log.info("OUV initialized successfully");
+}
+
+/**
+ * Initialize vector database
+ */
+async function initializeVectorDB(): Promise<void> {
+  const dbPath = state.config.vectorDbPath;
+  const dir = join(dbPath, "..");
+  
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+
+  state.db = new Database(dbPath);
+  
+  // Create tables
+  state.db.exec(`
+    CREATE TABLE IF NOT EXISTS elements (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      name TEXT,
+      description TEXT,
+      bounds_x INTEGER,
+      bounds_y INTEGER,
+      bounds_width INTEGER,
+      bounds_height INTEGER,
+      confidence REAL,
+      source TEXT,
+      metadata TEXT,
+      created_at INTEGER,
+      updated_at INTEGER
+    );
+
+    CREATE TABLE IF NOT EXISTS element_vectors (
+      element_id TEXT PRIMARY KEY,
+      vector BLOB,
+      FOREIGN KEY (element_id) REFERENCES elements(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS interactions (
+      id TEXT PRIMARY KEY,
+      element_id TEXT,
+      action TEXT,
+      result TEXT,
+      timestamp INTEGER,
+      FOREIGN KEY (element_id) REFERENCES elements(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_elements_type ON elements(type);
+    CREATE INDEX IF NOT EXISTS idx_elements_name ON elements(name);
+    CREATE INDEX IF NOT EXISTS idx_interactions_time ON interactions(timestamp);
+  `);
+
+  log.info("Vector database initialized");
+}
+
+/**
+ * Initialize memory system
+ */
+async function initializeMemory(): Promise<void> {
+  // Memory system is already initialized via GlobalMemory
+  log.info("Memory system initialized");
+}
+
+// === Element Detection ===
+
+/**
+ * Detect UI elements using hybrid approach
+ */
+export async function detectElements(
+  screenshotBase64: string,
+  options: {
+    useVLM?: boolean;
+    useUIA?: boolean;
+    useMemory?: boolean;
+  } = {},
+): Promise<UIElement[]> {
+  const { useVLM = true, useUIA = true, useMemory = true } = options;
+  const elements: UIElement[] = [];
+  const elementMap = new Map<string, UIElement>();
+
+  // VLM detection
+  if (useVLM) {
+    try {
+      const vlmElements = await detectWithVLM(screenshotBase64);
+      for (const elem of vlmElements) {
+        elementMap.set(elem.id, elem);
+      }
+    } catch (error) {
+      log.error(`VLM detection failed: ${error}`);
+    }
+  }
+
+  // UIA detection
+  if (useUIA) {
+    try {
+      const uiaElements = await detectWithUIA();
+      for (const elem of uiaElements) {
+        const existing = elementMap.get(elem.id);
+        if (existing) {
+          // Merge with existing
+          mergeElements(existing, elem);
+        } else {
+          elementMap.set(elem.id, elem);
+        }
+      }
+    } catch (error) {
+      log.error(`UIA detection failed: ${error}`);
+    }
+  }
+
+  // Memory lookup
+  if (useMemory) {
+    try {
+      const memoryElements = await lookupInMemory(screenshotBase64);
+      for (const elem of memoryElements) {
+        const existing = elementMap.get(elem.id);
+        if (existing) {
+          mergeElements(existing, elem);
+        } else {
+          elementMap.set(elem.id, elem);
+        }
+      }
+    } catch (error) {
+      log.error(`Memory lookup failed: ${error}`);
+    }
+  }
+
+  return Array.from(elementMap.values());
+}
+
+/**
+ * Detect elements using VLM
+ */
+async function detectWithVLM(screenshotBase64: string): Promise<UIElement[]> {
+  // TODO: Implement VLM-based detection
+  // This would call the inference engine with a vision model
+  log.debug("VLM detection not yet implemented");
+  return [];
+}
+
+/**
+ * Detect elements using UIA
+ */
+async function detectWithUIA(): Promise<UIElement[]> {
+  // TODO: Implement UIA-based detection
+  // This would use the native UIA module
+  log.debug("UIA detection not yet implemented");
+  return [];
+}
+
+/**
+ * Lookup elements in memory
+ */
+async function lookupInMemory(screenshotBase64: string): Promise<UIElement[]> {
+  // TODO: Implement memory-based lookup
+  log.debug("Memory lookup not yet implemented");
+  return [];
+}
+
+/**
+ * Merge element data from multiple sources
+ */
+function mergeElements(base: UIElement, other: UIElement): void {
+  // Take higher confidence
+  if (other.confidence > base.confidence) {
+    base.confidence = other.confidence;
+    base.bounds = other.bounds;
+  }
+  
+  // Merge metadata
+  base.metadata = { ...base.metadata, ...other.metadata };
+  
+  // Update source to hybrid
+  if (base.source !== other.source) {
+    base.source = "hybrid";
+  }
+}
+
+// === Element Interaction ===
+
+/**
+ * Find element by description
+ */
+export async function findElement(
+  description: string,
+  screenshotBase64?: string,
+): Promise<UIElement | null> {
+  // First try exact match from memory
+  if (state.db) {
+    const row = state.db.prepare(
+      "SELECT * FROM elements WHERE name = ? OR description = ? LIMIT 1"
+    ).get(description, description) as any;
+
+    if (row) {
+      return rowToElement(row);
+    }
+  }
+
+  // Then try detection
+  if (screenshotBase64) {
+    const elements = await detectElements(screenshotBase64);
+    
+    // Find best match
+    const match = elements.find(e =>
+      e.name?.toLowerCase().includes(description.toLowerCase()) ||
+      e.description?.toLowerCase().includes(description.toLowerCase()),
+    );
+
+    return match || null;
+  }
+
+  return null;
+}
+
+/**
+ * Click element
+ */
+export async function clickElement(element: UIElement): Promise<boolean> {
+  const centerX = element.bounds.x + element.bounds.width / 2;
+  const centerY = element.bounds.y + element.bounds.height / 2;
+
+  log.info(`Clicking element at (${centerX}, ${centerY})`);
+
+  // TODO: Implement actual click via native module
+  // await native.mouseMove(centerX, centerY);
+  // await native.mouseClick(0);
+
+  // Record interaction
+  await recordInteraction(element.id, "click", "success");
+
+  return true;
+}
+
+/**
+ * Type text into element
+ */
+export async function typeIntoElement(
+  element: UIElement,
+  text: string,
+): Promise<boolean> {
+  // First click to focus
+  await clickElement(element);
+
+  log.info(`Typing text into element: ${text.substring(0, 50)}...`);
+
+  // TODO: Implement actual typing via native module
+  // await native.typeText(text);
+
+  // Record interaction
+  await recordInteraction(element.id, "type", "success");
+
+  return true;
+}
+
+// === Reflection and Prediction ===
+
+/**
+ * Record interaction for reflection
+ */
+async function recordInteraction(
+  elementId: string,
+  action: string,
+  result: string,
+): Promise<void> {
+  if (!state.db) return;
+
+  state.db.prepare(
+    `INSERT INTO interactions (id, element_id, action, result, timestamp)
+     VALUES (?, ?, ?, ?, ?)`
+  ).run(generateId("int"), elementId, action, result, nowMs());
+
+  log.debug(`Recorded interaction: ${action} on ${elementId}`);
+}
+
+/**
+ * Reflect on past interactions
+ */
+export async function reflect(
+  elementId?: string,
+): Promise<{
+  success: boolean;
+  insights: string[];
+}> {
+  if (!state.db) {
+    return { success: false, insights: [] };
+  }
+
+  const query = elementId
+    ? "SELECT * FROM interactions WHERE element_id = ? ORDER BY timestamp DESC LIMIT 100"
+    : "SELECT * FROM interactions ORDER BY timestamp DESC LIMIT 100";
+
+  const params = elementId ? [elementId] : [];
+  const interactions = state.db.prepare(query).all(...params) as any[];
+
+  // Analyze patterns
+  const insights: string[] = [];
+  const actionCounts = new Map<string, number>();
+  
+  for (const int of interactions) {
+    actionCounts.set(int.action, (actionCounts.get(int.action) || 0) + 1);
+  }
+
+  // Generate insights
+  for (const [action, count] of actionCounts.entries()) {
+    insights.push(`Action "${action}" performed ${count} times`);
+  }
+
+  return { success: true, insights };
+}
+
+/**
+ * Predict next action
+ */
+export async function predict(
+  context: {
+    currentScreen?: string;
+    recentActions?: string[];
+  },
+): Promise<{
+  predictedAction?: string;
+  confidence: number;
+  alternatives: string[];
+}> {
+  // TODO: Implement prediction based on learned patterns
+  log.debug("Prediction not yet implemented");
+  
+  return {
+    confidence: 0,
+    alternatives: [],
   };
 }
 
-// OUV Result Interface
-export interface OUVResult {
-  taskId: string;
-  success: boolean;
-  action: string;
-  targetElement?: UIElement;
-  executionTime: number;
-  reflection?: ReflectionResult;
-  error?: string;
+// === Utilities ===
+
+function rowToElement(row: any): UIElement {
+  return {
+    id: row.id,
+    type: row.type,
+    name: row.name,
+    description: row.description,
+    bounds: {
+      x: row.bounds_x,
+      y: row.bounds_y,
+      width: row.bounds_width,
+      height: row.bounds_height,
+    },
+    confidence: row.confidence,
+    source: row.source,
+    metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
+  };
 }
 
-// Reflection Result
-export interface ReflectionResult {
-  success: boolean;
-  confidence: number;
-  observations: string[];
-  suggestions: string[];
-  learnedPattern?: string;
-}
+// === Exports ===
 
-// OSR Record
-export interface OSRRecord {
-  id: string;
-  timestamp: number;
-  screenshotPath: string;
-  elements: UIElement[];
-  action: string;
-  result: "success" | "failure" | "partial";
-  vlmDescription?: string;
-  reflection?: string;
-  appName?: string;
-}
+export {
+  initializeOUV,
+  detectElements,
+  findElement,
+  clickElement,
+  typeIntoElement,
+  reflect,
+  predict,
+};
 
-// Vector Memory Entry
-export interface VectorMemoryEntry {
-  id: string;
-  elementId: string;
-  appName: string;
-  elementType: string;
-  embedding: number[];
-  position: { x: number; y: number };
-  successCount: number;
-  failureCount: number;
-  lastAccessed: number;
-}
-
-// OUV Core Class
-export class OxygenUltraVision {
-  private config: OUVConfig;
-  private memory: GlobalMemory;
-  private vectorDb: Database.Database;
-  private osrRecords: OSRRecord[] = [];
-  private elementCache: Map<string, UIElement> = new Map();
-
-  constructor(config: OUVConfig) {
-    this.config = config;
-    this.memory = new GlobalMemory(config.vectorDbPath);
-    this.vectorDb = this.initializeVectorDatabase(config.vectorDbPath);
-
-    log.info("OUV initialized with config:", {
-      primaryVLM: config.primaryVLM,
-      vlmProviders: config.vlmProviders.length,
-      osrEnabled: config.osrEnabled,
-      vectorDimension: config.vectorDimension,
-    });
-  }
-
-  private initializeVectorDatabase(dbPath: string): Database.Database {
-    const dir = join(dbPath, "..");
-    if (!existsSync(dir)) {
-      mkdirSync(dir, { recursive: true });
-    }
-
-    const db = new Database(dbPath);
-
-    // Create vector memory table
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS vector_memory (
-        id TEXT PRIMARY KEY,
-        element_id TEXT NOT NULL,
-        app_name TEXT NOT NULL,
-        element_type TEXT NOT NULL,
-        embedding BLOB NOT NULL,
-        position_x REAL NOT NULL,
-        position_y REAL NOT NULL,
-        success_count INTEGER DEFAULT 0,
-        failure_count INTEGER DEFAULT 0,
-        last_accessed INTEGER NOT NULL,
-        created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
-      );
-      
-      CREATE INDEX IF NOT EXISTS idx_element_app ON vector_memory(app_name);
-      CREATE INDEX IF NOT EXISTS idx_element_type ON vector_memory(element_type);
-      
-      CREATE TABLE IF NOT EXISTS osr_records (
-        id TEXT PRIMARY KEY,
-        timestamp INTEGER NOT NULL,
-        screenshot_path TEXT,
-        elements_json TEXT,
-        action TEXT NOT NULL,
-        result TEXT NOT NULL,
-        vlm_description TEXT,
-        reflection TEXT,
-        app_name TEXT
-      );
-      
-      CREATE INDEX IF NOT EXISTS idx_osr_app ON osr_records(app_name);
-      CREATE INDEX IF NOT EXISTS idx_osr_timestamp ON osr_records(timestamp);
-    `);
-
-    return db;
-  }
-
-  /**
-   * Core Pipeline: Precise Recognition -> Prediction -> Operation -> Reflection
-   */
-  async executeTask(task: OUVTask): Promise<OUVResult> {
-    const startTime = nowMs();
-
-    try {
-      // Step 1: Precise Recognition
-      log.info(`Step 1: Detecting elements for task: ${task.instruction}`);
-      const elements = await this.detectElements(task);
-
-      if (elements.length === 0) {
-        return {
-          taskId: task.id,
-          success: false,
-          action: task.action,
-          executionTime: nowMs() - startTime,
-          error: "No elements detected",
-        };
-      }
-
-      // Step 2: Prediction (if enabled)
-      let targetElement = elements[0];
-      if (this.config.predictionEnabled) {
-        log.info("Step 2: Predicting optimal element");
-        targetElement = await this.predictOptimalElement(elements, task);
-      }
-
-      // Step 3: Precise Operation
-      log.info(
-        `Step 3: Executing ${task.action} on element: ${targetElement.name || targetElement.id}`,
-      );
-      const operationResult = await this.executeOperation(targetElement, task);
-
-      // Step 4: Reflection (if enabled)
-      let reflection: ReflectionResult | undefined;
-      if (this.config.reflectionEnabled) {
-        log.info("Step 4: Reflecting on operation");
-        reflection = await this.reflectOnOperation(
-          task,
-          targetElement,
-          operationResult,
-        );
-
-        // Update memory with reflection results
-        if (reflection.success) {
-          await this.updateMemory(targetElement, true);
-        } else {
-          await this.updateMemory(targetElement, false);
-        }
-      }
-
-      // Record OSR if enabled
-      if (this.config.osrEnabled) {
-        await this.recordOSR(
-          task,
-          elements,
-          operationResult.success ? "success" : "failure",
-        );
-      }
-
-      return {
-        taskId: task.id,
-        success: operationResult.success,
-        action: task.action,
-        targetElement,
-        executionTime: nowMs() - startTime,
-        reflection,
-      };
-    } catch (error) {
-      log.error("OUV task execution failed:", error);
-      return {
-        taskId: task.id,
-        success: false,
-        action: task.action,
-        executionTime: nowMs() - startTime,
-        error: error instanceof Error ? error.message : String(error),
-      };
-    }
-  }
-
-  /**
-   * Step 1: Detect UI Elements using hybrid VLM + UIA approach
-   */
-  private async detectElements(task: OUVTask): Promise<UIElement[]> {
-    const elements: UIElement[] = [];
-
-    // Try UIA first (faster, more precise)
-    try {
-      const uiaElements = await this.detectWithUIA(task);
-      elements.push(...uiaElements);
-      log.info(`UIA detected ${uiaElements.length} elements`);
-    } catch (error) {
-      log.warn("UIA detection failed:", error);
-    }
-
-    // Try VLM for elements UIA missed
-    try {
-      const vlmElements = await this.detectWithVLM(task);
-      // Merge with UIA results, avoiding duplicates
-      for (const vlmEl of vlmElements) {
-        const isDuplicate = elements.some((el) =>
-          this.isSameElement(el, vlmEl),
-        );
-        if (!isDuplicate) {
-          elements.push(vlmEl);
-        }
-      }
-      log.info(`VLM detected ${vlmElements.length} unique elements`);
-    } catch (error) {
-      log.warn("VLM detection failed:", error);
-    }
-
-    // Try memory-based detection
-    if (this.config.memoryEnabled && task.context?.appName) {
-      try {
-        const memoryElements = await this.detectFromMemory(task);
-        for (const memEl of memoryElements) {
-          const isDuplicate = elements.some((el) =>
-            this.isSameElement(el, memEl),
-          );
-          if (!isDuplicate) {
-            elements.push(memEl);
-          }
-        }
-        log.info(`Memory provided ${memoryElements.length} elements`);
-      } catch (error) {
-        log.warn("Memory detection failed:", error);
-      }
-    }
-
-    // Sort by confidence
-    return elements.sort((a, b) => b.confidence - a.confidence);
-  }
-
-  private async detectWithUIA(task: OUVTask): Promise<UIElement[]> {
-    // TODO: Integrate with actual UIA detector
-    // This is a placeholder implementation
-    log.info("Detecting elements with UIA...");
-
-    // Simulate UIA detection
-    return [
-      {
-        id: generateId("uia-el"),
-        type: "button",
-        name: "Search",
-        bounds: { x: 100, y: 200, width: 80, height: 30 },
-        confidence: 0.95,
-        source: "uia",
-      },
-    ];
-  }
-
-  private async detectWithVLM(task: OUVTask): Promise<UIElement[]> {
-    const provider = this.config.vlmProviders.find(
-      (p) => p.name === this.config.primaryVLM,
-    );
-    if (!provider) {
-      throw new Error(`VLM provider not found: ${this.config.primaryVLM}`);
-    }
-
-    log.info(`Detecting elements with VLM: ${provider.model}`);
-
-    // TODO: Integrate with actual VLM API
-    // This is a placeholder implementation
-    return [
-      {
-        id: generateId("vlm-el"),
-        type: "input",
-        name: "search-input",
-        description: "Search text input field",
-        bounds: { x: 120, y: 205, width: 200, height: 25 },
-        confidence: 0.88,
-        source: "vlm",
-      },
-    ];
-  }
-
-  private async detectFromMemory(task: OUVTask): Promise<UIElement[]> {
-    if (!task.context?.appName) return [];
-
-    const stmt = this.vectorDb.prepare(`
-      SELECT * FROM vector_memory 
-      WHERE app_name = ? 
-      ORDER BY success_count DESC, last_accessed DESC
-      LIMIT 10
-    `);
-
-    const rows = stmt.all(task.context.appName) as any[];
-
-    return rows.map((row) => ({
-      id: row.element_id,
-      type: row.element_type,
-      bounds: { x: row.position_x, y: row.position_y, width: 100, height: 30 },
-      confidence: 0.7, // Memory-based elements have lower confidence
-      source: "memory",
-      metadata: {
-        successCount: row.success_count,
-        failureCount: row.failure_count,
-      },
-    }));
-  }
-
-  private isSameElement(a: UIElement, b: UIElement): boolean {
-    // Check if two elements are the same based on position overlap
-    const overlapX = Math.abs(a.bounds.x - b.bounds.x) < 10;
-    const overlapY = Math.abs(a.bounds.y - b.bounds.y) < 10;
-    return overlapX && overlapY;
-  }
-
-  /**
-   * Step 2: Predict optimal element based on task and history
-   */
-  private async predictOptimalElement(
-    elements: UIElement[],
-    task: OUVTask,
-  ): Promise<UIElement> {
-    // Simple scoring based on element type and task action
-    const scoredElements = elements.map((el) => {
-      let score = el.confidence;
-
-      // Boost score based on element type matching task action
-      if (task.action === "click" && ["button", "link"].includes(el.type)) {
-        score += 0.1;
-      }
-      if (task.action === "type" && ["input", "textarea"].includes(el.type)) {
-        score += 0.1;
-      }
-
-      // Boost based on memory success
-      if (el.metadata?.successCount) {
-        score += Math.min((el.metadata.successCount as number) * 0.02, 0.1);
-      }
-
-      return { element: el, score };
-    });
-
-    scoredElements.sort((a, b) => b.score - a.score);
-    return scoredElements[0].element;
-  }
-
-  /**
-   * Step 3: Execute operation on target element
-   */
-  private async executeOperation(
-    element: UIElement,
-    task: OUVTask,
-  ): Promise<{ success: boolean }> {
-    // TODO: Integrate with native input module
-    log.info(
-      `Executing ${task.action} at (${element.bounds.x}, ${element.bounds.y})`,
-    );
-
-    // Simulate operation
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    return { success: true };
-  }
-
-  /**
-   * Step 4: Reflect on operation and learn
-   */
-  private async reflectOnOperation(
-    task: OUVTask,
-    element: UIElement,
-    result: { success: boolean },
-  ): Promise<ReflectionResult> {
-    const observations: string[] = [];
-    const suggestions: string[] = [];
-
-    if (result.success) {
-      observations.push(
-        `Successfully executed ${task.action} on ${element.type}`,
-      );
-      observations.push(
-        `Element located at (${element.bounds.x}, ${element.bounds.y})`,
-      );
-
-      if (element.source === "memory") {
-        observations.push("Memory-based prediction was accurate");
-      }
-    } else {
-      observations.push(`Failed to execute ${task.action}`);
-      suggestions.push("Consider retrying with adjusted coordinates");
-      suggestions.push("Try alternative element detection method");
-    }
-
-    return {
-      success: result.success,
-      confidence: element.confidence,
-      observations,
-      suggestions,
-      learnedPattern: result.success
-        ? `${task.action}:${element.type}:${element.bounds.x},${element.bounds.y}`
-        : undefined,
-    };
-  }
-
-  /**
-   * Update memory with operation result
-   */
-  private async updateMemory(
-    element: UIElement,
-    success: boolean,
-  ): Promise<void> {
-    const stmt = this.vectorDb.prepare(`
-      INSERT INTO vector_memory (
-        id, element_id, app_name, element_type, embedding,
-        position_x, position_y, success_count, failure_count, last_accessed
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(element_id) DO UPDATE SET
-        success_count = success_count + ?,
-        failure_count = failure_count + ?,
-        last_accessed = ?
-    `);
-
-    const embedding = new Array(this.config.vectorDimension)
-      .fill(0)
-      .map(() => Math.random());
-
-    stmt.run(
-      generateId("mem"),
-      element.id,
-      "unknown", // TODO: Get actual app name
-      element.type,
-      Buffer.from(new Float32Array(embedding).buffer),
-      element.bounds.x,
-      element.bounds.y,
-      success ? 1 : 0,
-      success ? 0 : 1,
-      nowMs(),
-      success ? 1 : 0,
-      success ? 0 : 1,
-      nowMs(),
-    );
-  }
-
-  /**
-   * Record OSR (OxygenStepRecorder) entry
-   */
-  private async recordOSR(
-    task: OUVTask,
-    elements: UIElement[],
-    result: "success" | "failure" | "partial",
-  ): Promise<void> {
-    const record: OSRRecord = {
-      id: generateId("osr"),
-      timestamp: nowMs(),
-      screenshotPath: task.context?.screenshot || "",
-      elements,
-      action: task.action,
-      result,
-      appName: task.context?.appName,
-    };
-
-    this.osrRecords.push(record);
-
-    // Persist to database
-    const stmt = this.vectorDb.prepare(`
-      INSERT INTO osr_records (id, timestamp, screenshot_path, elements_json, action, result, app_name)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    stmt.run(
-      record.id,
-      record.timestamp,
-      record.screenshotPath,
-      JSON.stringify(elements),
-      record.action,
-      record.result,
-      record.appName,
-    );
-
-    log.info(`OSR recorded: ${record.id}`);
-  }
-
-  /**
-   * Get learning statistics
-   */
-  getStats(): {
-    memoryEntries: number;
-    osrRecords: number;
-    elementCacheSize: number;
-  } {
-    const memCount = this.vectorDb
-      .prepare("SELECT COUNT(*) as count FROM vector_memory")
-      .get() as { count: number };
-    const osrCount = this.vectorDb
-      .prepare("SELECT COUNT(*) as count FROM osr_records")
-      .get() as { count: number };
-
-    return {
-      memoryEntries: memCount.count,
-      osrRecords: osrCount.count,
-      elementCacheSize: this.elementCache.size,
-    };
-  }
-
-  /**
-   * Close and cleanup
-   */
-  close(): void {
-    this.vectorDb.close();
-    log.info("OUV closed");
-  }
-}
-
-export default OxygenUltraVision;
+export default {
+  initialize: initializeOUV,
+  detectElements,
+  findElement,
+  clickElement,
+  typeIntoElement,
+  reflect,
+  predict,
+};

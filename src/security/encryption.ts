@@ -10,9 +10,7 @@ import crypto from "node:crypto";
 
 const log = createSubsystemLogger("security/encryption");
 
-// ============================================================================
-// Encryption Types
-// ============================================================================
+// === Encryption Types ===
 
 export interface EncryptedData {
   ciphertext: string;
@@ -27,9 +25,7 @@ export interface EncryptionConfig {
   ivSize: number;
 }
 
-// ============================================================================
-// Encryption Service
-// ============================================================================
+// === Encryption Service ===
 
 export class EncryptionService {
   private masterKey?: Buffer;
@@ -115,77 +111,6 @@ export class EncryptionService {
   }
 
   /**
-   * Encrypt object
-   */
-  encryptObject(
-    obj: Record<string, unknown>,
-  ): Record<string, EncryptedData | unknown> {
-    const result: Record<string, EncryptedData | unknown> = {};
-
-    for (const [key, value] of Object.entries(obj)) {
-      if (typeof value === "string" && this.shouldEncrypt(key)) {
-        result[key] = this.encrypt(value);
-      } else {
-        result[key] = value;
-      }
-    }
-
-    return result;
-  }
-
-  /**
-   * Decrypt object
-   */
-  decryptObject(
-    obj: Record<string, EncryptedData | unknown>,
-  ): Record<string, unknown> {
-    const result: Record<string, unknown> = {};
-
-    for (const [key, value] of Object.entries(obj)) {
-      if (this.isEncryptedData(value)) {
-        result[key] = this.decrypt(value);
-      } else {
-        result[key] = value;
-      }
-    }
-
-    return result;
-  }
-
-  /**
-   * Check if field should be encrypted
-   */
-  private shouldEncrypt(fieldName: string): boolean {
-    const sensitiveFields = [
-      "password",
-      "secret",
-      "key",
-      "token",
-      "apiKey",
-      "privateKey",
-      "credential",
-      "auth",
-    ];
-
-    return sensitiveFields.some((f) =>
-      fieldName.toLowerCase().includes(f.toLowerCase()),
-    );
-  }
-
-  /**
-   * Check if value is encrypted data
-   */
-  private isEncryptedData(value: unknown): value is EncryptedData {
-    return (
-      typeof value === "object" &&
-      value !== null &&
-      "ciphertext" in value &&
-      "iv" in value &&
-      "tag" in value
-    );
-  }
-
-  /**
    * Generate secure random key
    */
   generateKey(): Buffer {
@@ -193,23 +118,38 @@ export class EncryptionService {
   }
 
   /**
-   * Hash data
+   * Hash data using SHA-256
    */
-  hash(data: string, algorithm: string = "sha256"): string {
-    return crypto.createHash(algorithm).update(data).digest("hex");
+  hash(data: string): string {
+    return crypto.createHash("sha256").update(data).digest("hex");
   }
 
   /**
-   * Compare hash (timing-safe)
+   * Compare hash securely (timing-safe)
    */
-  compareHash(data: string, hash: string, algorithm?: string): boolean {
-    const computed = this.hash(data, algorithm);
-    return crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(hash));
+  compareHash(data: string, hash: string): boolean {
+    const computed = this.hash(data);
+    
+    if (computed.length !== hash.length) {
+      return false;
+    }
+
+    let result = 0;
+    for (let i = 0; i < computed.length; i++) {
+      result |= computed.charCodeAt(i) ^ hash.charCodeAt(i);
+    }
+
+    return result === 0;
   }
 }
 
-// ============================================================================
-// Singleton Export
-// ============================================================================
+// === Factory ===
 
-export const encryptionService = new EncryptionService();
+export function createEncryptionService(): EncryptionService {
+  return new EncryptionService();
+}
+
+// === Exports ===
+
+export { createEncryptionService, EncryptionService };
+export default EncryptionService;

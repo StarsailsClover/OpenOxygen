@@ -1,20 +1,19 @@
 /**
- * OpenOxygen — Native Mouse Control (26w15aD Phase 1)
+ * OpenOxygen - Native Mouse Control
  *
  * Windows 原生鼠标控制
  * 使用 Win32 API 实现真实鼠标移动和点击
  */
 
 import { createSubsystemLogger } from "../logging/index.js";
-import { loadNativeModuleESM } from "./esm-adapter.js";
 const log = createSubsystemLogger("native/mouse");
 
 // Mouse button constants
 export const MouseButton = {
-  LEFT,
-  RIGHT,
-  MIDDLE,
-} ;
+  LEFT: 0,
+  RIGHT: 1,
+  MIDDLE: 2,
+};
 
 // Mouse event flags
 const MOUSEEVENTF_MOVE = 0x0001;
@@ -36,311 +35,226 @@ const SCREEN_HEIGHT = 65535;
  * @param x - X coordinate (0 to screen width)
  * @param y - Y coordinate (0 to screen height)
  */
-export function mouseMove(x, y) {
+export async function mouseMove(x, y) {
   log.debug(`Moving mouse to (${x}, ${y})`);
   
-  const native = await loadNativeModuleESM();
-  if (native?.mouseMove) {
-    return native.mouseMove(x, y);
-  }
-  
-  // Fallback PowerShell
-  return mouseMovePowerShell(x, y);
-}
-
-/**
- * Move mouse using PowerShell (fallback)
- */
-function mouseMovePowerShell(x, y) {
   try {
-    const { execSync } = require("node");
+    // Use PowerShell to move mouse via Windows API
+    const { execSync } = await import("node:child_process");
     const script = `
-      Add-Type @"
-      using System;
-      using System.Runtime.InteropServices;
-      public class Mouse {
-        [DllImport("user32.dll")]
-        public static extern bool SetCursorPos(int x, int y);
-      }
-"@
-      [Mouse]:(${x}, ${y})
+      Add-Type -AssemblyName System.Windows.Forms
+      [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(${x}, ${y})
     `;
     execSync(`powershell -Command "${script}"`, { encoding: "utf-8" });
     return true;
   } catch (error) {
-    log.error(`PowerShell mouse move failed: ${error.message}`);
+    log.error(`Mouse move failed: ${error.message}`);
     return false;
   }
 }
 
 /**
  * Click mouse button at current position
- * @param button - Mouse button (LEFT, RIGHT, MIDDLE)
+ * @param button - Button to click (0=left, 1=right, 2=middle)
  */
-export function mouseClick(button typeof MouseButton = "LEFT") {
+export async function mouseClick(button = MouseButton.LEFT) {
   log.debug(`Clicking mouse button: ${button}`);
   
-  const native = loadNativeModule();
-  if (native?.mouseClick) {
-    return native.mouseClick(MouseButton[button]);
-  }
-  
-  // Fallback PowerShell
-  return mouseClickPowerShell(button);
-}
-
-/**
- * Click using PowerShell (fallback)
- */
-function mouseClickPowerShell(button typeof MouseButton) {
   try {
-    const { execSync } = require("node");
+    const { execSync } = await import("node:child_process");
     
     let downFlag, upFlag;
     switch (button) {
-      case "LEFT" = MOUSEEVENTF_LEFTDOWN;
-        upFlag = MOUSEEVENTF_LEFTUP;
-        break;
-      case "RIGHT" = MOUSEEVENTF_RIGHTDOWN;
+      case MouseButton.RIGHT:
+        downFlag = MOUSEEVENTF_RIGHTDOWN;
         upFlag = MOUSEEVENTF_RIGHTUP;
         break;
-      case "MIDDLE" = MOUSEEVENTF_MIDDLEDOWN;
+      case MouseButton.MIDDLE:
+        downFlag = MOUSEEVENTF_MIDDLEDOWN;
         upFlag = MOUSEEVENTF_MIDDLEUP;
         break;
-      default = MOUSEEVENTF_LEFTDOWN;
+      default:
+        downFlag = MOUSEEVENTF_LEFTDOWN;
         upFlag = MOUSEEVENTF_LEFTUP;
     }
-    
+
     const script = `
       Add-Type @"
       using System;
       using System.Runtime.InteropServices;
       public class Mouse {
         [DllImport("user32.dll")]
-        public static extern void mouse_event(int flags, int dx, int dy, int buttons, int extra);
-        public const int MOUSEEVENTF_LEFTDOWN = 0x02;
-        public const int MOUSEEVENTF_LEFTUP = 0x04;
-        public const int MOUSEEVENTF_RIGHTDOWN = 0x08;
-        public const int MOUSEEVENTF_RIGHTUP = 0x10;
-        public const int MOUSEEVENTF_MIDDLEDOWN = 0x20;
-        public const int MOUSEEVENTF_MIDDLEUP = 0x40;
+        public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, int dwExtraInfo);
       }
 "@
-      [Mouse]:(${downFlag}, 0, 0, 0, 0)
-      Start-Sleep -Milliseconds 50
-      [Mouse]:(${upFlag}, 0, 0, 0, 0)
+      [Mouse]::mouse_event(${downFlag}, 0, 0, 0, 0)
+      [Mouse]::mouse_event(${upFlag}, 0, 0, 0, 0)
     `;
     
     execSync(`powershell -Command "${script}"`, { encoding: "utf-8" });
     return true;
   } catch (error) {
-    log.error(`PowerShell mouse click failed: ${error.message}`);
+    log.error(`Mouse click failed: ${error.message}`);
     return false;
   }
 }
 
 /**
- * Double click mouse button at current position
- * @param button - Mouse button (LEFT, RIGHT, MIDDLE)
+ * Double-click mouse button at current position
+ * @param button - Button to click (0=left, 1=right, 2=middle)
  */
-export function mouseDoubleClick(button typeof MouseButton = "LEFT") {
-  log.debug(`Double clicking mouse button: ${button}`);
+export async function mouseDoubleClick(button = MouseButton.LEFT) {
+  log.debug(`Double-clicking mouse button: ${button}`);
   
-  // Perform two clicks with small delay
-  const success1 = mouseClick(button);
-  if (!success1) return false;
+  await mouseClick(button);
+  await new Promise(r => setTimeout(r, 50)); // Small delay between clicks
+  await mouseClick(button);
   
-  // Small delay between clicks
-  const { sleep } = require("../utils/index.js");
-  sleep(50);
-  
-  const success2 = mouseClick(button);
-  return success2;
+  return true;
 }
 
 /**
- * Drag mouse from start to end position
- * @param startX - Start X coordinate
- * @param startY - Start Y coordinate
- * @param endX - End X coordinate
- * @param endY - End Y coordinate
- * @param button - Mouse button to hold during drag
+ * Move mouse and click
+ * @param x - X coordinate
+ * @param y - Y coordinate
+ * @param button - Button to click
  */
-export function mouseDrag(
-  startX,
-  startY,
-  endX,
-  endY,
-  button typeof MouseButton = "LEFT"
-) {
-  log.debug(`Dragging from (${startX}, ${startY}) to (${endX}, ${endY}) with ${button} button`);
+export async function mouseClickAt(x, y, button = MouseButton.LEFT) {
+  log.debug(`Clicking at (${x}, ${y}) with button ${button}`);
   
-  const native = loadNativeModule();
-  if (native?.mouseDrag) {
-    return native.mouseDrag(startX, startY, endX, endY, MouseButton[button]);
-  }
+  await mouseMove(x, y);
+  await new Promise(r => setTimeout(r, 50)); // Wait for move
+  await mouseClick(button);
   
-  // Fallback implementation
-  return mouseDragPowerShell(startX, startY, endX, endY, button);
+  return true;
 }
 
 /**
- * Drag using PowerShell (fallback)
+ * Drag mouse from one position to another
+ * @param fromX - Start X coordinate
+ * @param fromY - Start Y coordinate
+ * @param toX - End X coordinate
+ * @param toY - End Y coordinate
+ * @param button - Button to hold during drag
  */
-function mouseDragPowerShell(
-  startX,
-  startY,
-  endX,
-  endY,
-  button typeof MouseButton
-) {
+export async function mouseDrag(fromX, fromY, toX, toY, button = MouseButton.LEFT) {
+  log.debug(`Dragging from (${fromX}, ${fromY}) to (${toX}, ${toY})`);
+  
   try {
-    const { execSync } = require("node");
+    const { execSync } = await import("node:child_process");
     
     let downFlag, upFlag;
     switch (button) {
-      case "LEFT" = MOUSEEVENTF_LEFTDOWN;
-        upFlag = MOUSEEVENTF_LEFTUP;
-        break;
-      case "RIGHT" = MOUSEEVENTF_RIGHTDOWN;
+      case MouseButton.RIGHT:
+        downFlag = MOUSEEVENTF_RIGHTDOWN;
         upFlag = MOUSEEVENTF_RIGHTUP;
         break;
-      case "MIDDLE" = MOUSEEVENTF_MIDDLEDOWN;
+      case MouseButton.MIDDLE:
+        downFlag = MOUSEEVENTF_MIDDLEDOWN;
         upFlag = MOUSEEVENTF_MIDDLEUP;
         break;
-      default = MOUSEEVENTF_LEFTDOWN;
+      default:
+        downFlag = MOUSEEVENTF_LEFTDOWN;
         upFlag = MOUSEEVENTF_LEFTUP;
     }
-    
+
     const script = `
+      Add-Type -AssemblyName System.Windows.Forms
       Add-Type @"
       using System;
       using System.Runtime.InteropServices;
       public class Mouse {
         [DllImport("user32.dll")]
-        public static extern bool SetCursorPos(int x, int y);
-        [DllImport("user32.dll")]
-        public static extern void mouse_event(int flags, int dx, int dy, int buttons, int extra);
-        public const int MOUSEEVENTF_LEFTDOWN = 0x02;
-        public const int MOUSEEVENTF_LEFTUP = 0x04;
-        public const int MOUSEEVENTF_RIGHTDOWN = 0x08;
-        public const int MOUSEEVENTF_RIGHTUP = 0x10;
-        public const int MOUSEEVENTF_MIDDLEDOWN = 0x20;
-        public const int MOUSEEVENTF_MIDDLEUP = 0x40;
+        public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, int dwExtraInfo);
       }
 "@
+      
       # Move to start position
-      [Mouse]:(${startX}, ${startY})
+      [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(${fromX}, ${fromY})
       Start-Sleep -Milliseconds 50
+      
       # Press button down
-      [Mouse]:(${downFlag}, 0, 0, 0, 0)
+      [Mouse]::mouse_event(${downFlag}, 0, 0, 0, 0)
       Start-Sleep -Milliseconds 100
+      
       # Move to end position
-      [Mouse]:(${endX}, ${endY})
+      [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(${toX}, ${toY})
       Start-Sleep -Milliseconds 100
+      
       # Release button
-      [Mouse]:(${upFlag}, 0, 0, 0, 0)
+      [Mouse]::mouse_event(${upFlag}, 0, 0, 0, 0)
     `;
     
     execSync(`powershell -Command "${script}"`, { encoding: "utf-8" });
     return true;
   } catch (error) {
-    log.error(`PowerShell mouse drag failed: ${error.message}`);
+    log.error(`Mouse drag failed: ${error.message}`);
     return false;
   }
 }
 
 /**
  * Scroll mouse wheel
- * @param delta - Scroll amount (positive = up, negative = down)
+ * @param delta - Scroll amount (positive=up, negative=down)
  */
-export function mouseScroll(delta) {
-  log.debug(`Scrolling mouse wheel: ${delta}`);
+export async function mouseScroll(delta) {
+  log.debug(`Scrolling mouse: ${delta}`);
   
-  const native = loadNativeModule();
-  if (native?.mouseScroll) {
-    return native.mouseScroll(delta);
-  }
-  
-  // Fallback
-  return mouseScrollPowerShell(delta);
-}
-
-/**
- * Scroll using PowerShell (fallback)
- */
-function mouseScrollPowerShell(delta) {
   try {
-    const { execSync } = require("node");
+    const { execSync } = await import("node:child_process");
     const script = `
       Add-Type @"
       using System;
       using System.Runtime.InteropServices;
       public class Mouse {
         [DllImport("user32.dll")]
-        public static extern void mouse_event(int flags, int dx, int dy, int buttons, int extra);
-        public const int MOUSEEVENTF_WHEEL = 0x0800;
+        public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, int dwExtraInfo);
       }
 "@
-      [Mouse]:(0x0800, 0, 0, ${delta}, 0)
+      [Mouse]::mouse_event(${MOUSEEVENTF_WHEEL}, 0, 0, ${delta * 120}, 0)
     `;
     
     execSync(`powershell -Command "${script}"`, { encoding: "utf-8" });
     return true;
   } catch (error) {
-    log.error(`PowerShell mouse scroll failed: ${error.message}`);
+    log.error(`Mouse scroll failed: ${error.message}`);
     return false;
   }
 }
 
 /**
  * Get current mouse position
- * @returns Object with x and y coordinates
  */
-export function getMousePosition() | null {
-  const native = loadNativeModule();
-  if (native?.getMousePosition) {
-    return native.getMousePosition();
+export async function getMousePosition() {
+  try {
+    const { execSync } = await import("node:child_process");
+    const script = `
+      Add-Type -AssemblyName System.Windows.Forms
+      $pos = [System.Windows.Forms.Cursor]::Position
+      Write-Output "$($pos.X),$($pos.Y)"
+    `;
+    
+    const output = execSync(`powershell -Command "${script}"`, { encoding: "utf-8" }).trim();
+    const [x, y] = output.split(",").map(Number);
+    
+    return { x, y };
+  } catch (error) {
+    log.error(`Get mouse position failed: ${error.message}`);
+    return { x: 0, y: 0 };
   }
-  
-  // Fallback default position
-  log.warn("Native getMousePosition not available, returning default");
-  return { x, y };
 }
 
-/**
- * Click at specific coordinates
- * @param x - X coordinate
- * @param y - Y coordinate
- * @param button - Mouse button
- */
-export function mouseClickAt(
-  x,
-  y,
-  button typeof MouseButton = "LEFT"
-) {
-  log.debug(`Clicking at (${x}, ${y}) with ${button} button`);
-  
-  // Move to position first
-  const moved = mouseMove(x, y);
-  if (!moved) return false;
-  
-  // Small delay
-  const { sleep } = require("../utils/index.js");
-  sleep(50);
-  
-  // Then click
-  return mouseClick(button);
-}
+// === Default Export ===
 
-// Export all functions
-export default {
-  mouseMove,
-  mouseClick,
-  mouseDoubleClick,
-  mouseDrag,
-  mouseScroll,
-  getMousePosition,
-  mouseClickAt,
-  MouseButton,
+export const Mouse = {
+  move: mouseMove,
+  click: mouseClick,
+  doubleClick: mouseDoubleClick,
+  clickAt: mouseClickAt,
+  drag: mouseDrag,
+  scroll: mouseScroll,
+  getPosition: getMousePosition,
+  Button: MouseButton,
 };
+
+export default Mouse;
