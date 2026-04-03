@@ -1,6 +1,6 @@
 ﻿{
   "name": "OpenOxygen",
-  "version": "26w15aE",
+  "version": "26w15a-dev-26.115.0",
   "description": "High-performance AI Agent Framework",
   "native": {
     "module": "./native/build/Release/openoxygen_native.node",
