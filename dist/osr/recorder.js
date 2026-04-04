@@ -1,29 +1,22 @@
 /**
- * OpenOxygen — OxygenStepRecorder (OSR) Recorder (26w15aD Phase 2)
+ * OpenOxygen - OSR Recorder
  *
  * 操作录制系统
- * 记录鼠标、键盘、窗口操作并同步截屏
+ * 记录鼠标、键盘、窗口操作并同步截图
  */
 import { createSubsystemLogger } from "../logging/index.js";
 import { generateId, nowMs } from "../utils/index.js";
-import { getMousePosition } from "../native/mouse.js";
-import { GlobalMemory } from "../memory/global/index.js";
 const log = createSubsystemLogger("osr/recorder");
-;
 // Active recording session
-let activeSession;
- | null;
-null;
+let activeSession = null;
 // Recording interval
-let recordingInterval, Timeout;
- | null;
-null;
+let recordingInterval = null;
 // Screenshot interval (ms)
 const SCREENSHOT_INTERVAL = 1000;
 // Mouse tracking interval (ms)
 const MOUSE_TRACK_INTERVAL = 50;
 // Last mouse position
-let lastMousePos = { x, y };
+let lastMousePos = { x: 0, y: 0 };
 /**
  * Start recording
  * @param name - Recording name
@@ -31,60 +24,44 @@ let lastMousePos = { x, y };
  */
 export function startRecording(name, options = {}) {
     if (activeSession?.state === "recording") {
-        throw new Error("Already recording");
+        throw new Error("Recording already in progress");
     }
-    log.info(`Starting recording: ${name}`);
     const session = {
-        id() { },
+        id: generateId("rec"),
         name,
-        startTime() { },
+        startTime: nowMs(),
         steps: [],
         state: "recording",
-        metadata,
+        metadata: {
+            screenResolution: getScreenResolution(),
+        },
     };
     activeSession = session;
-    // Start mouse tracking
+    log.info(`Started recording: ${name} (${session.id})`);
+    // Start recording loops
     if (options.trackMouse !== false) {
         startMouseTracking();
     }
-    // Start screenshot capture
     if (options.captureScreenshots !== false) {
         startScreenshotCapture();
     }
-    // Record initial step
-    recordStep({
-        type: "window_focus",
-        data,
-    });
-    log.info(`Recording started: ${session.id}`);
     return session;
 }
 /**
  * Stop recording
  */
-export function stopRecording() { }
- | null;
-{
+export function stopRecording() {
     if (!activeSession) {
         log.warn("No active recording to stop");
         return null;
     }
-    log.info("Stopping recording");
-    // Stop tracking
-    stopMouseTracking();
-    stopScreenshotCapture();
-    // Record final step
-    recordStep({
-        type: "window_focus",
-        data,
-    });
-    activeSession.endTime = nowMs();
+    // Stop recording loops
+    stopRecordingLoops();
     activeSession.state = "idle";
-    // Save to memory
-    saveRecordingToMemory(activeSession);
-    const session = activeSession;
+    activeSession.endTime = nowMs();
+    const session = { ...activeSession };
+    log.info(`Stopped recording: ${session.name} (${session.steps.length} steps)`);
     activeSession = null;
-    log.info(`Recording stopped: ${session.id}, ${session.steps.length} steps`);
     return session;
 }
 /**
@@ -95,12 +72,7 @@ export function pauseRecording() {
         return false;
     }
     activeSession.state = "paused";
-    stopMouseTracking();
-    stopScreenshotCapture();
-    recordStep({
-        type: "window_focus",
-        data,
-    });
+    stopRecordingLoops();
     log.info("Recording paused");
     return true;
 }
@@ -114,220 +86,132 @@ export function resumeRecording() {
     activeSession.state = "recording";
     startMouseTracking();
     startScreenshotCapture();
-    recordStep({
-        type: "window_focus",
-        data,
-    });
     log.info("Recording resumed");
     return true;
 }
 /**
- * Record a step
+ * Add step to recording
  */
-export function recordStep(partialStep, , RecordedStep, , , ) { }
- > ;
-{
+export function addStep(type, data, screenshot) {
     if (!activeSession || activeSession.state !== "recording") {
-        return;
+        return null;
     }
     const step = {
-        id() { },
-        timestamp() { },
-        ...partialStep,
+        id: generateId("step"),
+        type,
+        timestamp: nowMs(),
+        data,
+        screenshot,
     };
     activeSession.steps.push(step);
-    log.debug(`Recorded step: ${step.type}`);
+    return step;
 }
 /**
- * Record mouse move
+ * Get active session
  */
-export function recordMouseMove(x, y) {
-    recordStep({
-        type: "mouse_move",
-        data,
-    });
-}
-/**
- * Record mouse click
- */
-export function recordMouseClick(x, y, button) {
-    recordStep({
-        type: "mouse_click",
-        data,
-    });
-}
-/**
- * Record mouse drag
- */
-export function recordMouseDrag(startX, startY, endX, endY, button) {
-    recordStep({
-        type: "mouse_drag",
-        data,
-    });
-}
-/**
- * Record key press
- */
-export function recordKeyPress(key) {
-    recordStep({
-        type: "key_press",
-        data,
-    });
-}
-/**
- * Record key combination
- */
-export function recordKeyCombination(keys) {
-    recordStep({
-        type: "key_combination",
-        data,
-    });
-}
-/**
- * Record text input
- */
-export function recordTypeText(text) {
-    recordStep({
-        type: "type_text",
-        data,
-    });
-}
-/**
- * Record window focus change
- */
-export function recordWindowFocus(windowTitle, app) {
-    recordStep({
-        type: "window_focus",
-        data,
-    });
+export function getActiveSession() {
+    return activeSession;
 }
 /**
  * Start mouse tracking
  */
 function startMouseTracking() {
-    if (recordingInterval)
-        return;
-    recordingInterval = setInterval(() => {
-        const pos = getMousePosition();
-        if (pos) {
+    // TODO: Implement native mouse tracking
+    // For now, use polling approach
+    const trackMouse = async () => {
+        if (!activeSession || activeSession.state !== "recording") {
+            return;
+        }
+        try {
+            // Get current mouse position (placeholder)
+            const pos = await getMousePosition();
             // Only record if position changed significantly
             const dx = Math.abs(pos.x - lastMousePos.x);
             const dy = Math.abs(pos.y - lastMousePos.y);
             if (dx > 5 || dy > 5) {
-                recordMouseMove(pos.x, pos.y);
+                addStep("mouse_move", { x: pos.x, y: pos.y });
                 lastMousePos = pos;
             }
         }
-    }, MOUSE_TRACK_INTERVAL);
+        catch (error) {
+            log.error(`Mouse tracking error: ${error}`);
+        }
+    };
+    recordingInterval = setInterval(trackMouse, MOUSE_TRACK_INTERVAL);
 }
 /**
- * Stop mouse tracking
+ * Start screenshot capture
  */
-function stopMouseTracking() {
+function startScreenshotCapture() {
+    const capture = async () => {
+        if (!activeSession || activeSession.state !== "recording") {
+            return;
+        }
+        try {
+            // TODO: Implement screenshot capture
+            // const screenshot = await captureScreenshot();
+            // addStep("screenshot", { timestamp: nowMs() }, screenshot);
+        }
+        catch (error) {
+            log.error(`Screenshot capture error: ${error}`);
+        }
+    };
+    // Capture immediately and then periodically
+    capture();
+    setInterval(capture, SCREENSHOT_INTERVAL);
+}
+/**
+ * Stop recording loops
+ */
+function stopRecordingLoops() {
     if (recordingInterval) {
         clearInterval(recordingInterval);
         recordingInterval = null;
     }
 }
-// Screenshot capture interval
-let screenshotInterval, Timeout;
- | null;
-null;
-/**
- * Start screenshot capture
- */
-function startScreenshotCapture() {
-    if (screenshotInterval)
-        return;
-    screenshotInterval = setInterval(() => {
-        captureScreenshot().then(screenshot => {
-            if (screenshot && activeSession) {
-                // Attach screenshot to last step or create new step
-                const lastStep = activeSession.steps[activeSession.steps.length - 1];
-                if (lastStep) {
-                    lastStep.screenshot = screenshot;
-                }
-            }
-        });
-    }, SCREENSHOT_INTERVAL);
-}
-/**
- * Stop screenshot capture
- */
-function stopScreenshotCapture() {
-    if (screenshotInterval) {
-        clearInterval(screenshotInterval);
-        screenshotInterval = null;
-    }
-}
-/**
- * Capture screenshot
- */
-async function captureScreenshot() { }
-<string /> | null > {
-    try: {
-        const: native = require("../native-bridge.js"),
-        if(native) { }, : .captureScreenshot
-    }
-};
-{
-    return native.captureScreenshot();
-}
-return null;
-try { }
-catch (error) {
-    log.error(`Screenshot capture failed: ${error.message}`);
-    return null;
-}
 /**
  * Get screen resolution
  */
 function getScreenResolution() {
-    // Default resolution
-    return { width, height };
+    // TODO: Get actual screen resolution
+    return { width: 1920, height: 1080 };
 }
 /**
- * Save recording to memory
+ * Get mouse position
  */
-function saveRecordingToMemory(session) {
+async function getMousePosition() {
+    // TODO: Get actual mouse position from native module
+    return { x: 0, y: 0 };
+}
+/**
+ * Export recording to file
+ */
+export function exportRecording(session, format = "json") {
+    if (format === "json") {
+        return JSON.stringify(session, null, 2);
+    }
+    // OSR format (custom binary format)
+    // TODO: Implement binary serialization
+    return JSON.stringify(session);
+}
+/**
+ * Import recording from file
+ */
+export function importRecording(data) {
     try {
-        const memory = new GlobalMemory(".state");
-        memory.setPreference(`osr_${session.id}`, JSON.stringify(session));
-        memory.close();
-        log.info(`Recording saved to memory: ${session.id}`);
+        return JSON.parse(data);
     }
     catch (error) {
-        log.error(`Failed to save recording: ${error.message}`);
+        throw new Error(`Failed to import recording: ${error}`);
     }
 }
-/**
- * Get active recording session
- */
-export function getActiveSession() { }
- | null;
-{
-    return activeSession;
-}
-/**
- * Check if recording
- */
-export function isRecording() {
-    return activeSession?.state === "recording";
-}
-// Export all functions
 export default {
     startRecording,
     stopRecording,
     pauseRecording,
     resumeRecording,
-    recordStep,
-    recordMouseMove,
-    recordMouseClick,
-    recordMouseDrag,
-    recordKeyPress,
-    recordKeyCombination,
-    recordTypeText,
-    recordWindowFocus,
+    addStep,
     getActiveSession,
-    isRecording,
+    exportRecording,
+    importRecording,
 };

@@ -1,5 +1,5 @@
 /**
- * OpenOxygen — Native Input/Output Module (26w15aD Phase 1)
+ * OpenOxygen - Native Input/Output Module
  *
  * 统一导出所有原生控制功能
  */

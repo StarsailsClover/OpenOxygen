@@ -90,7 +90,10 @@ export class SignedInputManager {
     verify(sequence) {
         // 1. 版本检查
         if (sequence.version !== 1) {
-            return { valid: false, reason: `Unsupported version: ${sequence.version}` };
+            return {
+                valid: false,
+                reason: `Unsupported version: ${sequence.version}`,
+            };
         }
         // 2. 过期检查
         if (nowMs() > sequence.expiresAt) {
@@ -119,7 +122,12 @@ export class SignedInputManager {
         const verification = this.verify(sequence);
         if (!verification.valid) {
             log.error(`Sequence ${sequence.id} rejected: ${verification.reason}`);
-            return { success: false, executed: 0, failed: 0, error: verification.reason };
+            return {
+                success: false,
+                executed: 0,
+                failed: 0,
+                error: verification.reason,
+            };
         }
         // 执行
         let executed = 0;
@@ -153,7 +161,7 @@ export class SignedInputManager {
      */
     getExecutionLog(sequenceId) {
         if (sequenceId) {
-            return this.executionLog.filter(l => l.sequenceId === sequenceId);
+            return this.executionLog.filter((l) => l.sequenceId === sequenceId);
         }
         return [...this.executionLog];
     }

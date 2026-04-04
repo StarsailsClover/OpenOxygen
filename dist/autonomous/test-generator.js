@@ -8,12 +8,8 @@
 import { createSubsystemLogger } from "../logging/index.js";
 import { generateId, nowMs } from "../utils/index.js";
 import { GlobalMemory } from "../memory/global/index.js";
-import { decomposeTask, createOrchestration, executeOrchestration } from "../agent/orchestrator/index.js";
+import { decomposeTask, createOrchestration, executeOrchestration, } from "../agent/orchestrator/index.js";
 const log = createSubsystemLogger("autonomous/test-generator");
-// Test pattern database
-// Function information
-// Generated test
-// Autonomous decision
 // Decision memory
 const decisionMemory = [];
 /**
@@ -29,7 +25,7 @@ function initializeTestPatterns() {
             generateTest: (fn) => ({
                 name: `${fn.name} should execute successfully`,
                 description: `Test that ${fn.name} executes without errors`,
-                code: `const result = await ${fn.name}(${fn.params.map(p => `"test_${p.name}"`).join(", ")});`,
+                code: `const result = await ${fn.name}(${fn.params.map((p) => `"test_${p.name}"`).join(", ")});`,
                 expectedResult: "defined",
             }),
         },
@@ -82,15 +78,16 @@ export function analyzeFunction(fn) {
     // Extract parameters from function string
     const fnString = fn.toString();
     const paramMatch = fnString.match(/\(([^)]*)\)/);
-    const params, [];
-    "params";
-    [];
+    const params = [];
     if (paramMatch) {
-        const paramList = paramMatch[1].split(",").map(p => p.trim()).filter(p => p);
+        const paramList = paramMatch[1]
+            .split(",")
+            .map((p) => p.trim())
+            .filter((p) => p);
         for (const param of paramList) {
-            const [paramName, defaultValue] = param.split("=").map(p => p.trim());
+            const [paramName, defaultValue] = param.split("=").map((p) => p.trim());
             params.push({
-                name,
+                name: paramName,
                 type: "unknown",
                 optional: !!defaultValue,
             });
@@ -114,9 +111,9 @@ export function generateTestsForFunction(fn, options = {}) {
     const tests = [];
     log.info(`Generating tests for function: ${functionInfo.name}`);
     // Find applicable patterns
-    const applicablePatterns = testPatterns.filter(pattern => {
+    const applicablePatterns = testPatterns.filter((pattern) => {
         // Check if pattern applies to this function
-        return pattern.applicableTo.some(pattern => {
+        return pattern.applicableTo.some((pattern) => {
             if (pattern === "*")
                 return true;
             if (pattern.includes("*")) {
@@ -148,12 +145,12 @@ export async function autonomousDecompose(instruction) {
     log.info(`Autonomous decomposition: ${instruction}`);
     // Check memory for similar decompositions
     const memory = new GlobalMemory(".state", ".state/autonomous-memory.db");
-    const similarTasks = memory.queryTasks({ limit });
+    const similarTasks = memory.queryTasks({ limit: 10 });
     // Find similar task patterns
-    const similarPatterns = similarTasks.filter(task => {
+    const similarPatterns = similarTasks.filter((task) => {
         const instructionWords = instruction.toLowerCase().split(/\s+/);
         const taskWords = task.instruction.toLowerCase().split(/\s+/);
-        const overlap = instructionWords.filter(w => taskWords.includes(w));
+        const overlap = instructionWords.filter((w) => taskWords.includes(w));
         return overlap.length >= 2;
     });
     // Use similar patterns to inform decomposition
@@ -162,7 +159,7 @@ export async function autonomousDecompose(instruction) {
     if (similarPatterns.length > 0) {
         log.info(`Found ${similarPatterns.length} similar task patterns`);
         // Adjust strategy based on success rate of similar tasks
-        const successRate = similarPatterns.filter(t => t.success).length / similarPatterns.length;
+        const successRate = similarPatterns.filter((t) => t.success).length / similarPatterns.length;
         if (successRate < 0.5) {
             // Low success rate - add more verification steps
             plan.subtasks.push({
@@ -177,9 +174,9 @@ export async function autonomousDecompose(instruction) {
     recordDecision({
         context: `Decompose: ${instruction}`,
         decision: `Strategy: ${plan.strategy}, ${plan.subtasks.length} subtasks`,
-        reasoning: `Based on ${similarPatterns.length} similar patterns with ${similarPatterns.filter(t => t.success).length / (similarPatterns.length || 1) * 100}% success rate`,
-        action() { }, plan,
-        success,
+        reasoning: `Based on ${similarPatterns.length} similar patterns with ${(similarPatterns.filter((t) => t.success).length / (similarPatterns.length || 1)) * 100}% success rate`,
+        action: async () => plan,
+        success: true,
     });
     return plan;
 }
@@ -190,21 +187,21 @@ export async function autonomousDecompose(instruction) {
  */
 export async function autonomousExecute(instruction) {
     log.info(`Autonomous execution: ${instruction}`);
-    // Step 1 task
+    // Step 1: Decompose task
     const plan = await autonomousDecompose(instruction);
-    // Step 2 orchestration
+    // Step 2: Create orchestration
     const orch = createOrchestration({
         name: `Autonomous: ${instruction.substring(0, 50)}`,
-        subtasks, : .subtasks,
-        strategy, : .strategy,
+        subtasks: plan.subtasks,
+        strategy: plan.strategy,
     });
-    // Step 3 with reflection
+    // Step 3: Execute with reflection
     let result;
     let retryCount = 0;
     const maxRetries = 3;
     while (retryCount < maxRetries) {
         result = await executeOrchestration(orch.id);
-        // Step 4 on result
+        // Step 4: Reflect on result
         const reflection = reflectOnResult(result, instruction);
         if (reflection.success) {
             log.info(`Task completed successfully`);
@@ -212,7 +209,7 @@ export async function autonomousExecute(instruction) {
         }
         else {
             log.warn(`Task failed, reflection: ${reflection.reasoning}`);
-            // Step 5 and retry if needed
+            // Step 5: Adjust and retry if needed
             if (reflection.shouldRetry && retryCount < maxRetries - 1) {
                 retryCount++;
                 log.info(`Retrying (${retryCount}/${maxRetries})`);
@@ -227,11 +224,13 @@ export async function autonomousExecute(instruction) {
     // Record decision
     recordDecision({
         context: `Execute: ${instruction}`,
-        decision, status
-    } || "unknown", reasoning, `Completed after ${retryCount} retries`, action(), result, success?.status === "completed");
+        decision: result?.status || "unknown",
+        reasoning: `Completed after ${retryCount} retries`,
+        action: async () => result,
+        success: result?.status === "completed",
+    });
+    return result;
 }
-;
-return result;
 /**
  * Reflect on execution result
  * @param result - Execution result
@@ -240,15 +239,15 @@ return result;
 function reflectOnResult(result, originalInstruction) {
     if (!result) {
         return {
-            success,
-            shouldRetry,
+            success: false,
+            shouldRetry: true,
             reasoning: "No result received",
         };
     }
     if (result.status === "completed") {
         return {
-            success,
-            shouldRetry,
+            success: true,
+            shouldRetry: false,
             reasoning: "Task completed successfully",
         };
     }
@@ -256,34 +255,36 @@ function reflectOnResult(result, originalInstruction) {
         // Analyze failure
         const failedSubtasks = result.subtasks?.filter((s) => s.status === "failed") || [];
         if (failedSubtasks.length > 0) {
-            const errors = failedSubtasks.map((s) => s.result?.error).filter(Boolean);
+            const errors = failedSubtasks
+                .map((s) => s.result?.error)
+                .filter(Boolean);
             // Check if errors are recoverable
             const recoverableErrors = errors.filter((e) => e.includes("timeout") ||
                 e.includes("network") ||
                 e.includes("temporarily"));
             if (recoverableErrors.length > 0) {
                 return {
-                    success,
-                    shouldRetry,
+                    success: false,
+                    shouldRetry: true,
                     reasoning: `Recoverable errors: ${recoverableErrors.join(", ")}`,
-                    adjustments,
+                    adjustments: { increaseTimeout: true },
                 };
             }
             return {
-                success,
-                shouldRetry,
+                success: false,
+                shouldRetry: false,
                 reasoning: `Non-recoverable errors: ${errors.join(", ")}`,
             };
         }
         return {
-            success,
-            shouldRetry,
+            success: false,
+            shouldRetry: true,
             reasoning: "Unknown failure",
         };
     }
     return {
-        success,
-        shouldRetry,
+        success: false,
+        shouldRetry: false,
         reasoning: `Unexpected status: ${result.status}`,
     };
 }
@@ -298,19 +299,17 @@ function adjustPlan(plan, reflection) {
         for (const subtask of plan.subtasks) {
             subtask.timeoutMs = (subtask.timeoutMs || 30000) * 2;
         }
-        log.info("Adjusted plan timeouts");
+        log.info("Adjusted plan: increased timeouts");
     }
 }
 /**
  * Record autonomous decision
  * @param decision - Decision to record
  */
-function recordDecision(decision, , AutonomousDecision, , , ) { }
- > ;
-{
+function recordDecision(decision) {
     const fullDecision = {
-        id() { },
-        timestamp() { },
+        id: generateId("decision"),
+        timestamp: nowMs(),
         ...decision,
     };
     decisionMemory.push(fullDecision);
@@ -333,17 +332,17 @@ export function getDecisionHistory() {
 export function learnFromDecisions() {
     if (decisionMemory.length === 0) {
         return {
-            successRate,
+            successRate: 0,
             commonFailures: [],
             recommendations: [],
         };
     }
-    const successCount = decisionMemory.filter(d => d.success).length;
+    const successCount = decisionMemory.filter((d) => d.success).length;
     const successRate = successCount / decisionMemory.length;
     // Find common failure patterns
     const failures = decisionMemory
-        .filter(d => !d.success)
-        .map(d => d.reasoning);
+        .filter((d) => !d.success)
+        .map((d) => d.reasoning);
     const failureCounts = {};
     for (const failure of failures) {
         failureCounts[failure] = (failureCounts[failure] || 0) + 1;
@@ -357,10 +356,10 @@ export function learnFromDecisions() {
     if (successRate < 0.7) {
         recommendations.push("Consider adding more verification steps");
     }
-    if (commonFailures.some(f => f.includes("timeout"))) {
+    if (commonFailures.some((f) => f.includes("timeout"))) {
         recommendations.push("Increase default timeout values");
     }
-    if (commonFailures.some(f => f.includes("permission"))) {
+    if (commonFailures.some((f) => f.includes("permission"))) {
         recommendations.push("Check permission requirements before execution");
     }
     return {

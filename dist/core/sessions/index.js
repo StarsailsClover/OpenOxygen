@@ -1,5 +1,5 @@
 /**
- * OpenOxygen — Session Management
+ * OpenOxygen - Session Management
  *
  * 会话生命周期管理：创建、持久化、路由绑定。
  * 接口协议兼容 OpenClaw 的 session-key 规范。
@@ -10,7 +10,7 @@ import { createSubsystemLogger } from "../../logging/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
 import { resolveStateDir } from "../config/index.js";
 const log = createSubsystemLogger("sessions");
-// ─── Session Key Convention ─────────────────────────────────────────────────
+// === Session Key Convention ===
 // Compatible with OpenClaw's session key format:
 //   default key:  "main"
 //   agent key:    "agent:<agentId>:main"
@@ -39,83 +39,148 @@ export function parseSessionKey(key) {
     if (parts[0] !== "agent" || parts.length < 3) {
         return { agentId: DEFAULT_AGENT_ID };
     }
-    const agentId = parts[1] ?? DEFAULT_AGENT_ID;
-    if (parts[2] === "main") {
-        return { agentId };
+    const agentId = parts[1];
+    if (parts.length === 3) {
+        return { agentId, channel: parts[2] };
     }
-    return {
+    return { agentId, channel: parts[2], peerId: parts[3] };
+}
+// === Session Store ===
+const sessions = new Map();
+const SESSIONS_FILE = "sessions.json";
+/**
+ * Create a new session
+ */
+export async function createSession(agentId = DEFAULT_AGENT_ID, metadata) {
+    const sessionKey = buildMainSessionKey(agentId);
+    const session = {
+        id: generateId("sess"),
+        key: sessionKey,
         agentId,
-        channel: parts[2],
-        peerId: parts.slice(3).join(":"),
-    };
-}
-const SESSIONS_FILENAME = "sessions.json";
-function resolveSessionStorePath() {
-    return path.join(resolveStateDir(), SESSIONS_FILENAME);
-}
-export async function loadSessionStore() {
-    const storePath = resolveSessionStorePath();
-    try {
-        const raw = await fs.readFile(storePath, "utf-8");
-        return JSON.parse(raw);
-    }
-    catch {
-        return { sessions: {}, version: 1 };
-    }
-}
-export async function saveSessionStore(store) {
-    const storePath = resolveSessionStorePath();
-    const dir = path.dirname(storePath);
-    await fs.mkdir(dir, { recursive: true });
-    await fs.writeFile(storePath, JSON.stringify(store, null, 2), "utf-8");
-}
-// ─── Session CRUD ───────────────────────────────────────────────────────────
-export async function createSession(agentId, channelId) {
-    const store = await loadSessionStore();
-    const key = channelId
-        ? buildPeerSessionKey(agentId, channelId, generateId())
-        : buildMainSessionKey(agentId);
-    const entry = {
-        id: generateId("session"),
-        key,
-        agentId,
-        channelId,
         createdAt: nowMs(),
         lastActiveAt: nowMs(),
+        metadata: {
+            ...metadata,
+            version: "1.0",
+        },
     };
-    store.sessions[key] = entry;
-    store.version += 1;
-    await saveSessionStore(store);
-    log.info(`Session created: ${key}`);
-    return entry;
+    sessions.set(sessionKey, session);
+    log.info(`Created session: ${sessionKey} (${session.id})`);
+    await persistSessions();
+    return session;
 }
-export async function getSession(key) {
-    const store = await loadSessionStore();
-    return store.sessions[key] ?? null;
+/**
+ * Get session by key
+ */
+export function getSession(key) {
+    return sessions.get(key);
 }
-export async function touchSession(key) {
-    const store = await loadSessionStore();
-    const entry = store.sessions[key];
-    if (entry) {
-        entry.lastActiveAt = nowMs();
-        await saveSessionStore(store);
+/**
+ * Get or create session
+ */
+export async function getOrCreateSession(key, agentId) {
+    let session = sessions.get(key);
+    if (!session) {
+        const parsed = parseSessionKey(key);
+        session = await createSession(agentId ?? parsed.agentId);
     }
+    return session;
 }
+/**
+ * Update session activity
+ */
+export function touchSession(key) {
+    const session = sessions.get(key);
+    if (!session)
+        return false;
+    session.lastActiveAt = nowMs();
+    return true;
+}
+/**
+ * Delete session
+ */
 export async function deleteSession(key) {
-    const store = await loadSessionStore();
-    if (store.sessions[key]) {
-        delete store.sessions[key];
-        store.version += 1;
-        await saveSessionStore(store);
-        log.info(`Session deleted: ${key}`);
-        return true;
+    const existed = sessions.delete(key);
+    if (existed) {
+        log.info(`Deleted session: ${key}`);
+        await persistSessions();
     }
-    return false;
+    return existed;
 }
-export async function listSessions(agentId) {
-    const store = await loadSessionStore();
-    const all = Object.values(store.sessions);
-    if (!agentId)
-        return all;
-    return all.filter((s) => s.agentId === agentId);
+/**
+ * List all sessions
+ */
+export function listSessions() {
+    return Array.from(sessions.values());
 }
+/**
+ * List sessions by agent
+ */
+export function listSessionsByAgent(agentId) {
+    return Array.from(sessions.values()).filter(s => s.agentId === agentId);
+}
+/**
+ * Clean up expired sessions
+ */
+export async function cleanupSessions(maxAgeMs = 24 * 60 * 60 * 1000) {
+    const now = nowMs();
+    let cleaned = 0;
+    for (const [key, session] of sessions.entries()) {
+        if (now - session.lastActiveAt > maxAgeMs) {
+            sessions.delete(key);
+            cleaned++;
+            log.debug(`Cleaned up expired session: ${key}`);
+        }
+    }
+    if (cleaned > 0) {
+        await persistSessions();
+        log.info(`Cleaned up ${cleaned} expired sessions`);
+    }
+    return cleaned;
+}
+// === Persistence ===
+async function persistSessions() {
+    const stateDir = resolveStateDir();
+    const filePath = path.join(stateDir, SESSIONS_FILE);
+    try {
+        const data = JSON.stringify(Array.from(sessions.entries()), null, 2);
+        await fs.mkdir(stateDir, { recursive: true });
+        await fs.writeFile(filePath, data, "utf-8");
+    }
+    catch (error) {
+        log.error(`Failed to persist sessions: ${error}`);
+    }
+}
+export async function loadSessions() {
+    const stateDir = resolveStateDir();
+    const filePath = path.join(stateDir, SESSIONS_FILE);
+    try {
+        const data = await fs.readFile(filePath, "utf-8");
+        const entries = JSON.parse(data);
+        for (const [key, session] of entries) {
+            sessions.set(key, session);
+        }
+        log.info(`Loaded ${entries.length} sessions`);
+    }
+    catch (error) {
+        // File may not exist yet
+        log.debug("No existing sessions file found");
+    }
+}
+export default {
+    create: createSession,
+    get: getSession,
+    getOrCreate: getOrCreateSession,
+    touch: touchSession,
+    delete: deleteSession,
+    list: listSessions,
+    listByAgent: listSessionsByAgent,
+    cleanup: cleanupSessions,
+    load: loadSessions,
+    buildMainSessionKey,
+    buildPeerSessionKey,
+    normalizeAgentId,
+    parseSessionKey,
+    DEFAULT_AGENT_ID,
+    DEFAULT_MAIN_KEY,
+};

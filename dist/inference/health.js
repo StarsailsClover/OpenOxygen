@@ -16,7 +16,7 @@ export async function checkModelHealth(config) {
         if (!response.ok) {
             return { healthy: false, error: `HTTP ${response.status}` };
         }
-        const data = await response.json();
+        const data = (await response.json());
         const models = data.data ?? [];
         const modelFound = models.some((m) => m.id?.includes(config.model) ?? false);
         if (!modelFound) {

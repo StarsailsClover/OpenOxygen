@@ -1,190 +1,245 @@
 /**
- * OpenOxygen — Multi-Model Router
+ * OpenOxygen - Multi-Model Router
  *
  * 多模型智能路由：根据任务类型、复杂度、成本约束自动选择最优模型。
  * 支持负载均衡、故障转移、API Key 轮换。
  */
 import { createSubsystemLogger } from "../../logging/index.js";
 const log = createSubsystemLogger("inference/router");
-// ─── Model Capability Profile ───────────────────────────────────────────────
-// 0-10
-speed; // 0-10
-vision; // 0-10
-toolUse; // 0-10
-costPer1kTokens; // USD
-maxContext; // tokens
-;
 const MODEL_PROFILES = {
-    "gpt-4o": ,
-    "gpt-4o-mini": ,
-    "gpt-5.1": ,
-    "claude-sonnet-4-20250514": ,
-    "claude-opus-4-20250514": ,
-    "gemini-2.5-pro": ,
-    "gemini-2.5-flash": ,
-    "step-2-16k": ,
+    "gpt-4o": {
+        reasoning: 9,
+        speed: 7,
+        vision: 9,
+        toolUse: 9,
+        costPer1kTokens: 0.005,
+        maxContext: 128000,
+    },
+    "gpt-4o-mini": {
+        reasoning: 7,
+        speed: 9,
+        vision: 7,
+        toolUse: 8,
+        costPer1kTokens: 0.00015,
+        maxContext: 128000,
+    },
+    "gpt-4.5": {
+        reasoning: 10,
+        speed: 6,
+        vision: 10,
+        toolUse: 10,
+        costPer1kTokens: 0.01,
+        maxContext: 256000,
+    },
+    "claude-sonnet-4-20250514": {
+        reasoning: 9,
+        speed: 7,
+        vision: 8,
+        toolUse: 9,
+        costPer1kTokens: 0.003,
+        maxContext: 200000,
+    },
+    "claude-opus-4-20250514": {
+        reasoning: 10,
+        speed: 5,
+        vision: 9,
+        toolUse: 9,
+        costPer1kTokens: 0.015,
+        maxContext: 200000,
+    },
+    "gemini-2.5-pro": {
+        reasoning: 9,
+        speed: 7,
+        vision: 9,
+        toolUse: 8,
+        costPer1kTokens: 0.00125,
+        maxContext: 1000000,
+    },
+    "gemini-2.5-flash": {
+        reasoning: 7,
+        speed: 9,
+        vision: 7,
+        toolUse: 7,
+        costPer1kTokens: 0.00015,
+        maxContext: 1000000,
+    },
+    "qwen3:4b": {
+        reasoning: 6,
+        speed: 10,
+        vision: 0,
+        toolUse: 6,
+        costPer1kTokens: 0,
+        maxContext: 32768,
+    },
+    "qwen3:32b": {
+        reasoning: 8,
+        speed: 7,
+        vision: 0,
+        toolUse: 8,
+        costPer1kTokens: 0,
+        maxContext: 131072,
+    },
 };
-function getModelProfile(model) { }
- | null;
-{
-    return MODEL_PROFILES[model] ?? null;
-}
-maxCostPer1kTokens ?  : ;
-requireVision ?  : ;
-requireToolUse ?  : ;
-minContextLength ?  : ;
-preferredProviders ?  : ;
-excludeProviders ?  : ;
-;
-reason;
-score;
-fallbacks;
-;
-// ─── Key Rotation ───────────────────────────────────────────────────────────
-currentIndex;
-failedKeys;
-;
-const keyPools = new Map();
-export function registerKeyPool(provider, keys) {
-    keyPools.set(provider, {
-        keys,
-        currentIndex,
-        failedKeys, Set() { },
-    });
-}
-export function getNextKey(provider) { }
- | null;
-{
-    const pool = keyPools.get(provider);
-    if (!pool || pool.keys.length === 0)
-        return null;
-    const availableKeys = pool.keys.filter((k) => !pool.failedKeys.has(k));
-    if (availableKeys.length === 0) {
-        // Reset failed keys and try again
-        pool.failedKeys.clear();
-        log.warn(`All keys for ${provider} failed, resetting pool`);
-        return pool.keys[0] ?? null;
-    }
-    const key = availableKeys[pool.currentIndex % availableKeys.length];
-    pool.currentIndex = (pool.currentIndex + 1) % availableKeys.length;
-    return key ?? null;
-}
-export function markKeyFailed(provider, key) {
-    const pool = keyPools.get(provider);
-    if (pool) {
-        pool.failedKeys.add(key);
-        log.warn(`Key marked  for ${provider} (${pool.failedKeys.size}/${pool.keys.length})`);
-    }
-}
-// ─── Router ─────────────────────────────────────────────────────────────────
 export class ModelRouter {
-    models;
-    constructor(models) {
-        this.models = models;
-        this.initKeyPools();
+    config;
+    availableModels;
+    healthStatus = new Map();
+    requestCount = new Map();
+    constructor(config, models) {
+        this.config = {
+            strategy: "balanced",
+            fallbackEnabled: true,
+            loadBalance: true,
+            ...config,
+        };
+        this.availableModels = models;
+        // Initialize health status
+        for (const model of models) {
+            const key = `${model.provider}:${model.model}`;
+            this.healthStatus.set(key, true);
+            this.requestCount.set(key, 0);
+        }
+        log.info(`ModelRouter initialized with ${models.length} models`);
     }
-    initKeyPools() {
-        // Group keys by provider for rotation
-        const providerKeys = new Map < string, string, [];
-         > ();
-        for (const model of this.models) {
-            if (model.apiKey) {
-                const existing = providerKeys.get(model.provider) ?? [];
-                existing.push(model.apiKey);
-                providerKeys.set(model.provider, existing);
+    /**
+     * Select best model for task
+     */
+    selectModel(task) {
+        const candidates = this.getHealthyModels();
+        if (candidates.length === 0) {
+            throw new Error("No healthy models available");
+        }
+        // Score each candidate
+        const scored = candidates.map(model => ({
+            model,
+            score: this.scoreModel(model, task),
+        }));
+        // Sort by score descending
+        scored.sort((a, b) => b.score - a.score);
+        const selected = scored[0]?.model;
+        if (!selected) {
+            throw new Error("Failed to select model");
+        }
+        // Update request count for load balancing
+        const key = `${selected.provider}:${selected.model}`;
+        this.requestCount.set(key, (this.requestCount.get(key) || 0) + 1);
+        log.debug(`Selected model: ${selected.model} (${selected.provider})`);
+        return selected;
+    }
+    scoreModel(model, task) {
+        const profile = MODEL_PROFILES[model.model] || {
+            reasoning: 5,
+            speed: 5,
+            vision: 0,
+            toolUse: 5,
+            costPer1kTokens: 0.001,
+            maxContext: 8192,
+        };
+        let score = 0;
+        // Strategy-based scoring
+        switch (this.config.strategy) {
+            case "cost":
+                score += (1 - Math.min(profile.costPer1kTokens * 100, 1)) * 10;
+                score += profile.speed * 2;
+                break;
+            case "quality":
+                score += profile.reasoning * 3;
+                score += profile.toolUse * 2;
+                break;
+            case "speed":
+                score += profile.speed * 4;
+                break;
+            case "balanced":
+            default:
+                score += profile.reasoning * 2;
+                score += profile.speed * 1.5;
+                score += (1 - Math.min(profile.costPer1kTokens * 100, 1)) * 5;
+                break;
+        }
+        // Task requirements
+        if (task.requiresVision && profile.vision > 0) {
+            score += profile.vision;
+        }
+        else if (task.requiresVision && profile.vision === 0) {
+            score -= 10; // Penalize non-vision models for vision tasks
+        }
+        if (task.requiresTools && profile.toolUse > 0) {
+            score += profile.toolUse;
+        }
+        // Complexity matching
+        if (task.complexity === "high" && profile.reasoning >= 8) {
+            score += 5;
+        }
+        else if (task.complexity === "low" && profile.speed >= 8) {
+            score += 5;
+        }
+        // Context window check
+        if (task.estimatedTokens && task.estimatedTokens > profile.maxContext) {
+            score -= 100; // Heavy penalty for insufficient context
+        }
+        // Load balancing penalty
+        const key = `${model.provider}:${model.model}`;
+        const requestCount = this.requestCount.get(key) || 0;
+        score -= requestCount * 0.1;
+        // Provider preference
+        if (this.config.preferredProviders?.includes(model.provider)) {
+            score += 3;
+        }
+        return score;
+    }
+    getHealthyModels() {
+        return this.availableModels.filter(model => {
+            const key = `${model.provider}:${model.model}`;
+            return this.healthStatus.get(key) !== false;
+        });
+    }
+    /**
+     * Mark model as unhealthy
+     */
+    markUnhealthy(model) {
+        const key = `${model.provider}:${model.model}`;
+        this.healthStatus.set(key, false);
+        log.warn(`Model marked unhealthy: ${key}`);
+        // Auto-recovery after 60 seconds
+        setTimeout(() => {
+            this.healthStatus.set(key, true);
+            log.info(`Model health restored: ${key}`);
+        }, 60000);
+    }
+    /**
+     * Get router stats
+     */
+    getStats() {
+        const healthy = this.getHealthyModels();
+        const distribution = {};
+        for (const [key, count] of this.requestCount.entries()) {
+            distribution[key] = count;
+        }
+        return {
+            totalModels: this.availableModels.length,
+            healthyModels: healthy.length,
+            requestDistribution: distribution,
+        };
+    }
+    /**
+     * Update model list
+     */
+    updateModels(models) {
+        this.availableModels = models;
+        // Update health status for new models
+        for (const model of models) {
+            const key = `${model.provider}:${model.model}`;
+            if (!this.healthStatus.has(key)) {
+                this.healthStatus.set(key, true);
+                this.requestCount.set(key, 0);
             }
         }
-        for (const [provider, keys] of providerKeys) {
-            registerKeyPool(provider, keys);
-        }
-    }
-    updateModels(models) {
-        this.models = models;
-        this.initKeyPools();
+        log.info(`Model list updated: ${models.length} models`);
     }
 }
- | null;
-{
-    const strategy = constraints?.strategy ?? "balanced";
-    const candidates = this.filterCandidates(constraints);
-    if (candidates.length === 0) {
-        log.warn("No models available for routing");
-        return null;
-    }
-    // Score each candidate
-    const scored = candidates.map((model) => ({
-        model,
-        score, : .scoreModel(model, mode, strategy),
-    }));
-    // Sort by score descending
-    scored.sort((a, b) => b.score - a.score);
-    const best = scored[0];
-    const fallbacks = scored.slice(1, 3).map((s) => s.model);
-    // Apply key rotation
-    const rotatedKey = getNextKey(best.model.provider);
-    if (rotatedKey) {
-        best.model = { ...best.model, apiKey };
-    }
-    log.debug(`Routed to ${best.model.provider}/${best.model.model} (score: ${best.score.toFixed(2)}, mode: ${mode})`);
-    return {
-        model, : .model,
-        reason: `${strategy} routing for ${mode} mode`,
-        score, : .score,
-        fallbacks,
-    };
+// === Factory ===
+export function createModelRouter(config, models) {
+    return new ModelRouter(config, models);
 }
-filterCandidates(constraints ?  : );
-{
-    let candidates = [...this.models];
-    if (constraints?.excludeProviders) {
-        candidates = candidates.filter((m) => !constraints.excludeProviders.includes(m.provider));
-    }
-    if (constraints?.preferredProviders) {
-        const preferred = candidates.filter((m) => constraints.preferredProviders.includes(m.provider));
-        if (preferred.length > 0)
-            candidates = preferred;
-    }
-    if (constraints?.requireVision) {
-        candidates = candidates.filter((m) => {
-            const profile = getModelProfile(m.model);
-            return profile ? profile.vision >= 5 : ; // Allow unknown models
-        });
-    }
-    if (constraints?.maxCostPer1kTokens) {
-        candidates = candidates.filter((m) => {
-            const profile = getModelProfile(m.model);
-            return profile ? profile.costPer1kTokens <= constraints.maxCostPer1kTokens : ;
-        });
-    }
-    return candidates;
-}
-scoreModel(model, mode, strategy);
-{
-    const profile = getModelProfile(model.model);
-    if (!profile)
-        return 5; // Neutral score for unknown models
-    const weights = mode === "deep"
-        ? { reasoning, .5: , speed, .1: , toolUse, .3: , cost, .1:  }
-            === "fast"
-            ? { reasoning, .1: , speed, .5: , toolUse, .2: , cost, .2:  }
-            :
-        :
-    ;
-    if (strategy === "cost") {
-        weights.cost = 0.5;
-        weights.reasoning = 0.2;
-        weights.speed = 0.2;
-        weights.toolUse = 0.1;
-    }
-    else if (strategy === "performance") {
-        weights.cost = 0.05;
-        weights.reasoning = 0.5;
-        weights.speed = 0.2;
-        weights.toolUse = 0.25;
-    }
-    const costScore = Math.max(0, 10 - profile.costPer1kTokens * 1000);
-    return (profile.reasoning * weights.reasoning +
-        profile.speed * weights.speed +
-        profile.toolUse * weights.toolUse +
-        costScore * weights.cost);
-}
+// === Default Export ===
+export default ModelRouter;

@@ -17,26 +17,31 @@ export class HumanLikenessScorer {
         const timing = this.scoreTiming(actions);
         const movement = this.scoreMovement(actions);
         const pattern = this.scorePattern(actions);
-        const overall = Math.round(timing.score * 0.35 +
-            movement.score * 0.40 +
-            pattern.score * 0.25);
+        const overall = Math.round(timing.score * 0.35 + movement.score * 0.4 + pattern.score * 0.25);
         const suggestions = this.generateSuggestions(timing, movement, pattern);
         return { overall, timing, movement, pattern, suggestions };
     }
     scoreTiming(actions) {
         if (actions.length < 2) {
-            return { score: 50, meanIntervalMs: 0, stdDevMs: 0, hasNaturalVariance: false, hasMicroPauses: false };
+            return {
+                score: 50,
+                meanIntervalMs: 0,
+                stdDevMs: 0,
+                hasNaturalVariance: false,
+                hasMicroPauses: false,
+            };
         }
         const intervals = [];
         for (let i = 1; i < actions.length; i++) {
             intervals.push(actions[i].timestamp - actions[i - 1].timestamp);
         }
         const mean = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-        const stdDev = Math.sqrt(intervals.reduce((sum, x) => sum + Math.pow(x - mean, 2), 0) / intervals.length);
+        const stdDev = Math.sqrt(intervals.reduce((sum, x) => sum + Math.pow(x - mean, 2), 0) /
+            intervals.length);
         // 人类行为特征
         const cv = mean > 0 ? stdDev / mean : 0; // 变异系数
         const hasNaturalVariance = cv > 0.1 && cv < 0.5; // 10%-50% 变异
-        const hasMicroPauses = intervals.some(i => i > 200 && i < 3000);
+        const hasMicroPauses = intervals.some((i) => i > 200 && i < 3000);
         // 评分
         let score = 50;
         if (hasNaturalVariance)
@@ -59,10 +64,17 @@ export class HumanLikenessScorer {
         };
     }
     scoreMovement(actions) {
-        const moves = actions.filter(a => (a.type === "move" || a.type === "click" || a.type === "smooth_move") &&
-            a.x !== undefined && a.y !== undefined);
+        const moves = actions.filter((a) => (a.type === "move" || a.type === "click" || a.type === "smooth_move") &&
+            a.x !== undefined &&
+            a.y !== undefined);
         if (moves.length < 2) {
-            return { score: 50, pathSmoothness: 0.5, hasAcceleration: false, hasOvershoot: false, straightLineRatio: 0 };
+            return {
+                score: 50,
+                pathSmoothness: 0.5,
+                hasAcceleration: false,
+                hasOvershoot: false,
+                straightLineRatio: 0,
+            };
         }
         // 计算路径特征
         let totalSegments = 0;
@@ -93,7 +105,8 @@ export class HumanLikenessScorer {
         // 加速→减速模式
         const hasAcceleration = distances.length >= 3 &&
             distances[0] < distances[Math.floor(distances.length / 2)] &&
-            distances[Math.floor(distances.length / 2)] > distances[distances.length - 1];
+            distances[Math.floor(distances.length / 2)] >
+                distances[distances.length - 1];
         // 过冲检测（最后几个点距离增大后减小）
         const hasOvershoot = distances.length >= 4 &&
             distances[distances.length - 2] > distances[distances.length - 1];
@@ -118,11 +131,14 @@ export class HumanLikenessScorer {
     }
     scorePattern(actions) {
         // 重复性检测
-        const typeSequence = actions.map(a => a.type).join(",");
+        const typeSequence = actions.map((a) => a.type).join(",");
         const chunks = [];
         for (let len = 2; len <= 5; len++) {
             for (let i = 0; i <= actions.length - len; i++) {
-                chunks.push(actions.slice(i, i + len).map(a => a.type).join(","));
+                chunks.push(actions
+                    .slice(i, i + len)
+                    .map((a) => a.type)
+                    .join(","));
             }
         }
         const uniqueChunks = new Set(chunks);
@@ -135,13 +151,16 @@ export class HumanLikenessScorer {
             return gap > 500 && gap < 3000;
         });
         // 点击精确度（像素级精确不自然）
-        const clickActions = actions.filter(a => a.type === "click" && a.x !== undefined);
-        const clickPrecision = clickActions.length > 1 ? (() => {
-            const xValues = clickActions.map(a => a.x);
-            const yValues = clickActions.map(a => a.y);
-            const allRound = xValues.every(x => x % 5 === 0) && yValues.every(y => y % 5 === 0);
-            return allRound ? 1.0 : 0.5;
-        })() : 0.5;
+        const clickActions = actions.filter((a) => a.type === "click" && a.x !== undefined);
+        const clickPrecision = clickActions.length > 1
+            ? (() => {
+                const xValues = clickActions.map((a) => a.x);
+                const yValues = clickActions.map((a) => a.y);
+                const allRound = xValues.every((x) => x % 5 === 0) &&
+                    yValues.every((y) => y % 5 === 0);
+                return allRound ? 1.0 : 0.5;
+            })()
+            : 0.5;
         let score = 60;
         if (!isRepetitive)
             score += 15;

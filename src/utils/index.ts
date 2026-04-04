@@ -77,7 +77,7 @@ export function nowMs(): number {
 }
 
 export function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export function formatDuration(ms: number): string {
@@ -123,7 +123,7 @@ export async function retry<T>(
       return await fn();
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
-      
+
       if (i < attempts - 1) {
         await sleep(currentDelay);
         currentDelay *= backoff;
@@ -150,7 +150,6 @@ export function isValidEmail(s: string): boolean {
 }
 
 export function isValidPath(s: string): boolean {
-  // Basic path validation
   if (s.includes("\0")) return false;
   if (s.includes("..") && !s.startsWith("..")) return false;
   return true;
@@ -179,7 +178,7 @@ export function camelCase(s: string): string {
 
 export function snakeCase(s: string): string {
   return s
-    .replace(/[A-Z]/g, c => `_${c.toLowerCase()}`)
+    .replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)
     .replace(/^_/, "");
 }
 
@@ -205,36 +204,7 @@ export function omit<T, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> {
   return result;
 }
 
-// === Exports ===
-
-export {
-  generateId,
-  generateShortId,
-  generateTimestampId,
-  resolveUserPath,
-  ensureWindowsPath,
-  normalizePathSeparators,
-  sanitizePath,
-  isWindows,
-  isMacOS,
-  isLinux,
-  nowMs,
-  sleep,
-  formatDuration,
-  formatTimestamp,
-  withTimeout,
-  retry,
-  isValidUrl,
-  isValidEmail,
-  isValidPath,
-  truncate,
-  slugify,
-  camelCase,
-  snakeCase,
-  deepClone,
-  pick,
-  omit,
-};
+// === Default Export ===
 
 export default {
   generateId,

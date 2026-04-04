@@ -15,45 +15,10 @@ import { WebSocket, WebSocketServer } from "ws";
 import { createSubsystemLogger } from "../../logging/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
 const log = createSubsystemLogger("agent/communication");
-name;
-role;
-status;
-capabilities; // ["terminal", "browser", "gui", "vlm"]
-currentTask ?  : ;
-lastHeartbeat;
-metadata ?  : ;
-;
-from; // Agent ID
-to ?  : ; // Target Agent ID or "broadcast"
-taskId ?  : ;
-payload;
-timestamp;
-ackRequired ?  : ;
-ackId ?  : ;
-;
-strategy;
-durationMs;
-logs;
-;
-instruction;
-mode ?  : ;
-fromAgent;
-toAgent;
-status: "pending" | "running" | "completed" | "failed";
-result ?  : ;
-createdAt;
-startedAt ?  : ;
-completedAt ?  : ;
-retryCount;
-maxRetries;
-;
-tasks;
-wss ?  : ;
-;
 // ─── Agent Registry ─────────────────────────────────────────────────────────
 const registry = {
-    agents, Map() { },
-    tasks, Map() { },
+    agents: new Map(),
+    tasks: new Map(),
 };
 // ─── Agent Registration ─────────────────────────────────────────────────────
 export function registerAgent(id, name, role = "worker", capabilities = ["terminal", "gui"]) {
@@ -63,7 +28,7 @@ export function registerAgent(id, name, role = "worker", capabilities = ["termin
         role,
         status: "idle",
         capabilities,
-        lastHeartbeat() { },
+        lastHeartbeat: nowMs(),
     };
     registry.agents.set(id, agent);
     log.info(`Agent registered: ${id} (${name}, ${role})`);
@@ -73,9 +38,7 @@ export function unregisterAgent(id) {
     registry.agents.delete(id);
     log.info(`Agent unregistered: ${id}`);
 }
-export function getAgent(id) { }
- | null;
-{
+export function getAgent(id) {
     return registry.agents.get(id) || null;
 }
 export function listAgents() {
@@ -107,7 +70,7 @@ export function checkStaleAgents(timeoutMs = 60000) {
     return stale;
 }
 // ─── Task Delegation ────────────────────────────────────────────────────────
-export function delegateTask(instruction, fromAgentId, toAgentId, , , options) {
+export function delegateTask(instruction, fromAgentId, toAgentId, options) {
     // Auto-select agent if "auto"
     let targetAgentId = typeof toAgentId === "string" && toAgentId !== "auto" ? toAgentId : "";
     if (toAgentId === "auto") {
@@ -118,36 +81,30 @@ export function delegateTask(instruction, fromAgentId, toAgentId, , , options) {
         targetAgentId = available[0].id;
     }
     const task = {
-        id() { },
+        id: generateId("task"),
         instruction,
-        mode, mode,
-        fromAgent,
-        toAgent,
+        mode: options?.mode,
+        fromAgent: fromAgentId,
+        toAgent: targetAgentId,
         status: "pending",
-        createdAt() { },
-        retryCount,
-        maxRetries, maxRetries
-    } ?? 1;
+        createdAt: nowMs(),
+        retryCount: 0,
+        maxRetries: options?.maxRetries ?? 1,
+    };
+    registry.tasks.set(task.id, task);
+    // Update agent status
+    const targetAgent = registry.agents.get(targetAgentId);
+    if (targetAgent) {
+        targetAgent.status = "busy";
+        targetAgent.currentTask = task.id;
+    }
+    log.info(`Task delegated: ${task.id} from ${fromAgentId} to ${targetAgentId}`);
+    return task;
 }
-;
-registry.tasks.set(task.id, task);
-// Update agent status
-const targetAgent = registry.agents.get(targetAgentId);
-if (targetAgent) {
-    targetAgent.status = "busy";
-    targetAgent.currentTask = task.id;
-}
-log.info(`Task delegated: ${task.id} from ${fromAgentId} to ${targetAgentId}`);
-return task;
-export function getTask(taskId) { }
- | null;
-{
+export function getTask(taskId) {
     return registry.tasks.get(taskId) || null;
 }
-export function updateTaskStatus(taskId, status, [], ) { }
-result ?  : ,
-;
-{
+export function updateTaskStatus(taskId, status, result) {
     const task = registry.tasks.get(taskId);
     if (!task)
         return;
@@ -178,28 +135,21 @@ export async function executeDelegatedTask(taskId) {
         // Import dynamically to avoid circular dependency
         const { executeWithStrategy } = await import("../../execution/unified/index.js");
         const result = await executeWithStrategy(task.instruction, task.mode
-            ? { mode, : .mode, confidence, reason: "Delegated task" }
-            :
-        );
+            ? { mode: task.mode, confidence: 1, reason: "Delegated task" }
+            : undefined);
         updateTaskStatus(taskId, result.success ? "completed" : "failed", result);
     }
     catch (e) {
         updateTaskStatus(taskId, "failed", {
-            success,
-            error, : .message,
-            durationMs,
-            mode, : .mode || "hybrid",
-            strategy,
+            success: false,
+            error: e.message,
+            durationMs: 0,
+            mode: task.mode || "hybrid",
+            strategy: { mode: task.mode || "hybrid", confidence: 0, reason: "Error" },
             logs: [],
         });
     }
 }
-results;
-successCount;
-failCount;
-avgDuration;
-errors;
-;
 export function aggregateResults(taskIds) {
     const results = [];
     const errors = [];
@@ -220,16 +170,14 @@ export function aggregateResults(taskIds) {
     }
     const total = results.length;
     return {
-        success
-    } === total,
+        success: successCount === total,
         results,
         successCount,
-        failCount - successCount,
-        avgDuration > 0 ? totalDuration / total : ,
+        failCount: total - successCount,
+        avgDuration: total > 0 ? totalDuration / total : 0,
         errors,
-    ;
+    };
 }
-;
 // ─── WebSocket Communication ────────────────────────────────────────────────
 export function initializeWebSocketServer(port = 4810) {
     const wss = new WebSocketServer({ port });
@@ -258,20 +206,20 @@ function handleMessage(ws, msg) {
         sendAck(ws, msg.ackId);
     }
     switch (msg.type) {
-        case "register"(ws, msg):
-            ;
+        case "register":
+            handleRegister(ws, msg);
             break;
-        case "heartbeat"(msg):
-            ;
+        case "heartbeat":
+            handleHeartbeat(msg);
             break;
-        case "delegate"(ws, msg):
-            ;
+        case "delegate":
+            handleDelegate(ws, msg);
             break;
-        case "result"(msg):
-            ;
+        case "result":
+            handleResult(msg);
             break;
-        case "broadcast"(ws, msg):
-            ;
+        case "broadcast":
+            handleBroadcast(ws, msg);
             break;
     }
 }
@@ -279,7 +227,7 @@ function sendAck(ws, ackId) {
     ws.send(JSON.stringify({
         type: "ack",
         ackId,
-        timestamp() { },
+        timestamp: nowMs(),
     }));
 }
 function handleRegister(ws, msg) {
@@ -288,8 +236,8 @@ function handleRegister(ws, msg) {
     // Send confirmation
     ws.send(JSON.stringify({
         type: "ack",
-        payload,
-        timestamp() { },
+        payload: { registered: true, agentId: id },
+        timestamp: nowMs(),
     }));
 }
 function handleHeartbeat(msg) {
@@ -305,16 +253,16 @@ function handleDelegate(ws, msg) {
         // Send confirmation
         ws.send(JSON.stringify({
             type: "ack",
-            taskId, : .id,
-            assignedTo, : .toAgent,
-            timestamp() { },
+            taskId: task.id,
+            assignedTo: task.toAgent,
+            timestamp: nowMs(),
         }));
     }
     catch (e) {
         ws.send(JSON.stringify({
             type: "error",
-            error, : .message,
-            timestamp() { },
+            error: e.message,
+            timestamp: nowMs(),
         }));
     }
 }
@@ -327,9 +275,9 @@ function handleBroadcast(ws, msg) {
         return;
     const data = JSON.stringify({
         type: "broadcast",
-        from, : .from,
-        payload, : .payload,
-        timestamp() { },
+        from: msg.from,
+        payload: msg.payload,
+        timestamp: nowMs(),
     });
     // Broadcast to all connected clients except sender
     registry.wss.clients.forEach((client) => {
@@ -340,78 +288,69 @@ function handleBroadcast(ws, msg) {
 }
 // ─── Client API (for agents connecting to coordinator) ────────────────────────
 export class AgentClient {
-    ws;
-}
- | null;
-null;
-agentId;
-coordinatorUrl;
-pendingAcks = new Map < string, { resolve: () => void , reject } > ();
-constructor(agentId, coordinatorUrl = "ws://127.0.0.1");
-{
-    this.agentId = agentId;
-    this.coordinatorUrl = coordinatorUrl;
-}
-async;
-connect();
-{
-    return new Promise((resolve, reject) => {
-        this.ws = new WebSocket(this.coordinatorUrl);
-        this.ws.on("open", () => {
-            log.info(`Connected to coordinator: ${this.coordinatorUrl}`);
-            resolve();
-        });
-        this.ws.on("error", reject);
-        this.ws.on("message", (data) => {
-            const msg = JSON.parse(data.toString());
-            if (msg.type === "ack" && msg.ackId) {
-                const pending = this.pendingAcks.get(msg.ackId);
-                if (pending) {
-                    this.pendingAcks.delete(msg.ackId);
-                    pending.resolve();
+    ws = null;
+    agentId;
+    coordinatorUrl;
+    pendingAcks = new Map();
+    constructor(agentId, coordinatorUrl = "ws://127.0.0.1:4810") {
+        this.agentId = agentId;
+        this.coordinatorUrl = coordinatorUrl;
+    }
+    async connect() {
+        return new Promise((resolve, reject) => {
+            this.ws = new WebSocket(this.coordinatorUrl);
+            this.ws.on("open", () => {
+                log.info(`Connected to coordinator: ${this.coordinatorUrl}`);
+                resolve();
+            });
+            this.ws.on("error", reject);
+            this.ws.on("message", (data) => {
+                const msg = JSON.parse(data.toString());
+                if (msg.type === "ack" && msg.ackId) {
+                    const pending = this.pendingAcks.get(msg.ackId);
+                    if (pending) {
+                        this.pendingAcks.delete(msg.ackId);
+                        pending.resolve();
+                    }
                 }
-            }
+            });
         });
-    });
-}
-async;
-register(name, role, capabilities);
-{
-    if (!this.ws)
-        throw new Error("Not connected");
-    const ackId = generateId("ack");
-    this.ws.send(JSON.stringify({
-        type: "register",
-        from, : .agentId,
-        payload,
-        ackId,
-        timestamp() { },
-    }));
-    // Wait for ACK
-    await new Promise((resolve, reject) => {
-        this.pendingAcks.set(ackId, { resolve, reject });
-        setTimeout(() => {
-            if (this.pendingAcks.has(ackId)) {
-                this.pendingAcks.delete(ackId);
-                reject(new Error("Registration timeout"));
-            }
-        }, 5000);
-    });
-}
-sendHeartbeat();
-{
-    if (!this.ws)
-        return;
-    this.ws.send(JSON.stringify({
-        type: "heartbeat",
-        from, : .agentId,
-        timestamp() { },
-    }));
-}
-disconnect();
-{
-    this.ws?.close();
-    this.ws = null;
+    }
+    async register(name, role, capabilities) {
+        if (!this.ws)
+            throw new Error("Not connected");
+        const ackId = generateId("ack");
+        this.ws.send(JSON.stringify({
+            type: "register",
+            from: this.agentId,
+            payload: { id: this.agentId, name, role, capabilities },
+            ackId,
+            timestamp: nowMs(),
+        }));
+        // Wait for ACK
+        await new Promise((resolve, reject) => {
+            this.pendingAcks.set(ackId, { resolve, reject });
+            setTimeout(() => {
+                if (this.pendingAcks.has(ackId)) {
+                    this.pendingAcks.delete(ackId);
+                    reject(new Error("Registration timeout"));
+                }
+            }, 5000);
+        });
+    }
+    sendHeartbeat() {
+        if (!this.ws)
+            return;
+        this.ws.send(JSON.stringify({
+            type: "heartbeat",
+            from: this.agentId,
+            timestamp: nowMs(),
+        }));
+    }
+    disconnect() {
+        this.ws?.close();
+        this.ws = null;
+    }
 }
 // ─── Cleanup ────────────────────────────────────────────────────────────────
 export function shutdownAgentSystem() {

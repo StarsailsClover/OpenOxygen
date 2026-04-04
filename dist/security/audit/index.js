@@ -1,15 +1,15 @@
 /**
- * OpenOxygen — Security Audit System
+ * OpenOxygen - Security Audit System
  *
  * 全链路审计：记录所有系统操作，支持查询、告警和事务回滚。
  */
-import fs from "node/promises";
-import path from "node";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { createSubsystemLogger } from "../../logging/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
 import { resolveStateDir } from "../../core/config/index.js";
 const log = createSubsystemLogger("security/audit");
-// ─── Audit Store ────────────────────────────────────────────────────────────
+// === Audit Store ===
 const AUDIT_FILENAME = "audit.jsonl";
 const MAX_MEMORY_ENTRIES = 10_000;
 export class AuditTrail {
@@ -28,92 +28,134 @@ export class AuditTrail {
      */
     async record(params) {
         const entry = {
-            id() { },
-            timestamp() { },
-            operation, : .operation,
-            actor, : .actor,
-            target, : .target,
-            severity, : .severity ?? "info",
-            details, : .details,
-            rollbackable, : .rollbackable ?? false,
+            id: generateId("audit"),
+            timestamp: nowMs(),
+            operation: params.operation,
+            actor: params.actor,
+            target: params.target,
+            severity: params.severity ?? "info",
+            details: params.details,
+            rollbackable: params.rollbackable ?? false,
         };
         this.entries.push(entry);
         // Trim in-memory buffer
         if (this.entries.length > MAX_MEMORY_ENTRIES) {
-            this.entries = this.entries.slice(-MAX_MEMORY_ENTRIES);
+            this.entries = this.entries.slice(-MAX_MEMORY_ENTRIES / 2);
         }
-        // Persist to file
-        if (this.config.auditEnabled) {
-            await this.appendToFile(entry);
-        }
-        // Alert on critical entries
-        if (entry.severity === "critical") {
-            log.error(`CRITICAL AUDIT: ${entry.operation} by ${entry.actor} on ${entry.target}`);
+        // Persist to disk
+        await this.persist(entry);
+        // Log high severity events
+        if (entry.severity === "high" || entry.severity === "critical") {
+            log.warn(`High severity audit: ${entry.operation} by ${entry.actor}`);
         }
         return entry;
     }
     /**
-     * Query audit entries.
+     * Query audit log.
      */
-    query(params) {
-        let results = [...this.entries];
-        if (params?.operation) {
-            results = results.filter((e) => e.operation === params.operation);
+    async query(filters) {
+        let results = this.entries;
+        if (filters.operation) {
+            results = results.filter(e => e.operation === filters.operation);
         }
-        if (params?.actor) {
-            results = results.filter((e) => e.actor === params.actor);
+        if (filters.actor) {
+            results = results.filter(e => e.actor === filters.actor);
         }
-        if (params?.severity) {
-            results = results.filter((e) => e.severity === params.severity);
+        if (filters.target) {
+            results = results.filter(e => e.target === filters.target);
         }
-        if (params?.since) {
-            results = results.filter((e) => e.timestamp >= params.since);
+        if (filters.severity) {
+            results = results.filter(e => e.severity === filters.severity);
         }
+        if (filters.since) {
+            results = results.filter(e => e.timestamp >= filters.since);
+        }
+        if (filters.until) {
+            results = results.filter(e => e.timestamp <= filters.until);
+        }
+        // Sort by timestamp descending
         results.sort((a, b) => b.timestamp - a.timestamp);
-        if (params?.limit) {
-            results = results.slice(0, params.limit);
+        if (filters.limit) {
+            results = results.slice(0, filters.limit);
         }
         return results;
     }
     /**
-     * Get rollbackable entries for undo operations.
+     * Get statistics.
      */
-    getRollbackable(limit = 10) {
-        return this.entries
-            .filter((e) => e.rollbackable)
-            .sort((a, b) => b.timestamp - a.timestamp)
-            .slice(0, limit);
-    }
-    async appendToFile(entry) {
-        try {
-            const dir = path.dirname(this.filePath);
-            await fs.mkdir(dir, { recursive });
-            await fs.appendFile(this.filePath, JSON.stringify(entry) + "\n", "utf-8");
+    getStats() {
+        const bySeverity = {
+            info: 0,
+            low: 0,
+            medium: 0,
+            high: 0,
+            critical: 0,
+        };
+        const byOperation = {};
+        for (const entry of this.entries) {
+            bySeverity[entry.severity]++;
+            byOperation[entry.operation] = (byOperation[entry.operation] || 0) + 1;
         }
-        catch (err) {
-            log.error("Failed to write audit entry:", err);
+        return {
+            totalEntries: this.entries.length,
+            bySeverity,
+            byOperation,
+        };
+    }
+    /**
+     * Persist entry to disk.
+     */
+    async persist(entry) {
+        if (!this.config.auditEnabled)
+            return;
+        try {
+            const line = JSON.stringify(entry) + "\n";
+            await fs.appendFile(this.filePath, line, "utf-8");
+        }
+        catch (error) {
+            log.error(`Failed to persist audit entry: ${error}`);
         }
     }
     /**
-     * Load audit history from file.
+     * Load from disk.
      */
-    async loadFromFile() {
+    async load() {
         try {
             const content = await fs.readFile(this.filePath, "utf-8");
-            const lines = content.trim().split("\n").filter(Boolean);
-            this.entries = lines.map((line) => JSON.parse(line));
-            log.info(`Loaded ${this.entries.length} audit entries from file`);
-            return this.entries.length;
+            const lines = content.split("\n").filter(l => l.trim());
+            this.entries = lines
+                .map(line => {
+                try {
+                    return JSON.parse(line);
+                }
+                catch {
+                    return null;
+                }
+            })
+                .filter((e) => e !== null);
+            log.info(`Loaded ${this.entries.length} audit entries`);
+        }
+        catch (error) {
+            // File may not exist yet
+            log.debug("No existing audit log found");
+        }
+    }
+    /**
+     * Clear all entries.
+     */
+    async clear() {
+        this.entries = [];
+        try {
+            await fs.unlink(this.filePath);
         }
         catch {
-            return 0;
+            // File may not exist
         }
-    }
-    getStats() {
-        return {
-            total, : .entries.length,
-            critical, : .entries.filter((e) => e.severity === "critical").length,
-            rollbackable, : .entries.filter((e) => e.rollbackable).length,
-        };
+        log.info("Audit log cleared");
     }
 }
+// === Factory ===
+export function createAuditTrail(config) {
+    return new AuditTrail(config);
+}
+export default AuditTrail;

@@ -1,164 +1,214 @@
 /**
- * OpenOxygen — OpenClaw Compatibility Layer
+ * OpenClaw Compatibility Layer
  *
- * 兼容适配器：将 OpenClaw 的配置格式、插件协议、Skill 接口
- * 转译为 OpenOxygen 的内部格式，实现零修改迁移。
+ * Seamless migration from OpenClaw to OpenOxygen
+ * Provides API compatibility and automatic conversion
  */
-import fs from "node:fs/promises";
-import { createSubsystemLogger } from "../../logging/index.js";
+import { createSubsystemLogger } from "../logging/index.js";
 const log = createSubsystemLogger("compat/openclaw");
-// ─── Config Translator ─────────────────────────────────────────────────────
-export async function translateOpenClawConfig(openclawConfigPath) {
-    try {
-        const raw = await fs.readFile(openclawConfigPath, "utf-8");
-        const clawConfig = JSON.parse(raw);
-        return convertConfig(clawConfig);
+// ============================================================================
+// Context Bridge
+// ============================================================================
+export class OpenClawContextBridge {
+    contexts = new Map();
+    /**
+     * Create OpenClaw-compatible context
+     */
+    createContext(sessionId, userId) {
+        const context = {
+            sessionId,
+            userId,
+            workspace: `workspace/${sessionId}`,
+            variables: {},
+        };
+        this.contexts.set(sessionId, context);
+        log.info(`OpenClaw context created: ${sessionId}`);
+        return context;
     }
-    catch (err) {
-        log.error(`Failed to load OpenClaw config from ${openclawConfigPath}:`, err);
-        return {};
+    /**
+     * Get context by session ID
+     */
+    getContext(sessionId) {
+        return this.contexts.get(sessionId);
+    }
+    /**
+     * Set context variable
+     */
+    setVariable(sessionId, key, value) {
+        const context = this.contexts.get(sessionId);
+        if (context) {
+            context.variables[key] = value;
+            return true;
+        }
+        return false;
+    }
+    /**
+     * Get context variable
+     */
+    getVariable(sessionId, key) {
+        const context = this.contexts.get(sessionId);
+        return context?.variables[key];
+    }
+    /**
+     * Clear context
+     */
+    clearContext(sessionId) {
+        const existed = this.contexts.has(sessionId);
+        if (existed) {
+            this.contexts.delete(sessionId);
+            log.info(`OpenClaw context cleared: ${sessionId}`);
+        }
+        return existed;
     }
 }
-function convertConfig(claw) {
-    const result = {};
-    // Gateway
-    if (claw.gateway) {
-        result.gateway = {
-            host: claw.gateway.host ?? "127.0.0.1",
-            port: claw.gateway.port ?? 4800,
-            auth: {
-                mode: claw.gateway.auth?.token ? "token" : claw.gateway.auth?.password ? "password" : "none",
-                token: claw.gateway.auth?.token,
-                password: claw.gateway.auth?.password,
-            },
-        };
+// ============================================================================
+// Skill Adapter
+// ============================================================================
+export class OpenClawSkillAdapter {
+    skills = new Map();
+    /**
+     * Register OpenClaw skill
+     */
+    registerSkill(skill) {
+        this.skills.set(skill.name, skill);
+        log.info(`OpenClaw skill registered: ${skill.name} v${skill.version}`);
     }
-    // Agents
-    if (claw.agents) {
-        result.agents = {
-            default: claw.agents.default,
-            list: (claw.agents.list ?? []).map(convertAgent),
-        };
+    /**
+     * Execute OpenClaw skill
+     */
+    async executeSkill(skillName, params, context) {
+        const skill = this.skills.get(skillName);
+        if (!skill) {
+            return {
+                success: false,
+                error: `OpenClaw skill not found: ${skillName}`,
+            };
+        }
+        try {
+            const result = await skill.handler(params, context);
+            return {
+                success: true,
+                data: result,
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: `OpenClaw skill execution failed: ${error}`,
+            };
+        }
     }
-    // Channels
-    if (claw.channels) {
-        result.channels = Object.entries(claw.channels).map(([id, cfg]) => ({
-            id,
-            type: id,
-            enabled: cfg.enabled ?? true,
-            config: cfg,
-        }));
+    /**
+     * List registered skills
+     */
+    listSkills() {
+        return Array.from(this.skills.values());
     }
-    // Plugins
-    if (claw.plugins) {
-        result.plugins = Object.entries(claw.plugins).map(([name, cfg]) => ({
-            name,
-            enabled: cfg.enabled ?? true,
-            path: cfg.path,
-            config: cfg,
-        }));
+    /**
+     * Check if skill exists
+     */
+    hasSkill(skillName) {
+        return this.skills.has(skillName);
     }
-    // Memory
-    if (claw.memory) {
-        result.memory = {
-            backend: "builtin",
-            embeddingProvider: mapProvider(claw.memory.provider),
-            embeddingModel: claw.memory.model,
-            hybridSearch: true,
-        };
+}
+export function convertOpenClawConfig(ocConfig) {
+    log.info(`Converting OpenClaw config v${ocConfig.version}`);
+    return {
+        version: "26w15aB",
+        skills: ocConfig.skills.map((skill, index) => ({
+            id: `skill-${index}`,
+            name: skill.name,
+            enabled: skill.enabled,
+            config: skill.config || {},
+        })),
+        plugins: ocConfig.plugins.map((plugin, index) => ({
+            id: `plugin-${index}`,
+            name: plugin.name,
+            source: plugin.path,
+            config: plugin.config || {},
+        })),
+        settings: {
+            ...ocConfig.settings,
+            migratedFrom: "openclaw",
+            originalVersion: ocConfig.version,
+        },
+    };
+}
+export async function migrateFromOpenClaw(openclawPath, outputPath) {
+    log.info(`Starting migration from OpenClaw: ${openclawPath}`);
+    const result = {
+        success: false,
+        migratedSkills: 0,
+        migratedPlugins: 0,
+        errors: [],
+        warnings: [],
+    };
+    try {
+        // Read OpenClaw configuration
+        const fs = await import("node:fs");
+        const configContent = await fs.promises.readFile(openclawPath, "utf-8");
+        const ocConfig = JSON.parse(configContent);
+        // Convert configuration
+        const ooConfig = convertOpenClawConfig(ocConfig);
+        // Write OpenOxygen configuration
+        await fs.promises.writeFile(outputPath, JSON.stringify(ooConfig, null, 2));
+        result.success = true;
+        result.migratedSkills = ooConfig.skills.length;
+        result.migratedPlugins = ooConfig.plugins.length;
+        log.info(`Migration completed: ${result.migratedSkills} skills, ${result.migratedPlugins} plugins`);
     }
-    // Env
-    if (claw.env) {
-        result.env = claw.env;
+    catch (error) {
+        result.errors.push(`Migration failed: ${error}`);
+        log.error(`Migration failed: ${error}`);
     }
-    log.info("OpenClaw config translated successfully");
     return result;
 }
-function convertAgent(claw) {
-    let model;
-    if (typeof claw.model === "string") {
-        // Simple model string like "gpt-4o" or "anthropic/claude-sonnet-4-20250514"
-        const parts = claw.model.split("/");
-        if (parts.length === 2) {
-            model = { provider: mapProvider(parts[0]) ?? "openai", model: parts[1] };
-        }
-        else {
-            model = { provider: "openai", model: claw.model };
-        }
-    }
-    else if (claw.model && typeof claw.model === "object") {
-        model = {
-            provider: mapProvider(claw.model.provider) ?? "openai",
-            model: claw.model.name ?? "gpt-4o",
-            apiKey: claw.model.apiKey,
-        };
-    }
-    let skills;
-    if (Array.isArray(claw.skills)) {
-        skills = claw.skills;
-    }
-    return {
-        id: claw.id ?? "default",
-        name: claw.name,
-        workspace: claw.workspace,
-        model,
-        skills,
-        identity: claw.identity,
-        sandbox: claw.sandbox ? { enabled: claw.sandbox.enabled ?? false, timeoutMs: claw.sandbox.timeoutMs } : undefined,
-        tools: claw.tools,
+export function checkCompatibility(ocConfig) {
+    const report = {
+        compatible: true,
+        skillCompatibility: [],
+        overallScore: 100,
     };
-}
-function mapProvider(provider) {
-    if (!provider)
-        return undefined;
-    const lower = provider.toLowerCase();
-    const mapping = {
-        openai: "openai",
-        anthropic: "anthropic",
-        google: "gemini",
-        gemini: "gemini",
-        openrouter: "openrouter",
-        ollama: "ollama",
-        stepfun: "stepfun",
-    };
-    return mapping[lower] ?? "custom";
-}
-// ─── Skill Compatibility ────────────────────────────────────────────────────
-/**
- * Check if an OpenClaw skill directory is compatible with OpenOxygen.
- */
-export async function validateOpenClawSkill(skillPath) {
-    const errors = [];
-    try {
-        const stat = await fs.stat(skillPath);
-        if (!stat.isDirectory()) {
-            errors.push("Skill path is not a directory");
-            return { valid: false, errors };
+    // Check each skill
+    for (const skill of ocConfig.skills) {
+        const issues = [];
+        let compatible = true;
+        // Check for known incompatible features
+        if (skill.name.includes("deprecated")) {
+            compatible = false;
+            issues.push("Skill uses deprecated API");
         }
-        // Check for required files
-        const files = await fs.readdir(skillPath);
-        const hasManifest = files.some((f) => f === "manifest.json" || f === "package.json");
-        const hasEntry = files.some((f) => f.endsWith(".ts") || f.endsWith(".js"));
-        if (!hasEntry) {
-            errors.push("No entry point file (.ts or .js) found");
+        if (skill.config && skill.config["legacyMode"]) {
+            issues.push("Uses legacy mode, may need manual adjustment");
         }
-        const name = skillPath.split(/[/\\]/).pop() ?? "unknown";
-        return { valid: errors.length === 0, name, errors };
+        report.skillCompatibility.push({
+            name: skill.name,
+            compatible,
+            issues,
+        });
+        if (!compatible) {
+            report.compatible = false;
+            report.overallScore -= 10;
+        }
     }
-    catch (err) {
-        errors.push(`Cannot access skill path: ${err}`);
-        return { valid: false, errors };
-    }
+    report.overallScore = Math.max(0, report.overallScore);
+    return report;
 }
-// ─── Plugin Protocol Adapter ────────────────────────────────────────────────
-/**
- * Wrap an OpenClaw plugin module to work with OpenOxygen's plugin system.
- */
-export function createOpenClawPluginAdapter(clawPlugin) {
-    // Map OpenClaw plugin hooks to OpenOxygen hook phases
-    return {
-        ...clawPlugin,
-        __compat: "openclaw",
-        __adapted: true,
-    };
+// ============================================================================
+// Singleton Exports
+// ============================================================================
+export const contextBridge = new OpenClawContextBridge();
+export const skillAdapter = new OpenClawSkillAdapter();
+// Convenience functions
+export function createOpenClawContext(sessionId, userId) {
+    return contextBridge.createContext(sessionId, userId);
+}
+export function registerOpenClawSkill(skill) {
+    skillAdapter.registerSkill(skill);
+}
+export function convertConfig(ocConfig) {
+    return convertOpenClawConfig(ocConfig);
+}
+export async function migrateConfig(openclawPath, outputPath) {
+    return migrateFromOpenClaw(openclawPath, outputPath);
 }

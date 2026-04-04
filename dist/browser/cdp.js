@@ -5,22 +5,17 @@
  * 用于高级浏览器控制
  */
 import { createSubsystemLogger } from "../logging/index.js";
-import { sleep } from "../utils/index.js";
 const log = createSubsystemLogger("oxygen-browser/cdp");
-// CDP Client
-export 
 // CDP Session
-let cdpSession;
- | null;
-null;
+let cdpSession = null;
 /**
  * Connect to browser via CDP
- * @param port - Debug port (default)
+ * @param port - Debug port (default: 9222)
  */
 export async function connectCDP(port = 9222) {
     log.info(`Connecting to CDP on port ${port}`);
     try {
-        // Fetch WebSocket URL from http://localhost/json/version
+        // Fetch WebSocket URL from http://localhost:9222/json/version
         const response = await fetch(`http://localhost:${port}/json/version`);
         const version = await response.json();
         log.debug(`Browser version: ${version.Browser}`);
@@ -52,65 +47,60 @@ function createCDPClient(wsUrl) {
     const WebSocket = require("ws");
     const ws = new WebSocket(wsUrl);
     let messageId = 0;
-    const pendingMessages = new Map < number, { resolve };
-    reject;
-}
- > ();
-const eventHandlers = new Map < string, Function, [];
- > ();
-ws.on("open", () => {
-    log.debug("CDP WebSocket connected");
-});
-ws.on("message", (data) => {
-    const message = JSON.parse(data);
-    if (message.id !== undefined) {
-        // Response to a command
-        const pending = pendingMessages.get(message.id);
-        if (pending) {
-            if (message.error) {
-                pending.reject(new Error(message.error.message));
-            }
-            else {
-                pending.resolve(message.result);
-            }
-            pendingMessages.delete(message.id);
-        }
-    }
-    else if (message.method) {
-        // Event
-        const handlers = eventHandlers.get(message.method) || [];
-        for (const handler of handlers) {
-            handler(message.params);
-        }
-    }
-});
-ws.on("error", (error) => {
-    log.error(`CDP WebSocket error: ${error.message}`);
-});
-ws.on("close", () => {
-    log.debug("CDP WebSocket closed");
-    cdpSession = null;
-});
-return {};
-{
-    const id = ++messageId;
-    const message = { id, method, params };
-    return new Promise((resolve, reject) => {
-        pendingMessages.set(id, { resolve, reject });
-        ws.send(JSON.stringify(message));
+    const pendingMessages = new Map();
+    const eventHandlers = new Map();
+    ws.on("open", () => {
+        log.debug("CDP WebSocket connected");
     });
+    ws.on("message", (data) => {
+        const message = JSON.parse(data);
+        if (message.id !== undefined) {
+            // Response to a command
+            const pending = pendingMessages.get(message.id);
+            if (pending) {
+                if (message.error) {
+                    pending.reject(new Error(message.error.message));
+                }
+                else {
+                    pending.resolve(message.result);
+                }
+                pendingMessages.delete(message.id);
+            }
+        }
+        else if (message.method) {
+            // Event
+            const handlers = eventHandlers.get(message.method) || [];
+            for (const handler of handlers) {
+                handler(message.params);
+            }
+        }
+    });
+    ws.on("error", (error) => {
+        log.error(`CDP WebSocket error: ${error.message}`);
+    });
+    ws.on("close", () => {
+        log.debug("CDP WebSocket closed");
+        cdpSession = null;
+    });
+    return {
+        send: async (method, params) => {
+            const id = ++messageId;
+            const message = { id, method, params };
+            return new Promise((resolve, reject) => {
+                pendingMessages.set(id, { resolve, reject });
+                ws.send(JSON.stringify(message));
+            });
+        },
+        on: (event, callback) => {
+            const handlers = eventHandlers.get(event) || [];
+            handlers.push(callback);
+            eventHandlers.set(event, handlers);
+        },
+        close: () => {
+            ws.close();
+        },
+    };
 }
-on;
-{
-    const handlers = eventHandlers.get(event) || [];
-    handlers.push(callback);
-    eventHandlers.set(event, handlers);
-}
-close: () => {
-    ws.close();
-},
-;
-;
 /**
  * Enable CDP domains
  * @param client - CDP client
@@ -147,8 +137,8 @@ export async function navigateCDP(client, url) {
 export async function executeScriptCDP(client, script) {
     log.debug("Executing script via CDP");
     const result = await client.send("Runtime.evaluate", {
-        expression,
-        returnByValue,
+        expression: script,
+        returnByValue: true,
     });
     if (result.exceptionDetails) {
         throw new Error(result.exceptionDetails.exception?.description || "Script error");
@@ -167,7 +157,7 @@ export async function queryElementCDP(client, selector) {
     const rootNodeId = document.root.nodeId;
     // Query selector
     const result = await client.send("DOM.querySelector", {
-        nodeId,
+        nodeId: rootNodeId,
         selector,
     });
     return result.nodeId;
@@ -184,7 +174,7 @@ export async function clickElementCDP(client, selector) {
     const element = document.querySelector("${selector}");
     if (element) {
       const rect = element.getBoundingClientRect();
-      return { x.left + rect.width / 2, y.top + rect.height / 2 };
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
     }
     return null;
   `);
@@ -207,7 +197,7 @@ export async function takeScreenshotCDP(client) {
     log.debug("Taking screenshot via CDP");
     const result = await client.send("Page.captureScreenshot", {
         format: "png",
-        fullPage,
+        fullPage: false,
     });
     return result.data; // Base64 encoded
 }

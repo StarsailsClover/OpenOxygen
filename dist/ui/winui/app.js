@@ -7,22 +7,10 @@
 import { createSubsystemLogger } from "../../logging/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
 const log = createSubsystemLogger("ui/winui");
-// App states
-export 
-// Window modes
-export 
-// App configuration
-export 
-// Chat message
-export 
-// WinUI App instance
-export 
 // Active app instance
-let activeApp;
- | null;
-null;
+let activeApp = null;
 // Message handlers
-const messageHandlers, [] = [];
+const messageHandlers = [];
 /**
  * Launch WinUI application
  * @param config - App configuration
@@ -34,9 +22,16 @@ export async function launchWinUI(config = {}) {
     }
     log.info("Launching WinUI application");
     const app = {
-        id() { },
+        id: generateId("winui"),
         state: "opening",
-        config,
+        config: {
+            width: config.width || 800,
+            height: config.height || 600,
+            mode: config.mode || "normal",
+            alwaysOnTop: config.alwaysOnTop ?? false,
+            opacity: config.opacity ?? 1.0,
+            ...config,
+        },
         messages: [],
     };
     activeApp = app;
@@ -63,7 +58,7 @@ async function initializeWinUIWindow(app) {
     // This would use WinUI 3 APIs
     // For now, create a placeholder
     app.window = {
-        id, : .id,
+        id: app.id,
         show: () => log.debug("Window shown"),
         hide: () => log.debug("Window hidden"),
         minimize: () => log.debug("Window minimized"),
@@ -91,20 +86,23 @@ function addMessage(app, message) {
  */
 export function addUserMessage(app, content) {
     const message = {
-        id() { },
+        id: generateId("msg"),
         role: "user",
         content,
-        timestamp() { },
+        timestamp: nowMs(),
     };
     addMessage(app, message);
     return message;
 }
-{
+/**
+ * Add assistant message
+ */
+export function addAssistantMessage(app, content, metadata) {
     const message = {
-        id() { },
+        id: generateId("msg"),
         role: "assistant",
         content,
-        timestamp() { },
+        timestamp: nowMs(),
         metadata,
     };
     addMessage(app, message);
@@ -115,10 +113,10 @@ export function addUserMessage(app, content) {
  */
 export function addSystemMessage(app, content) {
     const message = {
-        id() { },
+        id: generateId("msg"),
         role: "system",
         content,
-        timestamp() { },
+        timestamp: nowMs(),
     };
     addMessage(app, message);
     return message;
@@ -171,15 +169,15 @@ export function setWindowMode(mode) {
     log.debug(`Window mode set to: ${mode}`);
     // Apply mode changes
     switch (mode) {
-        case "compact".config.width = 400:
-            ;
+        case "compact":
+            activeApp.config.width = 400;
             activeApp.config.height = 600;
             break;
-        case "floating".config.alwaysOnTop = true:
-            ;
+        case "floating":
+            activeApp.config.alwaysOnTop = true;
             break;
-        case "normal".config.width = 800:
-            ;
+        case "normal":
+            activeApp.config.width = 800;
             activeApp.config.height = 600;
             activeApp.config.alwaysOnTop = false;
             break;
@@ -217,9 +215,7 @@ export function clearChatHistory() {
 /**
  * Get active app
  */
-export function getActiveApp() { }
- | null;
-{
+export function getActiveApp() {
     return activeApp;
 }
 /**
@@ -230,7 +226,7 @@ export function isAppRunning() {
 }
 // Helper
 function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 // Export
 export default {

@@ -7,14 +7,10 @@
  * - 沙箱进程隔离
  */
 import { createSubsystemLogger } from "../logging/index.js";
-import { spawn, execSync } from "node";
-import { platform } from "node";
-import process from "node";
+import { spawn, execSync } from "node:child_process";
+import { platform } from "node:os";
+import process from "node:process";
 const log = createSubsystemLogger("security/privilege");
-// ═══════════════════════════════════════════════════════════════════════════
-// Privilege Detection
-// ═══════════════════════════════════════════════════════════════════════════
-export export 
 /**
  * 检测当前进程权限级别
  */
@@ -23,16 +19,18 @@ export function detectPrivilegeLevel() {
         // 非 Windows 平台简化处理
         return {
             level: (process.getuid?.() === 0 ? "admin" : "user"),
-            isElevated, : .getuid?.() === 0,
-            canEscalate,
-            username, : .env.USER || "unknown",
+            isElevated: process.getuid?.() === 0,
+            canEscalate: false,
+            username: process.env.USER || "unknown",
             domain: "",
         };
     }
     try {
         // Windows: 使用 whoami 和 net session 检测
         const username = execSync("whoami", { encoding: "utf-8" }).trim();
-        const [domain = "", user = "unknown"] = username.includes("\\") ? username.split("\\") : ["", username];
+        const [domain = "", user = "unknown"] = username.includes("\\")
+            ? username.split("\\")
+            : ["", username];
         let isElevated = false;
         let level = "user";
         try {
@@ -45,37 +43,31 @@ export function detectPrivilegeLevel() {
             isElevated = false;
         }
         // 检测 SYSTEM 账户
-        if (username.toLowerCase().includes("system") || username.toLowerCase().includes("nt authority")) {
+        if (username.toLowerCase().includes("system") ||
+            username.toLowerCase().includes("nt authority")) {
             level = "system";
             isElevated = true;
         }
         return {
             level,
             isElevated,
-            canEscalate
-        } === "user",
-            username,
+            canEscalate: level === "user",
+            username: user,
             domain,
-        ;
+        };
     }
-    finally { }
-    ;
+    catch (err) {
+        log.error("Failed to detect privilege level:", err);
+        return {
+            level: "user",
+            isElevated: false,
+            canEscalate: false,
+            username: "unknown",
+            domain: "",
+        };
+    }
 }
-try { }
-catch (err) {
-    log.error("Failed to detect privilege level:", err);
-    return {
-        level: "user",
-        isElevated,
-        canEscalate,
-        username: "unknown",
-        domain: "",
-    };
-}
-// ═══════════════════════════════════════════════════════════════════════════
-// Low-Privilege User Management
-// ═══════════════════════════════════════════════════════════════════════════
-export export class LowPrivilegeSandbox {
+export class LowPrivilegeSandbox {
     config;
     constructor(config) {
         this.config = config;
@@ -99,10 +91,12 @@ export export class LowPrivilegeSandbox {
                 // 用户不存在，继续创建
             }
             // 创建用户
-            execSync(`net user ${this.config.username} ${this.config.password} /add /active /comment:"OpenOxygen Sandbox User"`, { stdio: "inherit" });
+            execSync(`net user ${this.config.username} ${this.config.password} /add /active:yes /comment:"OpenOxygen Sandbox User"`, { stdio: "inherit" });
             // 从 Users 组移除（限制权限）
             try {
-                execSync(`net localgroup Users ${this.config.username} /delete`, { stdio: "ignore" });
+                execSync(`net localgroup Users ${this.config.username} /delete`, {
+                    stdio: "ignore",
+                });
             }
             catch {
                 // 忽略错误
@@ -142,7 +136,9 @@ export export class LowPrivilegeSandbox {
         if (platform() !== "win32")
             return false;
         try {
-            execSync(`net user ${this.config.username} /delete`, { stdio: "inherit" });
+            execSync(`net user ${this.config.username} /delete`, {
+                stdio: "inherit",
+            });
             log.info(`Deleted user: ${this.config.username}`);
             return true;
         }
@@ -154,43 +150,44 @@ export export class LowPrivilegeSandbox {
     /**
      * 以低权限用户执行命令
      */
-    executeAsUser(command, args = []) { }
+    executeAsUser(command, args = []) {
+        return new Promise((resolve) => {
+            if (platform() !== "win32") {
+                resolve({
+                    success: false,
+                    output: "",
+                    error: "Only supported on Windows",
+                });
+                return;
+            }
+            // 使用 runas 以低权限用户执行
+            const runasCmd = `runas /user:${this.config.username} "${command} ${args.join(" ")}"`;
+            const child = spawn("cmd", ["/c", runasCmd], {
+                windowsHide: true,
+            });
+            let output = "";
+            let error = "";
+            child.stdout?.on("data", (data) => {
+                output += data.toString();
+            });
+            child.stderr?.on("data", (data) => {
+                error += data.toString();
+            });
+            child.on("close", (code) => {
+                resolve({
+                    success: code === 0,
+                    output,
+                    error: error || undefined,
+                });
+            });
+            // 超时处理
+            setTimeout(() => {
+                child.kill();
+                resolve({ success: false, output, error: "Execution timeout" });
+            }, 30000);
+        });
+    }
 }
- < { success, output, error } > {
-    return: new Promise((resolve) => {
-        if (platform() !== "win32") {
-            resolve({ success, output: "", error: "Only supported on Windows" });
-            return;
-        }
-        // 使用 runas 以低权限用户执行
-        const runasCmd = `runas /user:${this.config.username} "${command} ${args.join(" ")}"`;
-        const child = spawn("cmd", ["/c", runasCmd], {
-            windowsHide,
-        });
-        let output = "";
-        let error = "";
-        child.stdout?.on("data", (data) => {
-            output += data.toString();
-        });
-        child.stderr?.on("data", (data) => {
-            error += data.toString();
-        });
-        child.on("close", (code) => {
-            resolve({
-                success
-            } === 0, output, error || undefined);
-        });
-    }),
-    // 超时处理
-    setTimeout() { }
-}();
-{
-    child.kill();
-    resolve({ success, output, error: "Execution timeout" });
-}
-30000;
-;
-;
 // ═══════════════════════════════════════════════════════════════════════════
 // Privilege Drop
 // ═══════════════════════════════════════════════════════════════════════════
@@ -224,37 +221,26 @@ export function dropPrivileges(targetUser) {
 }
 function getUserIds(username) {
     try {
-        const output = execSync(`id -u ${username} && id -g ${username}`, { encoding: "utf-8" });
+        const output = execSync(`id -u ${username} && id -g ${username}`, {
+            encoding: "utf-8",
+        });
         const [uid, gid] = output.trim().split("\n").map(Number);
-        return { uid } || 65534, gid || 65534;
+        return { uid: uid || 65534, gid: gid || 65534 };
     }
-    finally { }
-    ;
+    catch {
+        return { uid: 65534, gid: 65534 }; // nobody
+    }
 }
-try { }
-catch {
-    return { uid, gid }; // nobody
-}
-// ═══════════════════════════════════════════════════════════════════════════
-// Process Isolation
-// ═══════════════════════════════════════════════════════════════════════════
-export 
 /**
  * 启动隔离进程
  */
-export function spawnIsolated(config) { }
- < {
-    success,
-    pid,
-    output,
-    error
-} > {
-    return: new Promise((resolve) => {
+export function spawnIsolated(config) {
+    return new Promise((resolve) => {
         const startTime = Date.now();
         // 构建隔离参数
         const spawnOptions = {
-            windowsHide,
-            detached,
+            windowsHide: true,
+            detached: false,
         };
         // Windows: 使用 Job Object 限制资源
         if (platform() === "win32") {
@@ -270,46 +256,57 @@ export function spawnIsolated(config) { }
             const child = spawn("powershell", ["-Command", psCommand], spawnOptions);
             let output = "";
             let error = "";
-            child.stdout?.on("data", (data) => { output += data.toString(); });
-            child.stderr?.on("data", (data) => { error += data.toString(); });
+            child.stdout?.on("data", (data) => {
+                output += data.toString();
+            });
+            child.stderr?.on("data", (data) => {
+                error += data.toString();
+            });
             child.on("close", (code) => {
                 resolve({
-                    success
-                } === 0, output, error || undefined);
+                    success: code === 0,
+                    output,
+                    error: error || undefined,
+                });
             });
         }
-    })
-};
-{
-    // Unix: 使用 chroot 或 systemd-run
-    const child = spawn(config.command, config.args, {
-        ...spawnOptions,
-        env,
-    });
-    let output = "";
-    let error = "";
-    child.stdout?.on("data", (data) => { output += data.toString(); });
-    child.stderr?.on("data", (data) => { error += data.toString(); });
-    // 内存限制（通过 cgroup，简化处理）
-    const memoryWatcher = setInterval(() => {
-        // 实际实现需要读取 /proc/[pid]/status
-    }, 1000);
-    // 超时
-    const timeout = setTimeout(() => {
-        clearInterval(memoryWatcher);
-        child.kill("SIGTERM");
-        setTimeout(() => child.kill("SIGKILL"), 5000);
-    }, config.timeoutMs);
-    child.on("close", (code) => {
-        clearInterval(memoryWatcher);
-        clearTimeout(timeout);
-        resolve({
-            success
-        } === 0, pid.pid, output, error || undefined);
+        else {
+            // Unix: 使用 chroot 或 systemd-run
+            const child = spawn(config.command, config.args, {
+                ...spawnOptions,
+                env: { ...process.env, PATH: "/usr/bin:/bin" },
+            });
+            let output = "";
+            let error = "";
+            child.stdout?.on("data", (data) => {
+                output += data.toString();
+            });
+            child.stderr?.on("data", (data) => {
+                error += data.toString();
+            });
+            // 内存限制（通过 cgroup，简化处理）
+            const memoryWatcher = setInterval(() => {
+                // 实际实现需要读取 /proc/[pid]/status
+            }, 1000);
+            // 超时
+            const timeout = setTimeout(() => {
+                clearInterval(memoryWatcher);
+                child.kill("SIGTERM");
+                setTimeout(() => child.kill("SIGKILL"), 5000);
+            }, config.timeoutMs);
+            child.on("close", (code) => {
+                clearInterval(memoryWatcher);
+                clearTimeout(timeout);
+                resolve({
+                    success: code === 0,
+                    pid: child.pid,
+                    output,
+                    error: error || undefined,
+                });
+            });
+        }
     });
 }
-;
-;
 // ═══════════════════════════════════════════════════════════════════════════
 // Security Policy Enforcement
 // ═══════════════════════════════════════════════════════════════════════════
@@ -324,10 +321,10 @@ export class PrivilegePolicy {
      */
     check() {
         const current = detectPrivilegeLevel();
-        const levels = { system, admin, user, restricted };
+        const levels = { system: 3, admin: 2, user: 1, restricted: 0 };
         if (levels[current.level] < levels[this.minLevel]) {
             return {
-                allowed,
+                allowed: false,
                 current,
                 reason: `Current level ${current.level} below required ${this.minLevel}`,
             };
@@ -335,12 +332,12 @@ export class PrivilegePolicy {
         // 警告：以管理员运行
         if (current.level === "admin" || current.level === "system") {
             return {
-                allowed,
+                allowed: true,
                 current,
-                reason: "WARNING with elevated privileges. Consider using LowPrivilegeSandbox.",
+                reason: "WARNING: Running with elevated privileges. Consider using LowPrivilegeSandbox.",
             };
         }
-        return { allowed, current };
+        return { allowed: true, current };
     }
     /**
      * 启用沙箱模式

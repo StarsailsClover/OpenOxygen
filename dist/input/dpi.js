@@ -32,7 +32,8 @@ export class DPIManager {
         if (this.nativeModule?.getScreenMetrics) {
             const metrics = this.nativeModule.getScreenMetrics();
             // 单显示器情况
-            this.monitors = [{
+            this.monitors = [
+                {
                     id: 0,
                     name: "Primary",
                     x: 0,
@@ -43,12 +44,14 @@ export class DPIManager {
                     dpiY: metrics.dpiY,
                     scaleFactor: metrics.scaleFactor,
                     isPrimary: true,
-                }];
+                },
+            ];
             log.info(`Detected ${this.monitors.length} monitor(s): ${metrics.physicalWidth}x${metrics.physicalHeight} @ ${metrics.dpiX}DPI`);
         }
         else {
             // 默认值
-            this.monitors = [{
+            this.monitors = [
+                {
                     id: 0,
                     name: "Default",
                     x: 0,
@@ -59,7 +62,8 @@ export class DPIManager {
                     dpiY: 96,
                     scaleFactor: 1.0,
                     isPrimary: true,
-                }];
+                },
+            ];
         }
     }
     /**
@@ -83,7 +87,8 @@ export class DPIManager {
      * 物理坐标 → 逻辑坐标
      */
     physicalToLogical(physical) {
-        const monitor = this.monitors.find(m => m.id === physical.monitorId) || this.monitors[0];
+        const monitor = this.monitors.find((m) => m.id === physical.monitorId) ||
+            this.monitors[0];
         return {
             x: Math.round((physical.x - monitor.x) / monitor.scaleFactor + monitor.x),
             y: Math.round((physical.y - monitor.y) / monitor.scaleFactor + monitor.y),
@@ -107,17 +112,16 @@ export class DPIManager {
      * 检查坐标是否在屏幕范围内
      */
     isOnScreen(x, y) {
-        return this.monitors.some(m => x >= m.x && x < m.x + m.width &&
-            y >= m.y && y < m.y + m.height);
+        return this.monitors.some((m) => x >= m.x && x < m.x + m.width && y >= m.y && y < m.y + m.height);
     }
     /**
      * 获取全局屏幕边界
      */
     getGlobalBounds() {
-        const minX = Math.min(...this.monitors.map(m => m.x));
-        const minY = Math.min(...this.monitors.map(m => m.y));
-        const maxX = Math.max(...this.monitors.map(m => m.x + m.width));
-        const maxY = Math.max(...this.monitors.map(m => m.y + m.height));
+        const minX = Math.min(...this.monitors.map((m) => m.x));
+        const minY = Math.min(...this.monitors.map((m) => m.y));
+        const maxX = Math.max(...this.monitors.map((m) => m.x + m.width));
+        const maxY = Math.max(...this.monitors.map((m) => m.y + m.height));
         return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
     }
 }
