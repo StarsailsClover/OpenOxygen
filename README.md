@@ -1,4 +1,4 @@
-# OpenOxygen
+# OpenOxygen (This is an old version, new version is OpenOxygen 2.0) [OpenOxygen 2.0](https://github.com/StarsailsClover/OpenOxygen2.0)
 
 [![Version](https://img.shields.io/badge/Version-26w14a--dev--26.114.3-blue)]()
 [![License](https://img.shields.io/badge/License-MIT-green)]()
