@@ -1,14 +1,16 @@
 /**
+<<<<<<< HEAD
  * OpenOxygen �?OxygenStepRecorder (OSR) Recorder (26w15aD Phase 2)
+=======
+ * OpenOxygen - OSR Recorder
+>>>>>>> dev
  *
  * 操作录制系统
- * 记录鼠标、键盘、窗口操作并同步截屏
+ * 记录鼠标、键盘、窗口操作并同步截图
  */
 
 import { createSubsystemLogger } from "../logging/index.js";
 import { generateId, nowMs } from "../utils/index.js";
-import { getMousePosition } from "../native/mouse.js";
-import { GlobalMemory } from "../memory/global/index.js";
 
 const log = createSubsystemLogger("osr/recorder");
 
@@ -76,13 +78,11 @@ export function startRecording(
   options: { captureScreenshots?: boolean; trackMouse?: boolean } = {},
 ): RecordingSession {
   if (activeSession?.state === "recording") {
-    throw new Error("Already recording");
+    throw new Error("Recording already in progress");
   }
 
-  log.info(`Starting recording: ${name}`);
-
   const session: RecordingSession = {
-    id: generateId("osr"),
+    id: generateId("rec"),
     name,
     startTime: nowMs(),
     steps: [],
@@ -93,24 +93,17 @@ export function startRecording(
   };
 
   activeSession = session;
+  log.info(`Started recording: ${name} (${session.id})`);
 
-  // Start mouse tracking
+  // Start recording loops
   if (options.trackMouse !== false) {
     startMouseTracking();
   }
-
-  // Start screenshot capture
+  
   if (options.captureScreenshots !== false) {
     startScreenshotCapture();
   }
 
-  // Record initial step
-  recordStep({
-    type: "window_focus",
-    data: { action: "recording_started" },
-  });
-
-  log.info(`Recording started: ${session.id}`);
   return session;
 }
 
@@ -123,28 +116,16 @@ export function stopRecording(): RecordingSession | null {
     return null;
   }
 
-  log.info("Stopping recording");
+  // Stop recording loops
+  stopRecordingLoops();
 
-  // Stop tracking
-  stopMouseTracking();
-  stopScreenshotCapture();
-
-  // Record final step
-  recordStep({
-    type: "window_focus",
-    data: { action: "recording_stopped" },
-  });
-
-  activeSession.endTime = nowMs();
   activeSession.state = "idle";
+  activeSession.endTime = nowMs();
 
-  // Save to memory
-  saveRecordingToMemory(activeSession);
-
-  const session = activeSession;
+  const session = { ...activeSession };
+  log.info(`Stopped recording: ${session.name} (${session.steps.length} steps)`);
+  
   activeSession = null;
-
-  log.info(`Recording stopped: ${session.id}, ${session.steps.length} steps`);
   return session;
 }
 
@@ -157,14 +138,7 @@ export function pauseRecording(): boolean {
   }
 
   activeSession.state = "paused";
-  stopMouseTracking();
-  stopScreenshotCapture();
-
-  recordStep({
-    type: "window_focus",
-    data: { action: "recording_paused" },
-  });
-
+  stopRecordingLoops();
   log.info("Recording paused");
   return true;
 }
@@ -180,188 +154,102 @@ export function resumeRecording(): boolean {
   activeSession.state = "recording";
   startMouseTracking();
   startScreenshotCapture();
-
-  recordStep({
-    type: "window_focus",
-    data: { action: "recording_resumed" },
-  });
-
   log.info("Recording resumed");
   return true;
 }
 
 /**
- * Record a step
+ * Add step to recording
  */
-export function recordStep(
-  partialStep: Omit<RecordedStep, "id" | "timestamp">,
-): void {
+export function addStep(
+  type: StepType,
+  data: any,
+  screenshot?: string,
+): RecordedStep | null {
   if (!activeSession || activeSession.state !== "recording") {
-    return;
+    return null;
   }
 
   const step: RecordedStep = {
     id: generateId("step"),
+    type,
     timestamp: nowMs(),
-    ...partialStep,
+    data,
+    screenshot,
   };
 
   activeSession.steps.push(step);
-  log.debug(`Recorded step: ${step.type}`);
+  return step;
 }
 
 /**
- * Record mouse move
+ * Get active session
  */
-export function recordMouseMove(x: number, y: number): void {
-  recordStep({
-    type: "mouse_move",
-    data: { x, y },
-  });
-}
-
-/**
- * Record mouse click
- */
-export function recordMouseClick(x: number, y: number, button: string): void {
-  recordStep({
-    type: "mouse_click",
-    data: { x, y, button },
-  });
-}
-
-/**
- * Record mouse drag
- */
-export function recordMouseDrag(
-  startX: number,
-  startY: number,
-  endX: number,
-  endY: number,
-  button: string,
-): void {
-  recordStep({
-    type: "mouse_drag",
-    data: { startX, startY, endX, endY, button },
-  });
-}
-
-/**
- * Record key press
- */
-export function recordKeyPress(key: string): void {
-  recordStep({
-    type: "key_press",
-    data: { key },
-  });
-}
-
-/**
- * Record key combination
- */
-export function recordKeyCombination(keys: string[]): void {
-  recordStep({
-    type: "key_combination",
-    data: { keys },
-  });
-}
-
-/**
- * Record text input
- */
-export function recordTypeText(text: string): void {
-  recordStep({
-    type: "type_text",
-    data: { text },
-  });
-}
-
-/**
- * Record window focus change
- */
-export function recordWindowFocus(windowTitle: string, app?: string): void {
-  recordStep({
-    type: "window_focus",
-    data: { windowTitle, app },
-  });
+export function getActiveSession(): RecordingSession | null {
+  return activeSession;
 }
 
 /**
  * Start mouse tracking
  */
 function startMouseTracking(): void {
-  if (recordingInterval) return;
+  // TODO: Implement native mouse tracking
+  // For now, use polling approach
+  const trackMouse = async () => {
+    if (!activeSession || activeSession.state !== "recording") {
+      return;
+    }
 
-  recordingInterval = setInterval(() => {
-    const pos = getMousePosition();
-    if (pos) {
+    try {
+      // Get current mouse position (placeholder)
+      const pos = await getMousePosition();
+      
       // Only record if position changed significantly
       const dx = Math.abs(pos.x - lastMousePos.x);
       const dy = Math.abs(pos.y - lastMousePos.y);
-
+      
       if (dx > 5 || dy > 5) {
-        recordMouseMove(pos.x, pos.y);
+        addStep("mouse_move", { x: pos.x, y: pos.y });
         lastMousePos = pos;
       }
+    } catch (error) {
+      log.error(`Mouse tracking error: ${error}`);
     }
-  }, MOUSE_TRACK_INTERVAL);
-}
+  };
 
-/**
- * Stop mouse tracking
- */
-function stopMouseTracking(): void {
-  if (recordingInterval) {
-    clearInterval(recordingInterval);
-    recordingInterval = null;
-  }
+  recordingInterval = setInterval(trackMouse, MOUSE_TRACK_INTERVAL);
 }
-
-// Screenshot capture interval
-let screenshotInterval: NodeJS.Timeout | null = null;
 
 /**
  * Start screenshot capture
  */
 function startScreenshotCapture(): void {
-  if (screenshotInterval) return;
-
-  screenshotInterval = setInterval(() => {
-    captureScreenshot().then((screenshot) => {
-      if (screenshot && activeSession) {
-        // Attach screenshot to last step or create new step
-        const lastStep = activeSession.steps[activeSession.steps.length - 1];
-        if (lastStep) {
-          lastStep.screenshot = screenshot;
-        }
-      }
-    });
-  }, SCREENSHOT_INTERVAL);
-}
-
-/**
- * Stop screenshot capture
- */
-function stopScreenshotCapture(): void {
-  if (screenshotInterval) {
-    clearInterval(screenshotInterval);
-    screenshotInterval = null;
-  }
-}
-
-/**
- * Capture screenshot
- */
-async function captureScreenshot(): Promise<string | null> {
-  try {
-    const native = require("../native-bridge.js");
-    if (native.captureScreenshot) {
-      return native.captureScreenshot();
+  const capture = async () => {
+    if (!activeSession || activeSession.state !== "recording") {
+      return;
     }
-    return null;
-  } catch (error) {
-    log.error(`Screenshot capture failed: ${error.message}`);
-    return null;
+
+    try {
+      // TODO: Implement screenshot capture
+      // const screenshot = await captureScreenshot();
+      // addStep("screenshot", { timestamp: nowMs() }, screenshot);
+    } catch (error) {
+      log.error(`Screenshot capture error: ${error}`);
+    }
+  };
+
+  // Capture immediately and then periodically
+  capture();
+  setInterval(capture, SCREENSHOT_INTERVAL);
+}
+
+/**
+ * Stop recording loops
+ */
+function stopRecordingLoops(): void {
+  if (recordingInterval) {
+    clearInterval(recordingInterval);
+    recordingInterval = null;
   }
 }
 
@@ -369,52 +257,59 @@ async function captureScreenshot(): Promise<string | null> {
  * Get screen resolution
  */
 function getScreenResolution(): { width: number; height: number } {
-  // Default resolution
+  // TODO: Get actual screen resolution
   return { width: 1920, height: 1080 };
 }
 
 /**
- * Save recording to memory
+ * Get mouse position
  */
-function saveRecordingToMemory(session: RecordingSession): void {
+async function getMousePosition(): Promise<{ x: number; y: number }> {
+  // TODO: Get actual mouse position from native module
+  return { x: 0, y: 0 };
+}
+
+/**
+ * Export recording to file
+ */
+export function exportRecording(
+  session: RecordingSession,
+  format: "json" | "osr" = "json",
+): string {
+  if (format === "json") {
+    return JSON.stringify(session, null, 2);
+  }
+  
+  // OSR format (custom binary format)
+  // TODO: Implement binary serialization
+  return JSON.stringify(session);
+}
+
+/**
+ * Import recording from file
+ */
+export function importRecording(data: string): RecordingSession {
   try {
-    const memory = new GlobalMemory(".state");
-    memory.setPreference(`osr_${session.id}`, JSON.stringify(session));
-    memory.close();
-    log.info(`Recording saved to memory: ${session.id}`);
+    return JSON.parse(data) as RecordingSession;
   } catch (error) {
-    log.error(`Failed to save recording: ${error.message}`);
+    throw new Error(`Failed to import recording: ${error}`);
   }
 }
 
-/**
- * Get active recording session
- */
-export function getActiveSession(): RecordingSession | null {
-  return activeSession;
-}
+// === Exports ===
 
-/**
- * Check if recording
- */
-export function isRecording(): boolean {
-  return activeSession?.state === "recording";
-}
+export {
+  exportRecording,
+  importRecording,
+};
 
-// Export all functions
 export default {
   startRecording,
   stopRecording,
   pauseRecording,
   resumeRecording,
-  recordStep,
-  recordMouseMove,
-  recordMouseClick,
-  recordMouseDrag,
-  recordKeyPress,
-  recordKeyCombination,
-  recordTypeText,
-  recordWindowFocus,
+  addStep,
   getActiveSession,
-  isRecording,
+  exportRecording,
+  importRecording,
 };

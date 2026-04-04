@@ -1,8 +1,15 @@
 /**
+<<<<<<< HEAD
  * OpenOxygen �?Task Planner
  *
  * 任务规划引擎：将用户意图分解为可执行的多步骤计划�?
  * 实现「推�?规划-执行-反馈-反思」一体化循环�?
+=======
+ * OpenOxygen - Task Planner
+ *
+ * 任务规划引擎：将用户意图拆解为可执行的多步骤计划。
+ * 实现「推理-规划-执行-反馈-反思」一体化循环。
+>>>>>>> dev
  */
 
 import { createSubsystemLogger } from "../../logging/index.js";
@@ -20,7 +27,7 @@ import type {
 
 const log = createSubsystemLogger("inference/planner");
 
-// ─── Plan Builder ───────────────────────────────────────────────────────────
+// === Plan Builder ===
 
 export function createEmptyPlan(goal: string): ExecutionPlan {
   return {
@@ -83,25 +90,36 @@ export function addReflection(
   plan.updatedAt = nowMs();
 }
 
-// ─── Plan Status ────────────────────────────────────────────────────────────
+export function getPlanProgress(plan: ExecutionPlan): {
+  total: number;
+  completed: number;
+  failed: number;
+  pending: number;
+  percentage: number;
+} {
+  const total = plan.steps.length;
+  const completed = plan.steps.filter((s) => s.status === "completed").length;
+  const failed = plan.steps.filter((s) => s.status === "failed").length;
+  const pending = plan.steps.filter((s) => s.status === "pending").length;
 
-export function getNextExecutableSteps(plan: ExecutionPlan): PlanStep[] {
-  return plan.steps.filter((step) => {
-    if (step.status !== "pending") return false;
-    // All dependencies must be completed
-    return step.dependencies.every((depId) => {
-      const dep = plan.steps.find((s) => s.id === depId);
-      return dep?.status === "completed";
-    });
-  });
+  return {
+    total,
+    completed,
+    failed,
+    pending,
+    percentage: total > 0 ? Math.round((completed / total) * 100) : 0,
+  };
 }
 
-export function isPlanComplete(plan: ExecutionPlan): boolean {
-  return plan.steps.every(
-    (s) => s.status === "completed" || s.status === "skipped",
-  );
+// === LLM-based Planning ===
+
+export interface PlannerConfig {
+  maxSteps?: number;
+  allowRetry?: boolean;
+  reflectionEnabled?: boolean;
 }
 
+<<<<<<< HEAD
 export function isPlanFailed(plan: ExecutionPlan): boolean {
   return plan.steps.some((s) => s.status === "failed");
 }
@@ -126,152 +144,256 @@ Rules:
 
 Respond ONLY with the JSON array, no other text.`;
 
+=======
+>>>>>>> dev
 export class TaskPlanner {
-  private engine: InferenceEngine;
+  private inferenceEngine: InferenceEngine;
+  private config: PlannerConfig;
 
-  constructor(engine: InferenceEngine) {
-    this.engine = engine;
+  constructor(inferenceEngine: InferenceEngine, config: PlannerConfig = {}) {
+    this.inferenceEngine = inferenceEngine;
+    this.config = {
+      maxSteps: 10,
+      allowRetry: true,
+      reflectionEnabled: true,
+      ...config,
+    };
   }
 
-  async generatePlan(goal: string, context?: string): Promise<ExecutionPlan> {
-    const plan = createEmptyPlan(goal);
+  /**
+   * Create plan from natural language instruction
+   */
+  async createPlan(instruction: string): Promise<ExecutionPlan> {
+    log.info(`Creating plan for: ${instruction}`);
 
-    const messages: ChatMessage[] = [
-      {
-        role: "user",
-        content: context ? `Context: ${context}\n\nGoal: ${goal}` : goal,
-      },
-    ];
+    const prompt = this.buildPlanningPrompt(instruction);
 
-    try {
-      const response = await this.engine.infer({
-        messages,
-        mode: "balanced",
-        systemPrompt: PLANNING_SYSTEM_PROMPT,
-        temperature: 0.3,
-      });
+    const response = await this.inferenceEngine.infer({
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a task planning assistant. Break down the user's request into clear, executable steps.",
+        },
+        { role: "user", content: prompt },
+      ],
+      mode: "balanced",
+    });
 
-      const steps = parsePlanSteps(response.content);
-      const stepIds: string[] = [];
+    const plan = this.parsePlanFromResponse(instruction, response.content);
 
-      for (const raw of steps) {
-        const deps = (raw.dependencies ?? [])
-          .map((idx: number) => stepIds[idx])
-          .filter(Boolean) as string[];
-        const step = addStep(plan, raw.action, raw.params ?? {}, deps);
-        stepIds.push(step.id);
-      }
-
-      plan.status = "executing";
-      log.info(`Plan generated: ${plan.id} with ${plan.steps.length} steps`);
-    } catch (err) {
-      plan.status = "failed";
-      log.error(`Plan generation failed:`, err);
-    }
-
+    log.info(`Plan created with ${plan.steps.length} steps`);
     return plan;
   }
 
-  async reflectOnStep(
+  /**
+   * Refine plan based on execution results
+   */
+  async refinePlan(
     plan: ExecutionPlan,
-    stepId: string,
-    result: unknown,
-    error?: string,
-  ): Promise<{ shouldContinue: boolean; adjustment?: string }> {
-    const step = plan.steps.find((s) => s.id === stepId);
-    if (!step) return { shouldContinue: true };
+    failedStepId: string,
+    error: string,
+  ): Promise<ExecutionPlan> {
+    log.info(`Refining plan after failure in step ${failedStepId}`);
 
-    if (!error) {
-      addReflection(
-        plan,
-        stepId,
-        `Step "${step.action}" completed successfully`,
-      );
-      return { shouldContinue: true };
+    const failedStep = plan.steps.find((s) => s.id === failedStepId);
+    if (!failedStep) return plan;
+
+    const prompt = this.buildRefinementPrompt(plan, failedStep, error);
+
+    const response = await this.inferenceEngine.infer({
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a task planning assistant. The previous plan failed. Suggest adjustments.",
+        },
+        { role: "user", content: prompt },
+      ],
+      mode: "deep",
+    });
+
+    // Add reflection
+    addReflection(
+      plan,
+      failedStepId,
+      `Step failed: ${error}`,
+      response.content,
+    );
+
+    // Create adjusted plan
+    const adjustedPlan = this.parsePlanFromResponse(plan.goal, response.content);
+    adjustedPlan.reflections = [...plan.reflections];
+
+    return adjustedPlan;
+  }
+
+  private buildPlanningPrompt(instruction: string): string {
+    return `Break down the following task into executable steps:
+
+Task: ${instruction}
+
+Provide your response in this JSON format:
+{
+  "steps": [
+    {
+      "action": "step description",
+      "params": { "key": "value" },
+      "dependencies": []
     }
+  ]
+}
 
-    // Ask the model to reflect on the failure
-    const messages: ChatMessage[] = [
-      {
-        role: "user",
-        content: `A step in the execution plan failed.
+Guidelines:
+- Each step should be atomic and executable
+- Use dependencies to indicate order
+- Keep steps under ${this.config.maxSteps}
+- Be specific about parameters`;
+  }
 
-Plan goal: ${plan.goal}
-Failed step: ${step.action}
-Params: ${JSON.stringify(step.params)}
+  private buildRefinementPrompt(
+    plan: ExecutionPlan,
+    failedStep: PlanStep,
+    error: string,
+  ): string {
+    const progress = getPlanProgress(plan);
+
+    return `The following plan failed during execution:
+
+Goal: ${plan.goal}
+Progress: ${progress.completed}/${progress.total} steps completed
+
+Failed Step: ${failedStep.action}
 Error: ${error}
-Previous results: ${JSON.stringify(plan.steps.filter((s) => s.status === "completed").map((s) => ({ action: s.action, result: s.result })))}
 
-Should we:
-1. Retry with modified params
-2. Skip this step and continue
-3. Abort the plan
+Previous Steps:
+${plan.steps
+  .map(
+    (s) =>
+      `- ${s.action} (${s.status})${s.error ? ` [Error: ${s.error}]` : ""}`,
+  )
+  .join("\n")}
 
-Respond with JSON: { "decision": "retry|skip|abort", "adjustment": "description of change if retry" }`,
-      },
-    ];
+Please suggest an adjusted plan to complete the task.
+Provide your response in the same JSON format as before.`;
+  }
+
+  private parsePlanFromResponse(
+    goal: string,
+    content: string,
+  ): ExecutionPlan {
+    const plan = createEmptyPlan(goal);
 
     try {
-      const response = await this.engine.infer({
-        messages,
-        mode: "fast",
-        temperature: 0.2,
-      });
+      // Try to extract JSON from response
+      const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) ||
+                       content.match(/\{[\s\S]*\}/);
 
-      const decision = JSON.parse(response.content) as {
-        decision: string;
-        adjustment?: string;
-      };
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[1] || jsonMatch[0]!);
 
-      addReflection(
-        plan,
-        stepId,
-        `Reflection: ${decision.decision}`,
-        decision.adjustment,
-      );
-
-      if (decision.decision === "abort") {
-        plan.status = "failed";
-        return { shouldContinue: false };
+        if (parsed.steps && Array.isArray(parsed.steps)) {
+          for (const step of parsed.steps) {
+            addStep(
+              plan,
+              step.action,
+              step.params || {},
+              step.dependencies || [],
+            );
+          }
+        }
       }
+    } catch (error) {
+      log.warn(`Failed to parse plan from response: ${error}`);
 
-      if (decision.decision === "skip") {
-        updateStepStatus(plan, stepId, "skipped");
-        return { shouldContinue: true };
+      // Fallback: create single-step plan
+      addStep(plan, goal);
+    }
+
+    plan.status = "planning";
+    return plan;
+  }
+}
+
+// === Plan Execution ===
+
+export interface PlanExecutor {
+  executeStep(step: PlanStep): Promise<{
+    success: boolean;
+    result?: unknown;
+    error?: string;
+  }>;
+}
+
+export async function executePlan(
+  plan: ExecutionPlan,
+  executor: PlanExecutor,
+  options: {
+    onStepStart?: (step: PlanStep) => void;
+    onStepComplete?: (step: PlanStep) => void;
+    onStepError?: (step: PlanStep, error: string) => void;
+  } = {},
+): Promise<ExecutionPlan> {
+  log.info(`Executing plan: ${plan.id}`);
+
+  plan.status = "executing";
+
+  for (const step of plan.steps) {
+    // Check dependencies
+    const depsCompleted = step.dependencies.every((depId) => {
+      const dep = plan.steps.find((s) => s.id === depId);
+      return dep?.status === "completed";
+    });
+
+    if (!depsCompleted) {
+      step.status = "skipped";
+      continue;
+    }
+
+    // Execute step
+    options.onStepStart?.(step);
+    step.status = "running";
+
+    try {
+      const result = await executor.executeStep(step);
+
+      if (result.success) {
+        updateStepStatus(plan, step.id, "completed", result.result);
+        options.onStepComplete?.(step);
+      } else {
+        updateStepStatus(plan, step.id, "failed", undefined, result.error);
+        options.onStepError?.(step, result.error || "Unknown error");
       }
-
-      return { shouldContinue: true, adjustment: decision.adjustment };
-    } catch {
-      addReflection(
-        plan,
-        stepId,
-        `Reflection failed, continuing with default behavior`,
-      );
-      return { shouldContinue: true };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      updateStepStatus(plan, step.id, "failed", undefined, errorMsg);
+      options.onStepError?.(step, errorMsg);
     }
   }
-}
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-function parsePlanSteps(
-  content: string,
-): Array<{
-  action: string;
-  params?: Record<string, unknown>;
-  dependencies?: number[];
-}> {
-  try {
-    // Extract JSON array from response (may be wrapped in markdown code block)
-    const jsonMatch = content.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) return [];
-    return JSON.parse(jsonMatch[0]) as Array<{
-      action: string;
-      params?: Record<string, unknown>;
-      dependencies?: number[];
-    }>;
-  } catch {
-    log.warn("Failed to parse plan steps from model response");
-    return [];
+  // Update plan status
+  const progress = getPlanProgress(plan);
+  if (progress.failed > 0) {
+    plan.status = "failed";
+  } else if (progress.completed === progress.total) {
+    plan.status = "completed";
   }
+
+  log.info(`Plan execution complete: ${progress.completed}/${progress.total} steps`);
+
+  return plan;
 }
+
+// === Exports ===
+
+export {
+  createEmptyPlan,
+  addStep,
+  updateStepStatus,
+  addReflection,
+  getPlanProgress,
+  TaskPlanner,
+  executePlan,
+};
+
+export default TaskPlanner;

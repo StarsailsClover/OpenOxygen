@@ -7,6 +7,9 @@
 
 import { createSubsystemLogger } from "../../logging/index.js";
 import type { ToolResult, ExecutionContext } from "../../types/index.js";
+import { generateId, nowMs } from "../../utils/index.js";
+import { GlobalMemory } from "../../memory/global/index.js";
+import type { InferenceEngine } from "../engine/index.js";
 
 const log = createSubsystemLogger("inference/reflection");
 
@@ -72,12 +75,12 @@ export interface StrategyAdjustment {
   rationale: string;
 }
 
-export interface ReflectionPattern {
+export interface ReflectionEntry {
   id: string;
-  name: string;
-  description: string;
-  matcher: (context: ReflectionContext) => boolean;
-  action: (context: ReflectionContext) => ReflectionResult;
+  timestamp: number;
+  context: ReflectionContext;
+  result: ReflectionResult;
+  applied: boolean;
 }
 
 // ============================================================================
@@ -85,368 +88,497 @@ export interface ReflectionPattern {
 // ============================================================================
 
 export class ReflectionEngine {
-  private patterns: Map<string, ReflectionPattern> = new Map();
-  private reflectionHistory: ReflectionResult[] = [];
-  private maxHistorySize = 100;
+  private inferenceEngine: InferenceEngine;
+  private memory: GlobalMemory;
+  private entries: ReflectionEntry[] = [];
 
-  constructor() {
-    this.initializeDefaultPatterns();
-    log.info("Reflection engine initialized");
+  constructor(inferenceEngine: InferenceEngine) {
+    this.inferenceEngine = inferenceEngine;
+    this.memory = new GlobalMemory();
+    log.info("ReflectionEngine initialized");
   }
 
   /**
-   * Analyze execution and generate insights
+   * Analyze execution and generate reflections
    */
-  reflect(context: ReflectionContext): ReflectionResult {
-    log.info(`Starting reflection for execution ${context.executionId}`);
+  async reflect(context: ReflectionContext): Promise<ReflectionResult> {
+    log.info(`Reflecting on execution: ${context.executionId}`);
 
-    const insights: Insight[] = [];
-    const recommendations: Recommendation[] = [];
-    const strategyAdjustments: StrategyAdjustment[] = [];
+    const startTime = nowMs();
 
-    // Apply all matching patterns
-    for (const pattern of this.patterns.values()) {
-      try {
-        if (pattern.matcher(context)) {
-          const result = pattern.action(context);
-          insights.push(...result.insights);
-          recommendations.push(...result.recommendations);
-          strategyAdjustments.push(...result.strategyAdjustments);
-        }
-      } catch (error) {
-        log.error(`Pattern ${pattern.id} failed:`, error);
-      }
-    }
+    // Generate insights
+    const insights = await this.generateInsights(context);
 
-    // Generate additional insights from metrics
-    const metricInsights = this.analyzeMetrics(context.metrics);
-    insights.push(...metricInsights);
+    // Generate recommendations
+    const recommendations = await this.generateRecommendations(context, insights);
 
-    // Generate recommendations from insights
-    const insightRecommendations = this.generateRecommendations(insights);
-    recommendations.push(...insightRecommendations);
+    // Generate strategy adjustments
+    const strategyAdjustments = await this.generateStrategyAdjustments(
+      context,
+      insights,
+    );
+
+    // Calculate confidence
+    const confidence = this.calculateConfidence(context, insights);
 
     const result: ReflectionResult = {
       insights,
       recommendations,
       strategyAdjustments,
-      confidence: this.calculateConfidence(insights, context),
+      confidence,
     };
 
-    // Store in history
-    this.addToHistory(result);
+    // Store reflection
+    const entry: ReflectionEntry = {
+      id: generateId("refl"),
+      timestamp: nowMs(),
+      context,
+      result,
+      applied: false,
+    };
+
+    this.entries.push(entry);
+    await this.persistReflection(entry);
 
     log.info(
-      `Reflection complete: ${insights.length} insights, ${recommendations.length} recommendations`,
+      `Reflection complete: ${insights.length} insights, ${recommendations.length} recommendations (${nowMs() - startTime}ms)`,
     );
 
     return result;
   }
 
   /**
-   * Add custom reflection pattern
+   * Generate insights from execution context
    */
-  addPattern(pattern: ReflectionPattern): void {
-    this.patterns.set(pattern.id, pattern);
-    log.info(`Reflection pattern added: ${pattern.name}`);
-  }
-
-  /**
-   * Remove reflection pattern
-   */
-  removePattern(id: string): boolean {
-    const existed = this.patterns.has(id);
-    if (existed) {
-      this.patterns.delete(id);
-      log.info(`Reflection pattern removed: ${id}`);
-    }
-    return existed;
-  }
-
-  /**
-   * Get reflection history
-   */
-  getHistory(limit?: number): ReflectionResult[] {
-    const history = [...this.reflectionHistory];
-    if (limit) {
-      return history.slice(-limit);
-    }
-    return history;
-  }
-
-  /**
-   * Clear reflection history
-   */
-  clearHistory(): void {
-    this.reflectionHistory = [];
-    log.info("Reflection history cleared");
-  }
-
-  /**
-   * Get aggregated insights from history
-   */
-  getAggregatedInsights(): Map<string, number> {
-    const aggregated = new Map<string, number>();
-
-    for (const result of this.reflectionHistory) {
-      for (const insight of result.insights) {
-        const key = `${insight.type}:${insight.description}`;
-        aggregated.set(key, (aggregated.get(key) || 0) + 1);
-      }
-    }
-
-    return aggregated;
-  }
-
-  // ============================================================================
-  // Private Methods
-  // ============================================================================
-
-  private initializeDefaultPatterns(): void {
-    // Pattern: High Error Rate
-    this.addPattern({
-      id: "high-error-rate",
-      name: "High Error Rate Detection",
-      description: "Detects executions with high error rates",
-      matcher: (ctx) =>
-        ctx.metrics.errors > 3 ||
-        ctx.metrics.errors / ctx.metrics.totalSteps > 0.3,
-      action: (ctx) => ({
-        insights: [
-          {
-            type: "error",
-            description: `High error rate detected: ${ctx.metrics.errors} errors in ${ctx.metrics.totalSteps} steps`,
-            severity: "high",
-            evidence: ctx.steps
-              .filter((s) => s.type === "error")
-              .map((s) => s.content),
-          },
-        ],
-        recommendations: [
-          {
-            id: "rec-error-handling",
-            category: "workflow",
-            description: "Improve error handling and retry logic",
-            expectedImpact: "high",
-            implementation: "Add more robust error recovery mechanisms",
-          },
-        ],
-        strategyAdjustments: [
-          {
-            target: "maxRetries",
-            currentValue: 3,
-            suggestedValue: 5,
-            rationale: "High error rate suggests need for more retries",
-          },
-        ],
-        confidence: 0.8,
-      }),
-    });
-
-    // Pattern: Slow Execution
-    this.addPattern({
-      id: "slow-execution",
-      name: "Slow Execution Detection",
-      description: "Detects unusually slow executions",
-      matcher: (ctx) => ctx.metrics.totalDurationMs > 60000, // > 1 minute
-      action: (ctx) => ({
-        insights: [
-          {
-            type: "bottleneck",
-            description: `Slow execution detected: ${ctx.metrics.totalDurationMs}ms total`,
-            severity: "medium",
-            evidence: [
-              `Average step duration: ${ctx.metrics.totalDurationMs / ctx.metrics.totalSteps}ms`,
-            ],
-          },
-        ],
-        recommendations: [
-          {
-            id: "rec-optimization",
-            category: "tool",
-            description: "Optimize slow operations",
-            expectedImpact: "medium",
-            implementation: "Profile and optimize the slowest steps",
-          },
-        ],
-        strategyAdjustments: [
-          {
-            target: "timeoutMs",
-            currentValue: 30000,
-            suggestedValue: Math.min(ctx.metrics.totalDurationMs * 1.5, 300000),
-            rationale: "Adjust timeout based on actual execution time",
-          },
-        ],
-        confidence: 0.7,
-      }),
-    });
-
-    // Pattern: Token Efficiency
-    this.addPattern({
-      id: "token-efficiency",
-      name: "Token Usage Analysis",
-      description: "Analyzes token usage efficiency",
-      matcher: (ctx) => ctx.metrics.tokenUsage > 4000,
-      action: (ctx) => ({
-        insights: [
-          {
-            type: "optimization",
-            description: `High token usage: ${ctx.metrics.tokenUsage} tokens`,
-            severity: "medium",
-            evidence: [
-              `Average per step: ${ctx.metrics.tokenUsage / ctx.metrics.totalSteps} tokens`,
-            ],
-          },
-        ],
-        recommendations: [
-          {
-            id: "rec-prompt-optimization",
-            category: "prompt",
-            description: "Optimize prompts to reduce token usage",
-            expectedImpact: "medium",
-            implementation: "Use more concise prompts and reduce context",
-          },
-        ],
-        strategyAdjustments: [
-          {
-            target: "maxTokens",
-            currentValue: 2048,
-            suggestedValue: 1536,
-            rationale: "Reduce max tokens to encourage efficiency",
-          },
-        ],
-        confidence: 0.6,
-      }),
-    });
-
-    // Pattern: Success Pattern
-    this.addPattern({
-      id: "success-pattern",
-      name: "Success Pattern Recognition",
-      description: "Identifies patterns in successful executions",
-      matcher: (ctx) =>
-        ctx.outcome === "success" && ctx.metrics.totalSteps < 10,
-      action: (ctx) => ({
-        insights: [
-          {
-            type: "pattern",
-            description: "Efficient execution pattern detected",
-            severity: "low",
-            evidence: [`Completed in ${ctx.metrics.totalSteps} steps`],
-          },
-        ],
-        recommendations: [
-          {
-            id: "rec-document-pattern",
-            category: "workflow",
-            description: "Document this efficient execution pattern",
-            expectedImpact: "low",
-            implementation: "Add to best practices documentation",
-          },
-        ],
-        strategyAdjustments: [],
-        confidence: 0.9,
-      }),
-    });
-  }
-
-  private analyzeMetrics(metrics: ExecutionMetrics): Insight[] {
+  private async generateInsights(context: ReflectionContext): Promise<Insight[]> {
     const insights: Insight[] = [];
 
-    // Check retry ratio
-    const retryRatio = metrics.retries / metrics.totalSteps;
-    if (retryRatio > 0.2) {
+    // Analyze patterns
+    const patternInsights = this.analyzePatterns(context);
+    insights.push(...patternInsights);
+
+    // Identify bottlenecks
+    const bottleneckInsights = this.identifyBottlenecks(context);
+    insights.push(...bottleneckInsights);
+
+    // Analyze errors
+    const errorInsights = this.analyzeErrors(context);
+    insights.push(...errorInsights);
+
+    // Find optimizations
+    const optimizationInsights = await this.findOptimizations(context);
+    insights.push(...optimizationInsights);
+
+    return insights;
+  }
+
+  /**
+   * Analyze execution patterns
+   */
+  private analyzePatterns(context: ReflectionContext): Insight[] {
+    const insights: Insight[] = [];
+
+    // Check for repetitive actions
+    const actionTypes = context.steps
+      .filter((s) => s.type === "action")
+      .map((s) => s.content);
+
+    const repetitions = this.findRepetitions(actionTypes);
+    if (repetitions.length > 0) {
       insights.push({
         type: "pattern",
-        description: `High retry ratio: ${(retryRatio * 100).toFixed(1)}%`,
+        description: `Detected repetitive actions: ${repetitions.join(", ")}`,
         severity: "medium",
-        evidence: [`${metrics.retries} retries in ${metrics.totalSteps} steps`],
+        evidence: repetitions,
       });
     }
 
-    // Check API call efficiency
-    const callsPerStep = metrics.apiCalls / metrics.totalSteps;
-    if (callsPerStep > 2) {
+    // Check for long-running steps
+    const longSteps = context.steps.filter((s) => s.durationMs > 10000);
+    if (longSteps.length > 0) {
       insights.push({
-        type: "optimization",
-        description: `High API call ratio: ${callsPerStep.toFixed(2)} calls per step`,
-        severity: "low",
-        evidence: [`${metrics.apiCalls} API calls total`],
+        type: "pattern",
+        description: `Found ${longSteps.length} long-running steps (>10s)`,
+        severity: "medium",
+        evidence: longSteps.map((s) => s.content),
       });
     }
 
     return insights;
   }
 
-  private generateRecommendations(insights: Insight[]): Recommendation[] {
+  /**
+   * Identify performance bottlenecks
+   */
+  private identifyBottlenecks(context: ReflectionContext): Insight[] {
+    const insights: Insight[] = [];
+
+    // Check API call efficiency
+    if (context.metrics.apiCalls > context.metrics.totalSteps * 2) {
+      insights.push({
+        type: "bottleneck",
+        description: "High API call ratio - consider batching",
+        severity: "high",
+        evidence: [`${context.metrics.apiCalls} calls for ${context.metrics.totalSteps} steps`],
+      });
+    }
+
+    // Check error rate
+    const errorRate = context.metrics.errors / context.metrics.totalSteps;
+    if (errorRate > 0.3) {
+      insights.push({
+        type: "bottleneck",
+        description: `High error rate: ${(errorRate * 100).toFixed(1)}%`,
+        severity: "high",
+        evidence: [`${context.metrics.errors} errors in ${context.metrics.totalSteps} steps`],
+      });
+    }
+
+    // Check retry rate
+    if (context.metrics.retries > context.metrics.totalSteps * 0.5) {
+      insights.push({
+        type: "bottleneck",
+        description: "High retry rate - consider improving reliability",
+        severity: "medium",
+        evidence: [`${context.metrics.retries} retries`],
+      });
+    }
+
+    return insights;
+  }
+
+  /**
+   * Analyze errors in execution
+   */
+  private analyzeErrors(context: ReflectionContext): Insight[] {
+    const insights: Insight[] = [];
+
+    const errorSteps = context.steps.filter(
+      (s) => s.type === "error" || (s.result && !s.result.success),
+    );
+
+    if (errorSteps.length === 0) {
+      return insights;
+    }
+
+    // Categorize errors
+    const errorTypes = new Map<string, number>();
+    for (const step of errorSteps) {
+      const errorType = this.categorizeError(step.result?.error || step.content);
+      errorTypes.set(errorType, (errorTypes.get(errorType) || 0) + 1);
+    }
+
+    // Report most common errors
+    const sortedErrors = Array.from(errorTypes.entries()).sort((a, b) => b[1] - a[1]);
+
+    for (const [type, count] of sortedErrors.slice(0, 3)) {
+      insights.push({
+        type: "error",
+        description: `Frequent error type: ${type} (${count} occurrences)`,
+        severity: count > 2 ? "high" : "medium",
+        evidence: [`${count} occurrences`],
+      });
+    }
+
+    return insights;
+  }
+
+  /**
+   * Find optimization opportunities
+   */
+  private async findOptimizations(context: ReflectionContext): Promise<Insight[]> {
+    const insights: Insight[] = [];
+
+    // Check for sequential independent actions
+    const independentActions = this.findIndependentActions(context.steps);
+    if (independentActions.length > 1) {
+      insights.push({
+        type: "optimization",
+        description: "Independent actions could be parallelized",
+        severity: "low",
+        evidence: independentActions.map((a) => a.content),
+      });
+    }
+
+    // Check token usage efficiency
+    if (context.metrics.tokenUsage > 4000) {
+      insights.push({
+        type: "optimization",
+        description: "High token usage - consider context optimization",
+        severity: "medium",
+        evidence: [`${context.metrics.tokenUsage} tokens used`],
+      });
+    }
+
+    return insights;
+  }
+
+  /**
+   * Generate recommendations based on insights
+   */
+  private async generateRecommendations(
+    context: ReflectionContext,
+    insights: Insight[],
+  ): Promise<Recommendation[]> {
     const recommendations: Recommendation[] = [];
 
     for (const insight of insights) {
-      if (insight.severity === "high") {
-        recommendations.push({
-          id: `rec-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          category: "workflow",
-          description: `Address high severity issue: ${insight.description}`,
-          expectedImpact: "high",
-          implementation: "Review and fix the identified issue",
-        });
+      switch (insight.type) {
+        case "bottleneck":
+          if (insight.description.includes("API call")) {
+            recommendations.push({
+              id: generateId("rec"),
+              category: "workflow",
+              description: "Implement request batching to reduce API calls",
+              expectedImpact: "high",
+              implementation: "Group multiple operations into single API calls",
+            });
+          }
+          break;
+
+        case "error":
+          recommendations.push({
+            id: generateId("rec"),
+            category: "prompt",
+            description: "Add error handling examples to system prompt",
+            expectedImpact: "medium",
+            implementation: "Include common error patterns and recovery strategies",
+          });
+          break;
+
+        case "optimization":
+          if (insight.description.includes("parallelized")) {
+            recommendations.push({
+              id: generateId("rec"),
+              category: "workflow",
+              description: "Enable parallel execution for independent tasks",
+              expectedImpact: "medium",
+              implementation: "Use Promise.all for independent operations",
+            });
+          }
+          break;
       }
+    }
+
+    // Add general recommendations based on metrics
+    if (context.metrics.totalDurationMs > 60000) {
+      recommendations.push({
+        id: generateId("rec"),
+        category: "model",
+        description: "Consider using faster model for simple tasks",
+        expectedImpact: "high",
+        implementation: "Route simple tasks to lightweight models",
+      });
     }
 
     return recommendations;
   }
 
-  private calculateConfidence(
-    insights: Insight[],
+  /**
+   * Generate strategy adjustments
+   */
+  private async generateStrategyAdjustments(
     context: ReflectionContext,
-  ): number {
-    if (insights.length === 0) return 0.5;
+    insights: Insight[],
+  ): Promise<StrategyAdjustment[]> {
+    const adjustments: StrategyAdjustment[] = [];
 
+    // Adjust retry strategy based on error rate
+    const errorRate = context.metrics.errors / context.metrics.totalSteps;
+    if (errorRate > 0.2) {
+      adjustments.push({
+        target: "retry.maxAttempts",
+        currentValue: 3,
+        suggestedValue: 5,
+        rationale: "High error rate suggests need for more retries",
+      });
+    }
+
+    // Adjust timeout based on step duration
+    const avgDuration = context.metrics.totalDurationMs / context.metrics.totalSteps;
+    if (avgDuration > 5000) {
+      adjustments.push({
+        target: "execution.timeoutMs",
+        currentValue: 30000,
+        suggestedValue: Math.min(avgDuration * 2, 120000),
+        rationale: "Steps are taking longer than expected",
+      });
+    }
+
+    return adjustments;
+  }
+
+  /**
+   * Calculate reflection confidence
+   */
+  private calculateConfidence(
+    context: ReflectionContext,
+    insights: Insight[],
+  ): number {
     // Base confidence on data quality
     let confidence = 0.5;
 
     // More steps = more data = higher confidence
-    confidence += Math.min(context.metrics.totalSteps / 20, 0.2);
+    if (context.metrics.totalSteps > 5) {
+      confidence += 0.1;
+    }
 
-    // Successful outcomes increase confidence
-    if (context.outcome === "success") confidence += 0.1;
+    // Successful executions provide better insights
+    if (context.outcome === "success") {
+      confidence += 0.2;
+    }
 
-    // High severity insights reduce confidence (uncertainty)
-    const highSeverityCount = insights.filter(
-      (i) => i.severity === "high",
-    ).length;
-    confidence -= highSeverityCount * 0.05;
+    // More insights = higher confidence
+    confidence += Math.min(insights.length * 0.05, 0.2);
 
-    return Math.max(0, Math.min(1, confidence));
+    return Math.min(confidence, 1);
   }
 
-  private addToHistory(result: ReflectionResult): void {
-    this.reflectionHistory.push(result);
+  /**
+   * Apply reflection insights to improve future executions
+   */
+  async applyReflection(entryId: string): Promise<boolean> {
+    const entry = this.entries.find((e) => e.id === entryId);
+    if (!entry) {
+      return false;
+    }
 
-    // Trim history if too large
-    if (this.reflectionHistory.length > this.maxHistorySize) {
-      this.reflectionHistory = this.reflectionHistory.slice(
-        -this.maxHistorySize,
+    log.info(`Applying reflection: ${entryId}`);
+
+    // Apply strategy adjustments
+    for (const adjustment of entry.result.strategyAdjustments) {
+      await this.memory.setPreference(
+        `strategy.${adjustment.target}`,
+        adjustment.suggestedValue,
       );
     }
+
+    // Store successful patterns
+    if (entry.context.outcome === "success") {
+      await this.memory.setPreference(
+        `pattern.success.${entry.context.taskId}`,
+        {
+          steps: entry.context.steps.map((s) => s.content),
+          timestamp: entry.timestamp,
+        },
+      );
+    }
+
+    entry.applied = true;
+    await this.persistReflection(entry);
+
+    return true;
+  }
+
+  /**
+   * Get learning statistics
+   */
+  getStatistics(): {
+    totalReflections: number;
+    appliedReflections: number;
+    insightsByType: Record<string, number>;
+    averageConfidence: number;
+  } {
+    const insightsByType: Record<string, number> = {};
+    let totalConfidence = 0;
+
+    for (const entry of this.entries) {
+      for (const insight of entry.result.insights) {
+        insightsByType[insight.type] = (insightsByType[insight.type] || 0) + 1;
+      }
+      totalConfidence += entry.result.confidence;
+    }
+
+    return {
+      totalReflections: this.entries.length,
+      appliedReflections: this.entries.filter((e) => e.applied).length,
+      insightsByType,
+      averageConfidence:
+        this.entries.length > 0 ? totalConfidence / this.entries.length : 0,
+    };
+  }
+
+  // ============================================================================
+// Utilities
+// ============================================================================
+
+  private findRepetitions(items: string[]): string[] {
+    const counts = new Map<string, number>();
+    for (const item of items) {
+      counts.set(item, (counts.get(item) || 0) + 1);
+    }
+
+    return Array.from(counts.entries())
+      .filter(([, count]) => count > 1)
+      .map(([item]) => item);
+  }
+
+  private categorizeError(error: string): string {
+    if (error.includes("timeout") || error.includes("Timeout")) {
+      return "timeout";
+    }
+    if (error.includes("network") || error.includes("Network")) {
+      return "network";
+    }
+    if (error.includes("permission") || error.includes("Permission")) {
+      return "permission";
+    }
+    if (error.includes("not found") || error.includes("Not found")) {
+      return "not_found";
+    }
+    return "unknown";
+  }
+
+  private findIndependentActions(steps: ExecutionStep[]): ExecutionStep[] {
+    // Simplified: actions without dependencies are independent
+    return steps.filter(
+      (s) => s.type === "action" && !s.content.includes("depends on"),
+    );
+  }
+
+  private async persistReflection(entry: ReflectionEntry): Promise<void> {
+    await this.memory.setPreference(`reflection.${entry.id}`, entry);
   }
 }
 
 // ============================================================================
-// Singleton Export
+// Exports
 // ============================================================================
 
-export const reflectionEngine = new ReflectionEngine();
+export {
+  ReflectionEngine,
+  createReflectionContext,
+  type ReflectionContext,
+  type ReflectionResult,
+  type ReflectionEntry,
+  type Insight,
+  type Recommendation,
+  type StrategyAdjustment,
+};
 
-// Convenience functions
-export function reflect(context: ReflectionContext): ReflectionResult {
-  return reflectionEngine.reflect(context);
+// Helper function to create reflection context
+export function createReflectionContext(
+  executionId: string,
+  taskId: string,
+  agentId: string,
+  startTime: number,
+): ReflectionContext {
+  return {
+    executionId,
+    taskId,
+    agentId,
+    startTime,
+    steps: [],
+    outcome: "success",
+    metrics: {
+      totalSteps: 0,
+      totalDurationMs: 0,
+      tokenUsage: 0,
+      apiCalls: 0,
+      errors: 0,
+      retries: 0,
+    },
+  };
 }
 
-export function addPattern(pattern: ReflectionPattern): void {
-  reflectionEngine.addPattern(pattern);
-}
-
-export function getReflectionHistory(limit?: number): ReflectionResult[] {
-  return reflectionEngine.getHistory(limit);
-}
+export default ReflectionEngine;

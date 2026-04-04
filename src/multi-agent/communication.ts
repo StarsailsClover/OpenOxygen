@@ -1,5 +1,9 @@
 /**
+<<<<<<< HEAD
  * OpenOxygen �?Multi-Agent Communication (26w15aD Phase 5)
+=======
+ * OpenOxygen - Multi-Agent Communication
+>>>>>>> dev
  *
  * Agent 间通信协议
  * 消息传递、广播、负载均�?
@@ -61,7 +65,7 @@ class CommunicationHub extends EventEmitter {
         try {
           handler(fullMessage);
         } catch (error) {
-          log.error(`Handler error: ${error.message}`);
+          log.error(`Handler error: ${error}`);
         }
       }
     }
@@ -83,31 +87,29 @@ class CommunicationHub extends EventEmitter {
   /**
    * Register message handler for agent
    */
-  registerHandler(agentId: string, handler: MessageHandler): void {
+  onMessage(agentId: string, handler: MessageHandler): void {
     const handlers = this.handlers.get(agentId) || [];
     handlers.push(handler);
     this.handlers.set(agentId, handlers);
-    log.debug(`Handler registered for agent: ${agentId}`);
   }
 
   /**
    * Unregister message handler
    */
-  unregisterHandler(agentId: string, handler: MessageHandler): void {
+  offMessage(agentId: string, handler: MessageHandler): void {
     const handlers = this.handlers.get(agentId) || [];
     const index = handlers.indexOf(handler);
     if (index > -1) {
       handlers.splice(index, 1);
-      this.handlers.set(agentId, handlers);
     }
   }
 }
 
-// Singleton hub
+// Global hub instance
 const hub = new CommunicationHub();
 
 /**
- * Send message
+ * Send message to specific agent
  */
 export function sendMessage(
   from: string,
@@ -124,7 +126,7 @@ export function sendMessage(
 }
 
 /**
- * Broadcast message
+ * Broadcast message to all agents
  */
 export function broadcastMessage(
   from: string,
@@ -135,31 +137,29 @@ export function broadcastMessage(
 }
 
 /**
- * Register handler
+ * Register message handler
  */
 export function onMessage(agentId: string, handler: MessageHandler): void {
-  hub.registerHandler(agentId, handler);
+  hub.onMessage(agentId, handler);
 }
 
 /**
- * Unregister handler
+ * Unregister message handler
  */
 export function offMessage(agentId: string, handler: MessageHandler): void {
-  hub.unregisterHandler(agentId, handler);
+  hub.offMessage(agentId, handler);
 }
 
 /**
- * Send task request
+ * Request task from coordinator
  */
 export function requestTask(
-  from: string,
-  to: string,
-  instruction: string,
-  options?: any,
+  agentId: string,
+  capabilities: string[],
 ): AgentMessage {
-  return sendMessage(from, to, "task", {
-    instruction,
-    options,
+  return sendMessage(agentId, "coordinator", "task", {
+    capabilities,
+    timestamp: nowMs(),
   });
 }
 
@@ -167,22 +167,30 @@ export function requestTask(
  * Send task result
  */
 export function sendResult(
-  from: string,
-  to: string,
+  agentId: string,
+  taskId: string,
   result: any,
 ): AgentMessage {
-  return sendMessage(from, to, "result", result);
+  return sendMessage(agentId, "coordinator", "result", {
+    taskId,
+    result,
+    timestamp: nowMs(),
+  });
 }
 
 /**
  * Send error
  */
 export function sendError(
-  from: string,
-  to: string,
+  agentId: string,
+  taskId: string,
   error: string,
 ): AgentMessage {
-  return sendMessage(from, to, "error", { error });
+  return sendMessage(agentId, "coordinator", "error", {
+    taskId,
+    error,
+    timestamp: nowMs(),
+  });
 }
 
 /**
@@ -194,14 +202,5 @@ export function sendHeartbeat(agentId: string): AgentMessage {
   });
 }
 
-// Export
-export default {
-  sendMessage,
-  broadcastMessage,
-  onMessage,
-  offMessage,
-  requestTask,
-  sendResult,
-  sendError,
-  sendHeartbeat,
-};
+// Exports
+export { hub as communicationHub };

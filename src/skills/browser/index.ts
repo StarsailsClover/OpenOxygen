@@ -1,5 +1,5 @@
 /**
- * Browser Automation Skills
+ * OpenOxygen - Browser Automation Skills
  *
  * High-frequency browser automation using CDP
  * Supports Chrome/Edge automation
@@ -7,6 +7,8 @@
 
 import { createSubsystemLogger } from "../../logging/index.js";
 import type { ToolResult } from "../../types/index.js";
+import { spawn, ChildProcess } from "node:child_process";
+import { WebSocket } from "ws";
 
 const log = createSubsystemLogger("skills/browser");
 
@@ -19,6 +21,7 @@ export interface BrowserConfig {
   userDataDir?: string;
   viewport?: { width: number; height: number };
   userAgent?: string;
+  executablePath?: string;
 }
 
 export interface NavigationOptions {
@@ -31,9 +34,22 @@ export interface ElementSelector {
   value: string;
 }
 
+export interface BrowserSession {
+  id: string;
+  process: ChildProcess | null;
+  wsClient: WebSocket | null;
+  cdpPort: number;
+  wsEndpoint: string;
+  userDataDir: string;
+  alive: boolean;
+}
+
 // ============================================================================
 // Browser Management
 // ============================================================================
+
+const activeBrowsers = new Map<string, BrowserSession>();
+let portCounter = 9222;
 
 export async function launchBrowser(
   config?: BrowserConfig,
@@ -42,13 +58,81 @@ export async function launchBrowser(
 
   try {
     const browserId = `browser-${Date.now()}`;
+    const cdpPort = portCounter++;
+    const userDataDir = config?.userDataDir || `./.state/browser-${browserId}`;
+
+    // Find Chrome/Edge executable
+    const executablePath = config?.executablePath || await findBrowserExecutable();
+    
+    if (!executablePath) {
+      return {
+        success: false,
+        error: "Could not find Chrome or Edge executable. Please install Chrome or Edge.",
+      };
+    }
+
+    // Launch browser with CDP
+    const args = [
+      `--remote-debugging-port=${cdpPort}`,
+      `--user-data-dir=${userDataDir}`,
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--disable-default-apps",
+      "--disable-popup-blocking",
+    ];
+
+    if (config?.headless) {
+      args.push("--headless");
+    }
+
+    if (config?.viewport) {
+      args.push(`--window-size=${config.viewport.width},${config.viewport.height}`);
+    }
+
+    const browserProcess = spawn(executablePath, args, {
+      detached: false,
+    });
+
+    // Wait for CDP to be ready
+    await waitForCdp(cdpPort, 10000);
+
+    // Get WebSocket endpoint
+    const wsEndpoint = await getWsEndpoint(cdpPort);
+
+    // Connect via WebSocket
+    const wsClient = new WebSocket(wsEndpoint);
+    
+    await new Promise<void>((resolve, reject) => {
+      wsClient.on("open", resolve);
+      wsClient.on("error", reject);
+    });
+
+    // Enable required CDP domains
+    await sendCdpCommand(wsClient, "Runtime.enable");
+    await sendCdpCommand(wsClient, "Page.enable");
+    await sendCdpCommand(wsClient, "DOM.enable");
+
+    const session: BrowserSession = {
+      id: browserId,
+      process: browserProcess,
+      wsClient,
+      cdpPort,
+      wsEndpoint,
+      userDataDir,
+      alive: true,
+    };
+
+    activeBrowsers.set(browserId, session);
+
+    log.info(`Browser launched: ${browserId} on port ${cdpPort}`);
 
     return {
       success: true,
       data: {
         browserId,
-        pid: 12345, // Placeholder
-        wsEndpoint: `ws://localhost:9222/${browserId}`,
+        pid: browserProcess.pid,
+        wsEndpoint,
+        cdpPort,
       },
     };
   } catch (error) {
@@ -62,7 +146,28 @@ export async function launchBrowser(
 export async function closeBrowser(browserId: string): Promise<ToolResult> {
   log.info(`Closing browser: ${browserId}`);
 
+  const session = activeBrowsers.get(browserId);
+  if (!session) {
+    return {
+      success: false,
+      error: `Browser not found: ${browserId}`,
+    };
+  }
+
   try {
+    // Close WebSocket connection
+    if (session.wsClient) {
+      session.wsClient.close();
+    }
+
+    // Kill browser process
+    if (session.process) {
+      session.process.kill();
+    }
+
+    session.alive = false;
+    activeBrowsers.delete(browserId);
+
     return {
       success: true,
       data: { browserId, closed: true },
@@ -79,22 +184,33 @@ export async function closeBrowser(browserId: string): Promise<ToolResult> {
 // Navigation
 // ============================================================================
 
-export async function navigateTo(
+export async function navigate(
   browserId: string,
   url: string,
   options?: NavigationOptions,
 ): Promise<ToolResult> {
   log.info(`Navigating to: ${url}`);
 
+  const session = activeBrowsers.get(browserId);
+  if (!session) {
+    return {
+      success: false,
+      error: `Browser not found: ${browserId}`,
+    };
+  }
+
   try {
+    await sendCdpCommand(session.wsClient!, "Page.navigate", { url });
+
+    // Wait for load event if requested
+    if (options?.waitUntil) {
+      const timeout = options.timeout || 30000;
+      await waitForLoadEvent(session.wsClient!, options.waitUntil, timeout);
+    }
+
     return {
       success: true,
-      data: {
-        browserId,
-        url,
-        title: "Page Title", // Placeholder
-        loadTime: 500, // Placeholder
-      },
+      data: { url, loaded: true },
     };
   } catch (error) {
     return {
@@ -105,34 +221,64 @@ export async function navigateTo(
 }
 
 export async function goBack(browserId: string): Promise<ToolResult> {
-  log.info("Going back");
+  const session = activeBrowsers.get(browserId);
+  if (!session) {
+    return { success: false, error: `Browser not found: ${browserId}` };
+  }
 
   try {
-    return {
-      success: true,
-      data: { browserId, action: "back" },
-    };
+    await sendCdpCommand(session.wsClient!, "Page.goBack");
+    return { success: true, data: { action: "back" } };
   } catch (error) {
-    return {
-      success: false,
-      error: `Failed to go back: ${error}`,
-    };
+    return { success: false, error: String(error) };
   }
 }
 
-export async function reloadPage(browserId: string): Promise<ToolResult> {
-  log.info("Reloading page");
+export async function goForward(browserId: string): Promise<ToolResult> {
+  const session = activeBrowsers.get(browserId);
+  if (!session) {
+    return { success: false, error: `Browser not found: ${browserId}` };
+  }
 
   try {
+    await sendCdpCommand(session.wsClient!, "Page.goForward");
+    return { success: true, data: { action: "forward" } };
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
+}
+
+export async function reload(browserId: string): Promise<ToolResult> {
+  const session = activeBrowsers.get(browserId);
+  if (!session) {
+    return { success: false, error: `Browser not found: ${browserId}` };
+  }
+
+  try {
+    await sendCdpCommand(session.wsClient!, "Page.reload");
+    return { success: true, data: { action: "reload" } };
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
+}
+
+export async function getCurrentUrl(browserId: string): Promise<ToolResult> {
+  const session = activeBrowsers.get(browserId);
+  if (!session) {
+    return { success: false, error: `Browser not found: ${browserId}` };
+  }
+
+  try {
+    const result = await sendCdpCommand(session.wsClient!, "Runtime.evaluate", {
+      expression: "window.location.href",
+    });
+
     return {
       success: true,
-      data: { browserId, action: "reload" },
+      data: { url: result.result?.value },
     };
   } catch (error) {
-    return {
-      success: false,
-      error: `Failed to reload: ${error}`,
-    };
+    return { success: false, error: String(error) };
   }
 }
 
@@ -146,20 +292,36 @@ export async function clickElement(
 ): Promise<ToolResult> {
   log.info(`Clicking element: ${selector.type}=${selector.value}`);
 
+  const session = activeBrowsers.get(browserId);
+  if (!session) {
+    return { success: false, error: `Browser not found: ${browserId}` };
+  }
+
   try {
-    return {
-      success: true,
-      data: {
-        browserId,
-        selector,
-        clicked: true,
-      },
-    };
+    const selectorStr = buildSelector(selector);
+    const script = `
+      (function() {
+        const el = document.querySelector(${JSON.stringify(selectorStr)});
+        if (el) {
+          el.click();
+          return { success: true };
+        }
+        return { success: false, error: "Element not found" };
+      })()
+    `;
+
+    const result = await sendCdpCommand(session.wsClient!, "Runtime.evaluate", {
+      expression: script,
+      awaitPromise: true,
+    });
+
+    if (result.result?.value?.success) {
+      return { success: true, data: { clicked: true } };
+    } else {
+      return { success: false, error: result.result?.value?.error || "Click failed" };
+    }
   } catch (error) {
-    return {
-      success: false,
-      error: `Failed to click element: ${error}`,
-    };
+    return { success: false, error: String(error) };
   }
 }
 
@@ -170,21 +332,39 @@ export async function typeText(
 ): Promise<ToolResult> {
   log.info(`Typing text into element: ${selector.type}=${selector.value}`);
 
+  const session = activeBrowsers.get(browserId);
+  if (!session) {
+    return { success: false, error: `Browser not found: ${browserId}` };
+  }
+
   try {
-    return {
-      success: true,
-      data: {
-        browserId,
-        selector,
-        text,
-        typed: true,
-      },
-    };
+    const selectorStr = buildSelector(selector);
+    const script = `
+      (function() {
+        const el = document.querySelector(${JSON.stringify(selectorStr)});
+        if (el) {
+          el.focus();
+          el.value = ${JSON.stringify(text)};
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+          return { success: true };
+        }
+        return { success: false, error: "Element not found" };
+      })()
+    `;
+
+    const result = await sendCdpCommand(session.wsClient!, "Runtime.evaluate", {
+      expression: script,
+      awaitPromise: true,
+    });
+
+    if (result.result?.value?.success) {
+      return { success: true, data: { typed: true } };
+    } else {
+      return { success: false, error: result.result?.value?.error || "Type failed" };
+    }
   } catch (error) {
-    return {
-      success: false,
-      error: `Failed to type text: ${error}`,
-    };
+    return { success: false, error: String(error) };
   }
 }
 
@@ -192,296 +372,323 @@ export async function getElementText(
   browserId: string,
   selector: ElementSelector,
 ): Promise<ToolResult> {
-  log.info(`Getting element text: ${selector.type}=${selector.value}`);
+  const session = activeBrowsers.get(browserId);
+  if (!session) {
+    return { success: false, error: `Browser not found: ${browserId}` };
+  }
 
   try {
+    const selectorStr = buildSelector(selector);
+    const script = `
+      (function() {
+        const el = document.querySelector(${JSON.stringify(selectorStr)});
+        return el ? el.textContent : null;
+      })()
+    `;
+
+    const result = await sendCdpCommand(session.wsClient!, "Runtime.evaluate", {
+      expression: script,
+    });
+
     return {
       success: true,
-      data: {
-        browserId,
-        selector,
-        text: "Element text content", // Placeholder
-      },
+      data: { text: result.result?.value },
     };
   } catch (error) {
+    return { success: false, error: String(error) };
+  }
+}
+
+export async function getElementAttribute(
+  browserId: string,
+  selector: ElementSelector,
+  attribute: string,
+): Promise<ToolResult> {
+  const session = activeBrowsers.get(browserId);
+  if (!session) {
+    return { success: false, error: `Browser not found: ${browserId}` };
+  }
+
+  try {
+    const selectorStr = buildSelector(selector);
+    const script = `
+      (function() {
+        const el = document.querySelector(${JSON.stringify(selectorStr)});
+        return el ? el.getAttribute(${JSON.stringify(attribute)}) : null;
+      })()
+    `;
+
+    const result = await sendCdpCommand(session.wsClient!, "Runtime.evaluate", {
+      expression: script,
+    });
+
     return {
-      success: false,
-      error: `Failed to get element text: ${error}`,
+      success: true,
+      data: { attribute, value: result.result?.value },
     };
+  } catch (error) {
+    return { success: false, error: String(error) };
   }
 }
 
 export async function waitForElement(
   browserId: string,
   selector: ElementSelector,
-  timeout?: number,
+  timeout: number = 10000,
 ): Promise<ToolResult> {
   log.info(`Waiting for element: ${selector.type}=${selector.value}`);
 
+  const session = activeBrowsers.get(browserId);
+  if (!session) {
+    return { success: false, error: `Browser not found: ${browserId}` };
+  }
+
   try {
-    return {
-      success: true,
-      data: {
-        browserId,
-        selector,
-        found: true,
-        waitTime: 100, // Placeholder
-      },
-    };
+    const selectorStr = buildSelector(selector);
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < timeout) {
+      const script = `
+        (function() {
+          return document.querySelector(${JSON.stringify(selectorStr)}) !== null;
+        })()
+      `;
+
+      const result = await sendCdpCommand(session.wsClient!, "Runtime.evaluate", {
+        expression: script,
+      });
+
+      if (result.result?.value) {
+        return { success: true, data: { found: true } };
+      }
+
+      await new Promise(r => setTimeout(r, 100));
+    }
+
+    return { success: false, error: "Timeout waiting for element" };
   } catch (error) {
-    return {
-      success: false,
-      error: `Failed to wait for element: ${error}`,
-    };
+    return { success: false, error: String(error) };
   }
 }
 
 // ============================================================================
-// Form Automation
+// Screenshot
 // ============================================================================
 
-export async function fillForm(
-  browserId: string,
-  formData: Record<string, string>,
-): Promise<ToolResult> {
-  log.info(`Filling form with ${Object.keys(formData).length} fields`);
+export async function takeScreenshot(browserId: string): Promise<ToolResult> {
+  log.info(`Taking screenshot: ${browserId}`);
 
-  try {
-    return {
-      success: true,
-      data: {
-        browserId,
-        fields: Object.keys(formData),
-        filled: true,
-      },
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: `Failed to fill form: ${error}`,
-    };
+  const session = activeBrowsers.get(browserId);
+  if (!session) {
+    return { success: false, error: `Browser not found: ${browserId}` };
   }
-}
-
-export async function submitForm(
-  browserId: string,
-  selector?: ElementSelector,
-): Promise<ToolResult> {
-  log.info("Submitting form");
 
   try {
+    const result = await sendCdpCommand(session.wsClient!, "Page.captureScreenshot");
+    
     return {
       success: true,
       data: {
-        browserId,
-        selector,
-        submitted: true,
+        screenshot: result.data,
+        format: "base64",
       },
     };
   } catch (error) {
-    return {
-      success: false,
-      error: `Failed to submit form: ${error}`,
-    };
+    return { success: false, error: String(error) };
   }
 }
 
 // ============================================================================
-// Screenshot & PDF
+// CDP Utilities
 // ============================================================================
 
-export async function takeScreenshot(
-  browserId: string,
-  options?: { fullPage?: boolean; selector?: ElementSelector },
-): Promise<ToolResult> {
-  log.info("Taking screenshot");
+async function findBrowserExecutable(): Promise<string | null> {
+  const { execSync } = await import("node:child_process");
+  
+  const possiblePaths = [
+    // Windows
+    "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+    `${process.env.LOCALAPPDATA}\\Google\\Chrome\\Application\\chrome.exe`,
+    "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
+    "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+    // macOS
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+    // Linux
+    "/usr/bin/google-chrome",
+    "/usr/bin/google-chrome-stable",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/microsoft-edge",
+  ];
 
+  for (const path of possiblePaths) {
+    try {
+      const fs = await import("node:fs");
+      if (fs.existsSync(path)) {
+        return path;
+      }
+    } catch {
+      // Continue to next path
+    }
+  }
+
+  // Try to find via command
   try {
-    const screenshotPath = `screenshot-${Date.now()}.png`;
-
-    return {
-      success: true,
-      data: {
-        browserId,
-        path: screenshotPath,
-        fullPage: options?.fullPage || false,
-      },
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: `Failed to take screenshot: ${error}`,
-    };
+    if (process.platform === "win32") {
+      const result = execSync("where chrome", { encoding: "utf-8" });
+      return result.trim().split("\n")[0] || null;
+    } else {
+      const result = execSync("which google-chrome || which chromium", { encoding: "utf-8" });
+      return result.trim() || null;
+    }
+  } catch {
+    return null;
   }
 }
 
-export async function generatePDF(
-  browserId: string,
-  outputPath: string,
-): Promise<ToolResult> {
-  log.info(`Generating PDF: ${outputPath}`);
-
-  try {
-    return {
-      success: true,
-      data: {
-        browserId,
-        path: outputPath,
-        generated: true,
-      },
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: `Failed to generate PDF: ${error}`,
-    };
+async function waitForCdp(port: number, timeout: number): Promise<void> {
+  const startTime = Date.now();
+  
+  while (Date.now() - startTime < timeout) {
+    try {
+      const response = await fetch(`http://localhost:${port}/json/version`);
+      if (response.ok) {
+        return;
+      }
+    } catch {
+      // Not ready yet
+    }
+    await new Promise(r => setTimeout(r, 100));
   }
+  
+  throw new Error("Timeout waiting for CDP");
 }
 
-// ============================================================================
-// Cookie & Storage
-// ============================================================================
-
-export async function getCookies(browserId: string): Promise<ToolResult> {
-  log.info("Getting cookies");
-
-  try {
-    return {
-      success: true,
-      data: {
-        browserId,
-        cookies: [], // Placeholder
-      },
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: `Failed to get cookies: ${error}`,
-    };
-  }
+async function getWsEndpoint(port: number): Promise<string> {
+  const response = await fetch(`http://localhost:${port}/json/version`);
+  const data = await response.json();
+  return data.webSocketDebuggerUrl;
 }
 
-export async function setCookie(
-  browserId: string,
-  name: string,
-  value: string,
-): Promise<ToolResult> {
-  log.info(`Setting cookie: ${name}`);
+function sendCdpCommand(
+  ws: WebSocket,
+  method: string,
+  params?: Record<string, unknown>,
+): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const id = Math.floor(Math.random() * 1000000);
+    
+    const message = JSON.stringify({ id, method, params });
+    
+    const handler = (data: WebSocket.RawData) => {
+      try {
+        const response = JSON.parse(data.toString());
+        if (response.id === id) {
+          ws.off("message", handler);
+          if (response.error) {
+            reject(new Error(response.error.message));
+          } else {
+            resolve(response.result);
+          }
+        }
+      } catch (error) {
+        reject(error);
+      }
+    };
 
-  try {
-    return {
-      success: true,
-      data: {
-        browserId,
-        name,
-        value,
-      },
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: `Failed to set cookie: ${error}`,
-    };
-  }
+    ws.on("message", handler);
+    ws.send(message);
+  });
 }
 
-export async function clearCookies(browserId: string): Promise<ToolResult> {
-  log.info("Clearing cookies");
+async function waitForLoadEvent(
+  ws: WebSocket,
+  event: string,
+  timeout: number,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error(`Timeout waiting for ${event}`));
+    }, timeout);
 
-  try {
-    return {
-      success: true,
-      data: {
-        browserId,
-        cleared: true,
-      },
+    const handler = (data: WebSocket.RawData) => {
+      try {
+        const message = JSON.parse(data.toString());
+        if (message.method === "Page.loadEventFired") {
+          clearTimeout(timeoutId);
+          ws.off("message", handler);
+          resolve();
+        }
+      } catch {
+        // Ignore parse errors
+      }
     };
-  } catch (error) {
-    return {
-      success: false,
-      error: `Failed to clear cookies: ${error}`,
-    };
-  }
+
+    ws.on("message", handler);
+  });
 }
 
-// ============================================================================
-// Anti-Detection
-// ============================================================================
-
-export async function setUserAgent(
-  browserId: string,
-  userAgent: string,
-): Promise<ToolResult> {
-  log.info(`Setting user agent: ${userAgent}`);
-
-  try {
-    return {
-      success: true,
-      data: {
-        browserId,
-        userAgent,
-      },
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: `Failed to set user agent: ${error}`,
-    };
-  }
-}
-
-export async function emulateDevice(
-  browserId: string,
-  device: "desktop" | "mobile" | "tablet",
-): Promise<ToolResult> {
-  log.info(`Emulating device: ${device}`);
-
-  try {
-    const viewports = {
-      desktop: { width: 1920, height: 1080 },
-      mobile: { width: 375, height: 667 },
-      tablet: { width: 768, height: 1024 },
-    };
-
-    return {
-      success: true,
-      data: {
-        browserId,
-        device,
-        viewport: viewports[device],
-      },
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: `Failed to emulate device: ${error}`,
-    };
+function buildSelector(selector: ElementSelector): string {
+  switch (selector.type) {
+    case "css":
+      return selector.value;
+    case "id":
+      return `#${selector.value}`;
+    case "xpath":
+      // Convert XPath to CSS (simplified)
+      return selector.value;
+    case "text":
+      // Use attribute selector for text content
+      return `[data-text="${selector.value}"]`;
+    default:
+      return selector.value;
   }
 }
 
 // ============================================================================
-// Skill Registration
+// Exports
 // ============================================================================
 
-export function registerBrowserSkills(skillRegistry: any): void {
-  skillRegistry.register("browser.launch", launchBrowser);
-  skillRegistry.register("browser.close", closeBrowser);
-  skillRegistry.register("browser.navigate", navigateTo);
-  skillRegistry.register("browser.back", goBack);
-  skillRegistry.register("browser.reload", reloadPage);
-  skillRegistry.register("browser.click", clickElement);
-  skillRegistry.register("browser.type", typeText);
-  skillRegistry.register("browser.getText", getElementText);
-  skillRegistry.register("browser.waitFor", waitForElement);
-  skillRegistry.register("browser.fillForm", fillForm);
-  skillRegistry.register("browser.submitForm", submitForm);
-  skillRegistry.register("browser.screenshot", takeScreenshot);
-  skillRegistry.register("browser.pdf", generatePDF);
-  skillRegistry.register("browser.getCookies", getCookies);
-  skillRegistry.register("browser.setCookie", setCookie);
-  skillRegistry.register("browser.clearCookies", clearCookies);
-  skillRegistry.register("browser.setUserAgent", setUserAgent);
-  skillRegistry.register("browser.emulateDevice", emulateDevice);
+export {
+  launchBrowser,
+  closeBrowser,
+  navigate,
+  goBack,
+  goForward,
+  reload,
+  getCurrentUrl,
+  clickElement,
+  typeText,
+  getElementText,
+  getElementAttribute,
+  waitForElement,
+  takeScreenshot,
+};
 
-  log.info("Browser automation skills registered");
-}
+export const BrowserSkills = {
+  browser: {
+    launch: launchBrowser,
+    close: closeBrowser,
+  },
+  navigation: {
+    navigate,
+    goBack,
+    goForward,
+    reload,
+    getCurrentUrl,
+  },
+  element: {
+    click: clickElement,
+    type: typeText,
+    getText: getElementText,
+    getAttribute: getElementAttribute,
+    waitFor: waitForElement,
+  },
+  screenshot: {
+    take: takeScreenshot,
+  },
+};
+
+export default BrowserSkills;
