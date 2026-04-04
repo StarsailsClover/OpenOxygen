@@ -1,9 +1,9 @@
 /**
  * OpenOxygen - OLB Acceleration Engine Core (26w15aD Phase 7)
  *
- * P-0: OLB 加速引擎核心架�?
- * - SIMD 向量运算加�?
- * - 内存池管�?
+ * P-0: OLB 加速引擎核心
+ * - SIMD 向量运算加速
+ * - 内存池管理
  * - 并行计算优化
  * - 缓存优化策略
  */
@@ -40,7 +40,7 @@ export interface MemoryPoolConfig {
 
 // SIMD vector
 export interface SIMDVector {
-  data: Float32Array | Float64Array | Int32Array | any;
+  data: Float32Array | Float64Array | Int32Array;
   dimension: VectorDim;
   type: SIMDDataType;
 }
@@ -83,212 +83,138 @@ export class SIMDArrayEngine {
       memoryUsed: 0,
       cacheHitRate: 0,
     };
-
-    log.info(`SIMD Engine initialized: ${dimension}-bit ${type}`);
+    log.info(`SIMDArrayEngine initialized: ${dimension}-bit ${type}`);
   }
 
   /**
-   * Create SIMD vector
+   * Create a SIMD vector from array
    */
   createVector(data: number[]): SIMDVector {
-    const elements =
-      this.dimension /
-      (this.type === "float64" || this.type === "int64" ? 64 : 32);
-
-    let typedArray: Float32Array | Float64Array | Int32Array | any;
-
-    switch (this.type) {
-      case "float32":
-        typedArray = new Float32Array(elements);
-        break;
-      case "float64":
-        typedArray = new Float64Array(elements);
-        break;
-      case "int32":
-        typedArray = new Int32Array(elements);
-        break;
-      case "int64":
-        typedArray = new BigInt64Array(elements) as unknown as Int64Array;
-        break;
-      default:
-        typedArray = new Float32Array(elements);
-    }
-
-    // Fill with data
-    for (let i = 0; i < Math.min(data.length, elements); i++) {
-      typedArray[i] = data[i];
-    }
-
+    const array = new Float32Array(data);
     return {
-      data: typedArray,
+      data: array,
       dimension: this.dimension,
       type: this.type,
     };
   }
 
   /**
-   * SIMD addition
+   * Perform SIMD operation on two vectors
    */
-  add(a: SIMDVector, b: SIMDVector): OperationResult {
-    const startTime = nowMs();
-
-    try {
-      if (a.dimension !== b.dimension || a.type !== b.type) {
-        throw new Error("Vector dimension or type mismatch");
-      }
-
-      const result = new (a.data.constructor as any)(a.data.length);
-
-      // SIMD-like parallel addition
-      for (let i = 0; i < a.data.length; i++) {
-        result[i] = (a.data as any)[i] + (b.data as any)[i];
-      }
-
-      const duration = nowMs() - startTime;
-      this.updateMetrics(a.data.length, duration);
-
-      return {
-        success: true,
-        durationMs: duration,
-        throughput: a.data.length / (duration / 1000),
-        result: {
-          data: result,
-          dimension: a.dimension,
-          type: a.type,
-        },
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        durationMs: nowMs() - startTime,
-        throughput: 0,
-        error: error.message,
-      };
-    }
-  }
-
-  /**
-   * SIMD multiplication
-   */
-  mul(a: SIMDVector, b: SIMDVector): OperationResult {
-    const startTime = nowMs();
-
-    try {
-      if (a.dimension !== b.dimension || a.type !== b.type) {
-        throw new Error("Vector dimension or type mismatch");
-      }
-
-      const result = new (a.data.constructor as any)(a.data.length);
-
-      for (let i = 0; i < a.data.length; i++) {
-        result[i] = (a.data as any)[i] * (b.data as any)[i];
-      }
-
-      const duration = nowMs() - startTime;
-      this.updateMetrics(a.data.length, duration);
-
-      return {
-        success: true,
-        durationMs: duration,
-        throughput: a.data.length / (duration / 1000),
-        result: {
-          data: result,
-          dimension: a.dimension,
-          type: a.type,
-        },
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        durationMs: nowMs() - startTime,
-        throughput: 0,
-        error: error.message,
-      };
-    }
-  }
-
-  /**
-   * Batch operations
-   */
-  batchOperation(
-    vectors: SIMDVector[],
-    operation: SIMDOps,
-    scalar?: number,
+  operate(
+    op: SIMDOps,
+    a: SIMDVector,
+    b?: SIMDVector,
   ): OperationResult {
     const startTime = nowMs();
 
     try {
-      const results: SIMDVector[] = [];
+      let result: Float32Array;
 
-      for (const vector of vectors) {
-        const result = new (vector.data.constructor as any)(vector.data.length);
-
-        for (let i = 0; i < vector.data.length; i++) {
-          const value = (vector.data as any)[i];
-
-          switch (operation) {
-            case "add":
-              result[i] = value + (scalar || 0);
-              break;
-            case "sub":
-              result[i] = value - (scalar || 0);
-              break;
-            case "mul":
-              result[i] = value * (scalar || 1);
-              break;
-            case "div":
-              result[i] = value / (scalar || 1);
-              break;
-            case "sqrt":
-              result[i] = Math.sqrt(value);
-              break;
-            case "abs":
-              result[i] = Math.abs(value);
-              break;
-            default:
-              result[i] = value;
-          }
-        }
-
-        results.push({
-          data: result,
-          dimension: vector.dimension,
-          type: vector.type,
-        });
+      switch (op) {
+        case "add":
+          result = this.add(a.data as Float32Array, b!.data as Float32Array);
+          break;
+        case "sub":
+          result = this.sub(a.data as Float32Array, b!.data as Float32Array);
+          break;
+        case "mul":
+          result = this.mul(a.data as Float32Array, b!.data as Float32Array);
+          break;
+        case "div":
+          result = this.div(a.data as Float32Array, b!.data as Float32Array);
+          break;
+        case "sqrt":
+          result = this.sqrt(a.data as Float32Array);
+          break;
+        case "abs":
+          result = this.abs(a.data as Float32Array);
+          break;
+        default:
+          throw new Error(`Unsupported operation: ${op}`);
       }
 
-      const duration = nowMs() - startTime;
-      const totalElements = vectors.reduce((sum, v) => sum + v.data.length, 0);
-      this.updateMetrics(totalElements, duration);
+      const durationMs = nowMs() - startTime;
+      const throughput = (a.data.length / durationMs) * 1000;
+
+      // Update metrics
+      this.metrics.totalOps++;
+      this.metrics.totalDurationMs += durationMs;
+      this.metrics.avgThroughput =
+        (this.metrics.avgThroughput * (this.metrics.totalOps - 1) + throughput) /
+        this.metrics.totalOps;
+      this.metrics.peakThroughput = Math.max(
+        this.metrics.peakThroughput,
+        throughput,
+      );
 
       return {
         success: true,
-        durationMs: duration,
-        throughput: totalElements / (duration / 1000),
+        durationMs,
+        throughput,
+        result: {
+          data: result,
+          dimension: this.dimension,
+          type: this.type,
+        },
       };
-    } catch (error: any) {
+    } catch (error) {
       return {
         success: false,
         durationMs: nowMs() - startTime,
         throughput: 0,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }
 
-  /**
-   * Update performance metrics
-   */
-  private updateMetrics(elements: number, duration: number): void {
-    this.metrics.totalOps += elements;
-    this.metrics.totalDurationMs += duration;
-    this.metrics.avgThroughput =
-      this.metrics.totalOps / (this.metrics.totalDurationMs / 1000);
-
-    const currentThroughput = elements / (duration / 1000);
-    if (currentThroughput > this.metrics.peakThroughput) {
-      this.metrics.peakThroughput = currentThroughput;
+  // SIMD operations (simulated with standard arrays for now)
+  private add(a: Float32Array, b: Float32Array): Float32Array {
+    const result = new Float32Array(a.length);
+    for (let i = 0; i < a.length; i++) {
+      result[i] = a[i]! + b[i]!;
     }
+    return result;
+  }
+
+  private sub(a: Float32Array, b: Float32Array): Float32Array {
+    const result = new Float32Array(a.length);
+    for (let i = 0; i < a.length; i++) {
+      result[i] = a[i]! - b[i]!;
+    }
+    return result;
+  }
+
+  private mul(a: Float32Array, b: Float32Array): Float32Array {
+    const result = new Float32Array(a.length);
+    for (let i = 0; i < a.length; i++) {
+      result[i] = a[i]! * b[i]!;
+    }
+    return result;
+  }
+
+  private div(a: Float32Array, b: Float32Array): Float32Array {
+    const result = new Float32Array(a.length);
+    for (let i = 0; i < a.length; i++) {
+      result[i] = a[i]! / b[i]!;
+    }
+    return result;
+  }
+
+  private sqrt(a: Float32Array): Float32Array {
+    const result = new Float32Array(a.length);
+    for (let i = 0; i < a.length; i++) {
+      result[i] = Math.sqrt(a[i]!);
+    }
+    return result;
+  }
+
+  private abs(a: Float32Array): Float32Array {
+    const result = new Float32Array(a.length);
+    for (let i = 0; i < a.length; i++) {
+      result[i] = Math.abs(a[i]!);
+    }
+    return result;
   }
 
   /**
@@ -297,6 +223,20 @@ export class SIMDArrayEngine {
   getMetrics(): PerformanceMetrics {
     return { ...this.metrics };
   }
+
+  /**
+   * Reset metrics
+   */
+  resetMetrics(): void {
+    this.metrics = {
+      totalOps: 0,
+      totalDurationMs: 0,
+      avgThroughput: 0,
+      peakThroughput: 0,
+      memoryUsed: 0,
+      cacheHitRate: 0,
+    };
+  }
 }
 
 /**
@@ -304,96 +244,96 @@ export class SIMDArrayEngine {
  */
 export class MemoryPoolManager {
   private config: MemoryPoolConfig;
-  private pool: ArrayBuffer[] = [];
-  private allocated: Set<ArrayBuffer> = new Set();
-  private totalAllocated = 0;
+  private pools: Map<string, ArrayBuffer[]> = new Map();
+  private allocated: Map<string, number> = new Map();
 
   constructor(config: Partial<MemoryPoolConfig> = {}) {
     this.config = {
-      blockSize: config.blockSize || 64 * 1024, // 64KB default
+      blockSize: config.blockSize || 1024 * 1024, // 1MB default
       initialBlocks: config.initialBlocks || 10,
       maxBlocks: config.maxBlocks || 100,
       alignment: config.alignment || 64,
     };
-
-    // Initialize pool
-    for (let i = 0; i < this.config.initialBlocks; i++) {
-      this.pool.push(this.createBlock());
-    }
-
     log.info(
-      `Memory Pool initialized: ${this.config.initialBlocks} blocks of ${this.config.blockSize} bytes`,
+      `MemoryPoolManager initialized: ${this.config.initialBlocks} blocks of ${this.config.blockSize} bytes`,
     );
   }
 
   /**
-   * Create memory block
+   * Allocate memory block
    */
-  private createBlock(): ArrayBuffer {
-    return new ArrayBuffer(this.config.blockSize);
-  }
+  allocate(poolId: string): ArrayBuffer | null {
+    let pool = this.pools.get(poolId);
 
-  /**
-   * Allocate from pool
-   */
-  allocate(size: number): ArrayBuffer | null {
-    if (size > this.config.blockSize) {
-      log.warn(
-        `Allocation size ${size} exceeds block size ${this.config.blockSize}`,
-      );
+    if (!pool) {
+      pool = [];
+      this.pools.set(poolId, pool);
+      this.allocated.set(poolId, 0);
+    }
+
+    // Check if we can allocate more
+    const currentAllocated = this.allocated.get(poolId) || 0;
+    if (currentAllocated >= this.config.maxBlocks) {
+      log.warn(`Memory pool ${poolId} reached max blocks`);
       return null;
     }
 
-    // Find available block
-    for (let i = 0; i < this.pool.length; i++) {
-      const block = this.pool[i];
-      if (!this.allocated.has(block)) {
-        this.allocated.add(block);
-        this.totalAllocated += size;
-        return block;
-      }
+    // Try to reuse from pool
+    if (pool.length > 0) {
+      this.allocated.set(poolId, currentAllocated + 1);
+      return pool.pop()!;
     }
 
-    // Create new block if under max
-    if (this.pool.length < this.config.maxBlocks) {
-      const block = this.createBlock();
-      this.pool.push(block);
-      this.allocated.add(block);
-      this.totalAllocated += size;
-      return block;
-    }
-
-    log.warn("Memory pool exhausted");
-    return null;
+    // Allocate new block
+    const block = new ArrayBuffer(this.config.blockSize);
+    this.allocated.set(poolId, currentAllocated + 1);
+    return block;
   }
 
   /**
-   * Free allocation
+   * Free memory block back to pool
    */
-  free(buffer: ArrayBuffer): boolean {
-    if (this.allocated.has(buffer)) {
-      this.allocated.delete(buffer);
-      this.totalAllocated -= this.config.blockSize;
-      return true;
+  free(poolId: string, block: ArrayBuffer): void {
+    const pool = this.pools.get(poolId);
+    if (pool) {
+      pool.push(block);
+      const currentAllocated = this.allocated.get(poolId) || 0;
+      this.allocated.set(poolId, Math.max(0, currentAllocated - 1));
     }
-    return false;
   }
 
   /**
    * Get pool statistics
    */
   getStats(): {
+    pools: number;
     totalBlocks: number;
     allocatedBlocks: number;
     freeBlocks: number;
-    totalAllocated: number;
   } {
+    let totalBlocks = 0;
+    let allocatedBlocks = 0;
+
+    for (const [poolId, pool] of this.pools.entries()) {
+      totalBlocks += pool.length;
+      allocatedBlocks += this.allocated.get(poolId) || 0;
+    }
+
     return {
-      totalBlocks: this.pool.length,
-      allocatedBlocks: this.allocated.size,
-      freeBlocks: this.pool.length - this.allocated.size,
-      totalAllocated: this.totalAllocated,
+      pools: this.pools.size,
+      totalBlocks,
+      allocatedBlocks,
+      freeBlocks: totalBlocks - allocatedBlocks,
     };
+  }
+
+  /**
+   * Clear all pools
+   */
+  clear(): void {
+    this.pools.clear();
+    this.allocated.clear();
+    log.info("Memory pools cleared");
   }
 }
 
@@ -403,35 +343,28 @@ export class MemoryPoolManager {
 export class OLBCoreEngine {
   private simdEngine: SIMDArrayEngine;
   private memoryPool: MemoryPoolManager;
-  private enabled = false;
+  private enabled: boolean;
 
-  constructor() {
-    this.simdEngine = new SIMDArrayEngine(256, "float32");
+  constructor(enabled: boolean = true) {
+    this.enabled = enabled;
+    this.simdEngine = new SIMDArrayEngine();
     this.memoryPool = new MemoryPoolManager();
-    log.info("OLB Core Engine initialized");
+    log.info(`OLBCoreEngine initialized (enabled: ${enabled})`);
   }
 
   /**
-   * Enable acceleration
-   */
-  enable(): void {
-    this.enabled = true;
-    log.info("OLB acceleration enabled");
-  }
-
-  /**
-   * Disable acceleration
-   */
-  disable(): void {
-    this.enabled = false;
-    log.info("OLB acceleration disabled");
-  }
-
-  /**
-   * Check if enabled
+   * Check if OLB is enabled
    */
   isEnabled(): boolean {
     return this.enabled;
+  }
+
+  /**
+   * Enable/disable OLB
+   */
+  setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
+    log.info(`OLB ${enabled ? "enabled" : "disabled"}`);
   }
 
   /**
@@ -442,64 +375,66 @@ export class OLBCoreEngine {
   }
 
   /**
-   * Get memory pool
+   * Get memory pool manager
    */
   getMemoryPool(): MemoryPoolManager {
     return this.memoryPool;
   }
 
   /**
-   * Benchmark performance
+   * Get combined performance metrics
+   */
+  getMetrics(): {
+    simd: PerformanceMetrics;
+    memory: ReturnType<MemoryPoolManager["getStats"]>;
+    enabled: boolean;
+  } {
+    return {
+      simd: this.simdEngine.getMetrics(),
+      memory: this.memoryPool.getStats(),
+      enabled: this.enabled,
+    };
+  }
+
+  /**
+   * Benchmark OLB performance
    */
   benchmark(): {
-    simdThroughput: number;
-    memoryAllocationSpeed: number;
-    overallScore: number;
+    vectorOps: number;
+    memoryAllocation: number;
+    overall: number;
   } {
-    // SIMD benchmark
-    const vector = this.simdEngine.createVector(new Array(64).fill(1.0));
     const startTime = nowMs();
 
+    // Benchmark vector operations
+    const vecStart = nowMs();
+    const a = this.simdEngine.createVector(new Array(1000).fill(1.0));
+    const b = this.simdEngine.createVector(new Array(1000).fill(2.0));
     for (let i = 0; i < 1000; i++) {
-      this.simdEngine.add(vector, vector);
+      this.simdEngine.operate("add", a, b);
     }
+    const vectorOps = nowMs() - vecStart;
 
-    const simdDuration = nowMs() - startTime;
-    const simdThroughput = (1000 * 64) / (simdDuration / 1000);
-
-    // Memory benchmark
-    const memStartTime = nowMs();
-    const allocations: ArrayBuffer[] = [];
-
+    // Benchmark memory allocation
+    const memStart = nowMs();
     for (let i = 0; i < 100; i++) {
-      const block = this.memoryPool.allocate(1024);
-      if (block) allocations.push(block);
+      const block = this.memoryPool.allocate("benchmark");
+      if (block) {
+        this.memoryPool.free("benchmark", block);
+      }
     }
+    const memoryAllocation = nowMs() - memStart;
 
-    for (const block of allocations) {
-      this.memoryPool.free(block);
-    }
-
-    const memDuration = nowMs() - memStartTime;
-    const memSpeed = 100 / (memDuration / 1000);
-
-    // Overall score (normalized)
-    const overallScore =
-      (simdThroughput / 1000000) * 0.7 + (memSpeed / 1000) * 0.3;
+    const overall = nowMs() - startTime;
 
     return {
-      simdThroughput,
-      memoryAllocationSpeed: memSpeed,
-      overallScore,
+      vectorOps,
+      memoryAllocation,
+      overall,
     };
   }
 }
 
-// Export OLB core utilities
-export const OLBCore = {
-  SIMDArrayEngine,
-  MemoryPoolManager,
-  OLBCoreEngine,
-};
-
-export default OLBCore;
+// Exports
+export { SIMDArrayEngine, MemoryPoolManager, OLBCoreEngine };
+export default OLBCoreEngine;

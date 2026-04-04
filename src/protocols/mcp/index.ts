@@ -1,12 +1,13 @@
 /**
- * MCP (Model Context Protocol) Client
- * 
+ * MCP (Model Context Protocol) Client & Server
+ *
  * Implementation of Anthropic's MCP protocol for tool discovery and invocation
  * Enables integration with MCP-compatible servers
  */
 
 import { createSubsystemLogger } from "../../logging/index.js";
 import type { ToolResult } from "../../types/index.js";
+import { generateId, nowMs } from "../../utils/index.js";
 
 const log = createSubsystemLogger("protocols/mcp");
 
@@ -84,14 +85,11 @@ export interface MCPResource {
   size?: number;
 }
 
-export interface MCPPrompt {
-  name: string;
-  description?: string;
-  arguments?: Array<{
-    name: string;
-    description?: string;
-    required?: boolean;
-  }>;
+export interface MCPResourceContent {
+  uri: string;
+  mimeType?: string;
+  text?: string;
+  blob?: string; // base64 encoded
 }
 
 // ============================================================================
@@ -99,430 +97,571 @@ export interface MCPPrompt {
 // ============================================================================
 
 export class MCPClient {
-  private servers: Map<string, MCPServerConnection> = new Map();
-  private protocolVersion = "2024-11-05";
+  private config: MCPServerConfig;
+  private connected: boolean = false;
+  private serverCapabilities?: MCPHandshakeResponse["capabilities"];
+  private tools: MCPTool[] = [];
+  private resources: MCPResource[] = [];
+
+  constructor(config: MCPServerConfig) {
+    this.config = { timeout: 30000, ...config };
+    log.info(`MCPClient created for: ${config.name}`);
+  }
 
   /**
-   * Connect to an MCP server
+   * Connect to MCP server
    */
-  async connect(config: MCPServerConfig): Promise<boolean> {
-    log.info(`Connecting to MCP server: ${config.name} (${config.id})`);
+  async connect(): Promise<{
+    success: boolean;
+    error?: string;
+    capabilities?: MCPHandshakeResponse["capabilities"];
+  }> {
+    log.info(`Connecting to MCP server: ${this.config.name}`);
 
     try {
-      const connection = new MCPServerConnection(config);
-      const success = await connection.handshake();
-
-      if (success) {
-        this.servers.set(config.id, connection);
-        log.info(`Connected to MCP server: ${config.name}`);
-        return true;
-      }
-
-      log.error(`Failed to handshake with MCP server: ${config.name}`);
-      return false;
-    } catch (error) {
-      log.error(`Error connecting to MCP server: ${config.name}`, error);
-      return false;
-    }
-  }
-
-  /**
-   * Disconnect from an MCP server
-   */
-  async disconnect(serverId: string): Promise<boolean> {
-    const connection = this.servers.get(serverId);
-    if (!connection) {
-      log.warn(`MCP server not found: ${serverId}`);
-      return false;
-    }
-
-    await connection.close();
-    this.servers.delete(serverId);
-    log.info(`Disconnected from MCP server: ${serverId}`);
-    return true;
-  }
-
-  /**
-   * Discover tools from an MCP server
-   */
-  async discoverTools(serverId: string): Promise<MCPTool[]> {
-    const connection = this.servers.get(serverId);
-    if (!connection) {
-      log.error(`MCP server not connected: ${serverId}`);
-      return [];
-    }
-
-    return await connection.listTools();
-  }
-
-  /**
-   * Call a tool on an MCP server
-   */
-  async callTool(
-    serverId: string,
-    toolName: string,
-    args: Record<string, unknown>,
-  ): Promise<ToolResult> {
-    const connection = this.servers.get(serverId);
-    if (!connection) {
-      return {
-        success: false,
-        error: `MCP server not connected: ${serverId}`,
+      const handshakeRequest: MCPHandshakeRequest = {
+        protocolVersion: "2024-11-05",
+        clientInfo: {
+          name: "OpenOxygen",
+          version: "26w15a-dev-26.115.0",
+        },
+        capabilities: {
+          tools: true,
+          resources: true,
+          prompts: false,
+          sampling: false,
+          roots: false,
+        },
       };
-    }
 
-    try {
-      const response = await connection.callTool(toolName, args);
-      
-      if (response.isError) {
-        return {
-          success: false,
-          error: response.content.find(c => c.type === "text")?.text || "Tool execution failed",
-        };
+      const response = await fetch(`${this.config.url}/mcp/handshake`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(this.config.apiKey && { Authorization: `Bearer ${this.config.apiKey}` }),
+        },
+        body: JSON.stringify(handshakeRequest),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Handshake failed: ${response.status} ${response.statusText}`);
       }
 
-      const textContent = response.content.find(c => c.type === "text")?.text;
-      const dataContent = response.content.find(c => c.type === "data")?.data;
+      const handshakeResponse: MCPHandshakeResponse = await response.json();
+      this.serverCapabilities = handshakeResponse.capabilities;
+      this.connected = true;
+
+      log.info(`Connected to MCP server: ${handshakeResponse.serverInfo.name}`);
+
+      // Discover tools and resources
+      if (this.serverCapabilities.tools) {
+        await this.discoverTools();
+      }
+      if (this.serverCapabilities.resources) {
+        await this.discoverResources();
+      }
 
       return {
         success: true,
-        output: dataContent || textContent,
+        capabilities: this.serverCapabilities,
       };
     } catch (error) {
+      log.error(`MCP connection failed: ${error}`);
       return {
         success: false,
-        error: `Tool call failed: ${error}`,
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }
 
   /**
-   * Discover resources from an MCP server
+   * Discover available tools
    */
-  async discoverResources(serverId: string): Promise<MCPResource[]> {
-    const connection = this.servers.get(serverId);
-    if (!connection) {
-      log.error(`MCP server not connected: ${serverId}`);
-      return [];
+  async discoverTools(): Promise<{
+    success: boolean;
+    tools?: MCPTool[];
+    error?: string;
+  }> {
+    if (!this.connected) {
+      return { success: false, error: "Not connected" };
     }
-
-    return await connection.listResources();
-  }
-
-  /**
-   * Read a resource from an MCP server
-   */
-  async readResource(serverId: string, uri: string): Promise<ToolResult> {
-    const connection = this.servers.get(serverId);
-    if (!connection) {
-      return {
-        success: false,
-        error: `MCP server not connected: ${serverId}`,
-      };
-    }
-
-    return await connection.readResource(uri);
-  }
-
-  /**
-   * Discover prompts from an MCP server
-   */
-  async discoverPrompts(serverId: string): Promise<MCPPrompt[]> {
-    const connection = this.servers.get(serverId);
-    if (!connection) {
-      log.error(`MCP server not connected: ${serverId}`);
-      return [];
-    }
-
-    return await connection.listPrompts();
-  }
-
-  /**
-   * Get a prompt from an MCP server
-   */
-  async getPrompt(
-    serverId: string,
-    promptName: string,
-    args?: Record<string, string>,
-  ): Promise<ToolResult> {
-    const connection = this.servers.get(serverId);
-    if (!connection) {
-      return {
-        success: false,
-        error: `MCP server not connected: ${serverId}`,
-      };
-    }
-
-    return await connection.getPrompt(promptName, args);
-  }
-
-  /**
-   * List all connected servers
-   */
-  listServers(): string[] {
-    return Array.from(this.servers.keys());
-  }
-
-  /**
-   * Check if a server is connected
-   */
-  isConnected(serverId: string): boolean {
-    return this.servers.has(serverId);
-  }
-
-  /**
-   * Get server capabilities
-   */
-  getServerCapabilities(serverId: string): MCPHandshakeResponse["capabilities"] | null {
-    const connection = this.servers.get(serverId);
-    return connection?.getCapabilities() || null;
-  }
-}
-
-// ============================================================================
-// MCP Server Connection
-// ============================================================================
-
-class MCPServerConnection {
-  private config: MCPServerConfig;
-  private capabilities?: MCPHandshakeResponse["capabilities"];
-  private sessionId?: string;
-
-  constructor(config: MCPServerConfig) {
-    this.config = config;
-  }
-
-  /**
-   * Perform MCP handshake
-   */
-  async handshake(): Promise<boolean> {
-    const request: MCPHandshakeRequest = {
-      protocolVersion: "2024-11-05",
-      clientInfo: {
-        name: "OpenOxygen",
-        version: "26w14a",
-      },
-      capabilities: {
-        tools: true,
-        resources: true,
-        prompts: true,
-        sampling: true,
-        roots: true,
-      },
-    };
 
     try {
-      log.debug(`Handshaking with ${this.config.url}`);
-      
-      this.capabilities = {
-        tools: true,
-        resources: true,
-        prompts: false,
-        sampling: false,
-        roots: false,
-      };
-      
-      this.sessionId = `mcp-session-${Date.now()}`;
-      
-      return true;
+      const response = await fetch(`${this.config.url}/mcp/tools`, {
+        headers: this.config.apiKey
+          ? { Authorization: `Bearer ${this.config.apiKey}` }
+          : {},
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to discover tools: ${response.status}`);
+      }
+
+      const data = await response.json();
+      this.tools = data.tools || [];
+
+      log.info(`Discovered ${this.tools.length} tools`);
+
+      return { success: true, tools: this.tools };
     } catch (error) {
-      log.error(`Handshake failed: ${error}`);
-      return false;
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
   /**
-   * Get server capabilities
+   * Discover available resources
    */
-  getCapabilities(): MCPHandshakeResponse["capabilities"] | undefined {
-    return this.capabilities;
-  }
-
-  /**
-   * List available tools
-   */
-  async listTools(): Promise<MCPTool[]> {
-    if (!this.capabilities?.tools) {
-      return [];
+  async discoverResources(): Promise<{
+    success: boolean;
+    resources?: MCPResource[];
+    error?: string;
+  }> {
+    if (!this.connected) {
+      return { success: false, error: "Not connected" };
     }
 
-    return [
-      {
-        name: "read_file",
-        description: "Read a file from the filesystem",
-        inputSchema: {
-          type: "object",
-          properties: {
-            path: { type: "string" },
-          },
-          required: ["path"],
-        },
-      },
-      {
-        name: "write_file",
-        description: "Write content to a file",
-        inputSchema: {
-          type: "object",
-          properties: {
-            path: { type: "string" },
-            content: { type: "string" },
-          },
-          required: ["path", "content"],
-        },
-      },
-    ];
+    try {
+      const response = await fetch(`${this.config.url}/mcp/resources`, {
+        headers: this.config.apiKey
+          ? { Authorization: `Bearer ${this.config.apiKey}` }
+          : {},
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to discover resources: ${response.status}`);
+      }
+
+      const data = await response.json();
+      this.resources = data.resources || [];
+
+      log.info(`Discovered ${this.resources.length} resources`);
+
+      return { success: true, resources: this.resources };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
   }
 
   /**
    * Call a tool
    */
   async callTool(
-    toolName: string,
+    name: string,
     args: Record<string, unknown>,
-  ): Promise<MCPToolCallResponse> {
-    log.debug(`Calling tool: ${toolName}`);
-
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Tool ${toolName} executed successfully`,
-        },
-      ],
-    };
-  }
-
-  /**
-   * List available resources
-   */
-  async listResources(): Promise<MCPResource[]> {
-    if (!this.capabilities?.resources) {
-      return [];
+  ): Promise<ToolResult> {
+    if (!this.connected) {
+      return { success: false, error: "Not connected to MCP server" };
     }
 
-    return [
-      {
-        uri: "file:///docs/readme.md",
-        name: "README",
-        description: "Project readme file",
-        mimeType: "text/markdown",
-      },
-    ];
+    log.info(`Calling MCP tool: ${name}`);
+
+    try {
+      const request: MCPToolCallRequest = { name, arguments: args };
+
+      const response = await fetch(`${this.config.url}/mcp/tools/call`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(this.config.apiKey && { Authorization: `Bearer ${this.config.apiKey}` }),
+        },
+        body: JSON.stringify(request),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Tool call failed: ${response.status}`);
+      }
+
+      const result: MCPToolCallResponse = await response.json();
+
+      if (result.isError) {
+        return {
+          success: false,
+          error: result.content.map((c) => c.text).join("\n"),
+        };
+      }
+
+      return {
+        success: true,
+        data: result.content,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
   }
 
   /**
    * Read a resource
    */
   async readResource(uri: string): Promise<ToolResult> {
-    log.debug(`Reading resource: ${uri}`);
+    if (!this.connected) {
+      return { success: false, error: "Not connected to MCP server" };
+    }
 
-    return {
-      success: true,
-      output: { uri, content: "Resource content" },
-    };
+    log.info(`Reading MCP resource: ${uri}`);
+
+    try {
+      const response = await fetch(
+        `${this.config.url}/mcp/resources?uri=${encodeURIComponent(uri)}`,
+        {
+          headers: this.config.apiKey
+            ? { Authorization: `Bearer ${this.config.apiKey}` }
+            : {},
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to read resource: ${response.status}`);
+      }
+
+      const content: MCPResourceContent = await response.json();
+
+      return {
+        success: true,
+        data: content,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
   }
 
   /**
-   * List available prompts
+   * Get available tools
    */
-  async listPrompts(): Promise<MCPPrompt[]> {
-    if (!this.capabilities?.prompts) {
-      return [];
+  getTools(): MCPTool[] {
+    return [...this.tools];
+  }
+
+  /**
+   * Get available resources
+   */
+  getResources(): MCPResource[] {
+    return [...this.resources];
+  }
+
+  /**
+   * Check if connected
+   */
+  isConnected(): boolean {
+    return this.connected;
+  }
+
+  /**
+   * Disconnect from server
+   */
+  disconnect(): void {
+    this.connected = false;
+    this.serverCapabilities = undefined;
+    this.tools = [];
+    this.resources = [];
+    log.info(`Disconnected from MCP server: ${this.config.name}`);
+  }
+}
+
+// ============================================================================
+// MCP Server (Simple Implementation)
+// ============================================================================
+
+export interface MCPServerOptions {
+  name: string;
+  version: string;
+  port?: number;
+  tools?: MCPTool[];
+  resources?: MCPResource[];
+  toolHandlers?: Map<string, (args: Record<string, unknown>) => Promise<ToolResult>>;
+}
+
+export class MCPServer {
+  private options: MCPServerOptions;
+  private running: boolean = false;
+  private httpServer?: any;
+
+  constructor(options: MCPServerOptions) {
+    this.options = { port: 3000, ...options };
+    log.info(`MCPServer created: ${options.name}`);
+  }
+
+  /**
+   * Start MCP server
+   */
+  async start(): Promise<{ success: boolean; error?: string }> {
+    if (this.running) {
+      return { success: false, error: "Server already running" };
     }
 
-    return [
-      {
-        name: "code_review",
-        description: "Review code for best practices",
-        arguments: [
+    try {
+      const { createServer } = await import("node:http");
+
+      this.httpServer = createServer(async (req, res) => {
+        await this.handleRequest(req, res);
+      });
+
+      await new Promise<void>((resolve, reject) => {
+        this.httpServer!.listen(this.options.port, () => {
+          resolve();
+        });
+        this.httpServer!.on("error", reject);
+      });
+
+      this.running = true;
+      log.info(`MCP Server started on port ${this.options.port}`);
+
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * Stop MCP server
+   */
+  async stop(): Promise<void> {
+    if (!this.running || !this.httpServer) {
+      return;
+    }
+
+    await new Promise<void>((resolve) => {
+      this.httpServer!.close(() => resolve());
+    });
+
+    this.running = false;
+    log.info("MCP Server stopped");
+  }
+
+  /**
+   * Handle HTTP request
+   */
+  private async handleRequest(req: any, res: any): Promise<void> {
+    const url = new URL(req.url, `http://localhost:${this.options.port}`);
+
+    // Set CORS headers
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+    if (req.method === "OPTIONS") {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
+    try {
+      switch (url.pathname) {
+        case "/mcp/handshake":
+          await this.handleHandshake(req, res);
+          break;
+        case "/mcp/tools":
+          await this.handleListTools(req, res);
+          break;
+        case "/mcp/tools/call":
+          await this.handleCallTool(req, res);
+          break;
+        case "/mcp/resources":
+          await this.handleListResources(req, res);
+          break;
+        default:
+          res.writeHead(404, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Not found" }));
+      }
+    } catch (error) {
+      log.error(`Request handling error: ${error}`);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Internal server error" }));
+    }
+  }
+
+  private async handleHandshake(req: any, res: any): Promise<void> {
+    const response: MCPHandshakeResponse = {
+      protocolVersion: "2024-11-05",
+      serverInfo: {
+        name: this.options.name,
+        version: this.options.version,
+      },
+      capabilities: {
+        tools: (this.options.tools?.length || 0) > 0,
+        resources: (this.options.resources?.length || 0) > 0,
+        prompts: false,
+        sampling: false,
+        roots: false,
+      },
+    };
+
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(response));
+  }
+
+  private async handleListTools(req: any, res: any): Promise<void> {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ tools: this.options.tools || [] }));
+  }
+
+  private async handleListResources(req: any, res: any): Promise<void> {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ resources: this.options.resources || [] }));
+  }
+
+  private async handleCallTool(req: any, res: any): Promise<void> {
+    if (req.method !== "POST") {
+      res.writeHead(405, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Method not allowed" }));
+      return;
+    }
+
+    // Parse request body
+    const body = await new Promise<string>((resolve) => {
+      let data = "";
+      req.on("data", (chunk: string) => (data += chunk));
+      req.on("end", () => resolve(data));
+    });
+
+    const request: MCPToolCallRequest = JSON.parse(body);
+    const handler = this.options.toolHandlers?.get(request.name);
+
+    if (!handler) {
+      res.writeHead(404, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: `Tool not found: ${request.name}` }));
+      return;
+    }
+
+    try {
+      const result = await handler(request.arguments);
+
+      const response: MCPToolCallResponse = {
+        content: [
           {
-            name: "code",
-            description: "Code to review",
-            required: true,
+            type: "text",
+            text: result.success
+              ? JSON.stringify(result.data)
+              : result.error || "Unknown error",
           },
         ],
-      },
-    ];
-  }
+        isError: !result.success,
+      };
 
-  /**
-   * Get a prompt
-   */
-  async getPrompt(
-    promptName: string,
-    args?: Record<string, string>,
-  ): Promise<ToolResult> {
-    log.debug(`Getting prompt: ${promptName}`);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(response));
+    } catch (error) {
+      const response: MCPToolCallResponse = {
+        content: [
+          {
+            type: "text",
+            text: error instanceof Error ? error.message : String(error),
+          },
+        ],
+        isError: true,
+      };
 
-    return {
-      success: true,
-      output: {
-        name: promptName,
-        prompt: `Prompt template for ${promptName}`,
-        arguments: args,
-      },
-    };
-  }
-
-  /**
-   * Close connection
-   */
-  async close(): Promise<void> {
-    log.debug(`Closing connection to ${this.config.url}`);
-    this.sessionId = undefined;
-  }
-}
-
-// ============================================================================
-// MCP Tool Adapter
-// ============================================================================
-
-export class MCPToolAdapter {
-  private mcpClient: MCPClient;
-
-  constructor(mcpClient: MCPClient) {
-    this.mcpClient = mcpClient;
-  }
-
-  /**
-   * Convert MCP tool to OpenOxygen skill
-   */
-  convertToSkill(serverId: string, tool: MCPTool): any {
-    return {
-      id: `mcp.${serverId}.${tool.name}`,
-      name: `MCP: ${tool.description || tool.name}`,
-      description: tool.description,
-      category: "mcp",
-      parameters: Object.entries(tool.inputSchema.properties).map(([key, value]) => ({
-        name: key,
-        type: (value as any).type,
-        required: tool.inputSchema.required?.includes(key) || false,
-        description: (value as any).description,
-      })),
-      handler: async (args: Record<string, unknown>) => {
-        return this.mcpClient.callTool(serverId, tool.name, args);
-      },
-    };
-  }
-
-  /**
-   * Discover and register all tools from a server
-   */
-  async discoverAndRegister(serverId: string, skillRegistry: any): Promise<number> {
-    const tools = await this.mcpClient.discoverTools(serverId);
-    
-    for (const tool of tools) {
-      const skill = this.convertToSkill(serverId, tool);
-      skillRegistry.register(skill);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(response));
     }
+  }
 
-    log.info(`Registered ${tools.length} MCP tools from ${serverId}`);
-    return tools.length;
+  /**
+   * Check if server is running
+   */
+  isRunning(): boolean {
+    return this.running;
   }
 }
 
 // ============================================================================
-// Singleton Export
+// MCP Manager
 // ============================================================================
 
-export const mcpClient = new MCPClient();
+export class MCPManager {
+  private clients: Map<string, MCPClient> = new Map();
+  private servers: Map<string, MCPServer> = new Map();
+
+  /**
+   * Add MCP client
+   */
+  addClient(config: MCPServerConfig): MCPClient {
+    const client = new MCPClient(config);
+    this.clients.set(config.id, client);
+    return client;
+  }
+
+  /**
+   * Get MCP client
+   */
+  getClient(id: string): MCPClient | undefined {
+    return this.clients.get(id);
+  }
+
+  /**
+   * Remove MCP client
+   */
+  removeClient(id: string): boolean {
+    const client = this.clients.get(id);
+    if (client) {
+      client.disconnect();
+      return this.clients.delete(id);
+    }
+    return false;
+  }
+
+  /**
+   * Add MCP server
+   */
+  addServer(options: MCPServerOptions): MCPServer {
+    const server = new MCPServer(options);
+    this.servers.set(options.name, server);
+    return server;
+  }
+
+  /**
+   * Get MCP server
+   */
+  getServer(name: string): MCPServer | undefined {
+    return this.servers.get(name);
+  }
+
+  /**
+   * List all clients
+   */
+  listClients(): MCPClient[] {
+    return Array.from(this.clients.values());
+  }
+
+  /**
+   * List all servers
+   */
+  listServers(): MCPServer[] {
+    return Array.from(this.servers.values());
+  }
+}
+
+// ============================================================================
+// Exports
+// ============================================================================
+
+export {
+  MCPClient,
+  MCPServer,
+  MCPManager,
+  type MCPServerConfig,
+  type MCPHandshakeRequest,
+  type MCPHandshakeResponse,
+  type MCPTool,
+  type MCPToolCallRequest,
+  type MCPToolCallResponse,
+  type MCPResource,
+  type MCPResourceContent,
+  type MCPServerOptions,
+};
+
+export default MCPManager;
