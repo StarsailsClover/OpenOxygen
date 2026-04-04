@@ -151,7 +151,11 @@ export class MemoryManager {
         const startTime = nowMs();
         const paths = opts?.paths ?? this.config.extraPaths ?? [];
         if (!opts?.force && nowMs() - this.lastSyncTime < 60_000) {
+<<<<<<< HEAD
             log.debug("Skipping sync �?too recent");
+=======
+            log.debug("Skipping sync — too recent");
+>>>>>>> dev
             return { indexed: 0, chunks: 0 };
         }
         log.info(`Memory sync started (${paths.length} paths)`);

@@ -15,7 +15,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { resolveStateDir } from "../../core/config/index.js";
 const log = createSubsystemLogger("marketplace");
+<<<<<<< HEAD
 // ══════════════════════════════════════════════════════════════════════════�?
+=======
+// ═══════════════════════════════════════════════════════════════════════════
+>>>>>>> dev
 // Plugin Integrity & Signing
 // ══════════════════════════════════════════════════════════════════════════�?
 export function computePluginHash(pluginDir) {
@@ -94,7 +98,11 @@ export class PluginRepository {
             if (metaPath) {
                 meta = JSON.parse(fs.readFileSync(metaPath, "utf-8"));
             }
+<<<<<<< HEAD
             // 计算完整性哈�?
+=======
+            // 计算完整性哈希
+>>>>>>> dev
             const hash = computePluginHash(path.dirname(clawJsonPath));
             // 安全审计
             const audit = this.auditPermissions(manifest.permissions);
@@ -102,7 +110,11 @@ export class PluginRepository {
                 log.error(`Plugin ${manifest.name} blocked: dangerous permissions [${audit.blocked.join(", ")}]`);
                 return null;
             }
+<<<<<<< HEAD
             // 复制到本地仓�?
+=======
+            // 复制到本地仓库
+>>>>>>> dev
             const destDir = path.join(this.pluginsDir, manifest.name);
             if (!fs.existsSync(destDir)) {
                 fs.mkdirSync(destDir, { recursive: true });
@@ -132,7 +144,11 @@ export class PluginRepository {
      * 安装本地插件
      */
     installLocal(pluginDir) {
+<<<<<<< HEAD
         // 查找 manifest（支�?claw.json �?manifest.json�?
+=======
+        // 查找 manifest（支持 claw.json 或 manifest.json）
+>>>>>>> dev
         const manifestPath = findFile(pluginDir, "claw.json") || findFile(pluginDir, "manifest.json");
         if (!manifestPath) {
             log.error(`No manifest found in ${pluginDir}`);
@@ -175,7 +191,11 @@ export class PluginRepository {
         return true;
     }
     /**
+<<<<<<< HEAD
      * 列出已安装插�?
+=======
+     * 列出已安装插件
+>>>>>>> dev
      */
     list() {
         return [...this.installed.values()];
@@ -187,7 +207,11 @@ export class PluginRepository {
         return this.installed.get(name);
     }
     /**
+<<<<<<< HEAD
      * 搜索插件（本地已安装�?
+=======
+     * 搜索插件（本地已安装）
+>>>>>>> dev
      */
     search(query) {
         const lower = query.toLowerCase();
@@ -196,7 +220,11 @@ export class PluginRepository {
             p.manifest.tags.some((t) => t.toLowerCase().includes(lower)));
     }
     /**
+<<<<<<< HEAD
      * 验证插件完整�?
+=======
+     * 验证插件完整性
+>>>>>>> dev
      */
     verifyIntegrity(name) {
         const plugin = this.installed.get(name);

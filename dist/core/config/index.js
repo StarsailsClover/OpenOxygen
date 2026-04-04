@@ -1,9 +1,17 @@
 /**
+<<<<<<< HEAD
  * OpenOxygen �?Configuration System
  *
  * 配置加载、验证、热重载�?
  * 支持 openoxygen.json + .env + 环境变量三级覆盖�?
  * 兼容 OpenClaw �?openclaw.json 配置格式（通过 compat 层转译）�?
+=======
+ * OpenOxygen - Configuration System
+ *
+ * 配置加载、验证、热重载。
+ * 支持 openoxygen.json + .env + 环境变量三级覆盖。
+ * 兼容 OpenClaw 的 openclaw.json 配置格式（通过 compat 层转换）。
+>>>>>>> dev
  */
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -11,7 +19,7 @@ import process from "node:process";
 import { createSubsystemLogger } from "../../logging/index.js";
 import { resolveUserPath } from "../../utils/index.js";
 const log = createSubsystemLogger("config");
-// ─── Paths ──────────────────────────────────────────────────────────────────
+// === Paths ===
 const DEFAULT_STATE_DIR = "~/.openoxygen";
 const DEFAULT_CONFIG_FILENAME = "openoxygen.json";
 export function resolveStateDir(env = process.env) {
@@ -23,7 +31,7 @@ export function resolveConfigPath(env = process.env) {
     }
     return path.join(resolveStateDir(env), DEFAULT_CONFIG_FILENAME);
 }
-// ─── Defaults ───────────────────────────────────────────────────────────────
+// === Defaults ===
 export function createDefaultConfig() {
     return {
         version: "0.1.0",
@@ -48,6 +56,7 @@ export function createDefaultConfig() {
         agents: { list: [] },
         channels: [],
         plugins: [],
+<<<<<<< HEAD
     };
 }
 // ─── Dotenv ─────────────────────────────────────────────────────────────────
@@ -145,10 +154,30 @@ function applyEnvOverrides(config, env) {
     // Gateway
     if (env["OPENOXYGEN_GATEWAY_PORT"]) {
         config.gateway.port = parseInt(env["OPENOXYGEN_GATEWAY_PORT"], 10);
+=======
+    };
+}
+// === Load Config ===
+/**
+ * Load configuration from all sources
+ */
+export async function loadConfig(options = {}) {
+    const env = options.env ?? process.env;
+    const configPath = options.configPath ?? resolveConfigPath(env);
+    log.info(`Loading config from: ${configPath}`);
+    // Start with defaults
+    let config = createDefaultConfig();
+    // Load from file
+    try {
+        const fileConfig = await loadConfigFromFile(configPath);
+        config = mergeConfig(config, fileConfig);
+        log.debug("Loaded config from file");
+>>>>>>> dev
     }
-    if (env["OPENOXYGEN_GATEWAY_HOST"]) {
-        config.gateway.host = env["OPENOXYGEN_GATEWAY_HOST"];
+    catch (error) {
+        log.warn(`Failed to load config file: ${error}`);
     }
+<<<<<<< HEAD
     if (env["OPENOXYGEN_GATEWAY_TOKEN"]) {
         config.gateway.auth = {
             mode: "token",
@@ -170,13 +199,110 @@ function applyEnvOverrides(config, env) {
             if (existing) {
                 existing.apiKey = key;
             }
+=======
+    // Override with environment variables
+    const envConfig = loadConfigFromEnv(env);
+    config = mergeConfig(config, envConfig);
+    // Validate
+    const validation = validateConfig(config);
+    if (!validation.valid) {
+        throw new Error(`Config validation failed: ${validation.errors.join(", ")}`);
+    }
+    log.info("Config loaded successfully");
+    return config;
+}
+/**
+ * Load config from JSON file
+ */
+async function loadConfigFromFile(configPath) {
+    const content = await fs.readFile(configPath, "utf-8");
+    return JSON.parse(content);
+}
+/**
+ * Load config from environment variables
+ */
+function loadConfigFromEnv(env) {
+    const config = {};
+    // Gateway settings
+    if (env.OPENOXYGEN_GATEWAY_HOST) {
+        config.gateway = { ...config.gateway, host: env.OPENOXYGEN_GATEWAY_HOST };
+    }
+    if (env.OPENOXYGEN_GATEWAY_PORT) {
+        config.gateway = { ...config.gateway, port: parseInt(env.OPENOXYGEN_GATEWAY_PORT, 10) };
+    }
+    // Model settings
+    const models = [];
+    if (env.OPENAI_API_KEY) {
+        models.push({
+            provider: "openai",
+            model: env.OPENAI_MODEL || "gpt-4o-mini",
+            apiKey: env.OPENAI_API_KEY,
+        });
+    }
+    if (env.ANTHROPIC_API_KEY) {
+        models.push({
+            provider: "anthropic",
+            model: env.ANTHROPIC_MODEL || "claude-sonnet-4-20250514",
+            apiKey: env.ANTHROPIC_API_KEY,
+        });
+    }
+    if (models.length > 0) {
+        config.models = models;
+    }
+    // Security settings
+    if (env.OPENOXYGEN_AUDIT_ENABLED) {
+        config.security = {
+            ...config.security,
+            auditEnabled: env.OPENOXYGEN_AUDIT_ENABLED === "1" || env.OPENOXYGEN_AUDIT_ENABLED === "true",
+        };
+    }
+    return config;
+}
+/**
+ * Merge two config objects
+ */
+function mergeConfig(base, override) {
+    return {
+        ...base,
+        ...override,
+        gateway: { ...base.gateway, ...override.gateway },
+        security: { ...base.security, ...override.security },
+        memory: { ...base.memory, ...override.memory },
+        vision: { ...base.vision, ...override.vision },
+        models: override.models ?? base.models,
+        agents: { ...base.agents, ...override.agents },
+        channels: override.channels ?? base.channels,
+        plugins: override.plugins ?? base.plugins,
+    };
+}
+/**
+ * Validate configuration
+ */
+export function validateConfig(config) {
+    const errors = [];
+    // Check gateway settings
+    if (!config.gateway?.host) {
+        errors.push("Gateway host is required");
+    }
+    if (!config.gateway?.port || config.gateway.port < 1 || config.gateway.port > 65535) {
+        errors.push("Gateway port must be between 1 and 65535");
+    }
+    // Check models
+    for (const model of config.models || []) {
+        if (!model.provider) {
+            errors.push("Model provider is required");
+        }
+        if (!model.model) {
+            errors.push("Model name is required");
+>>>>>>> dev
         }
     }
-    // Security
-    if (env["OPENOXYGEN_AUDIT_ENABLED"]) {
-        config.security.auditEnabled = env["OPENOXYGEN_AUDIT_ENABLED"] === "1";
-    }
+    return {
+        valid: errors.length === 0,
+        errors,
+    };
 }
+<<<<<<< HEAD
 // ─── Config Write ───────────────────────────────────────────────────────────
 export async function writeConfig(config, configPath) {
     const resolved = configPath ?? resolveConfigPath();
@@ -199,11 +325,51 @@ export async function hasConfigChanged(configPath) {
     if (!cachedConfigHash)
         return true;
     const resolved = configPath ?? resolveConfigPath();
+=======
+// === DotEnv Loading ===
+/**
+ * Load .env file
+ */
+export async function loadDotEnv(envPath) {
+    const dotenvPath = envPath ?? path.join(process.cwd(), ".env");
+>>>>>>> dev
     try {
-        const raw = await fs.readFile(resolved, "utf-8");
-        return simpleHash(raw) !== cachedConfigHash;
+        const content = await fs.readFile(dotenvPath, "utf-8");
+        const lines = content.split("\n");
+        for (const line of lines) {
+            const trimmed = line.trim();
+            // Skip comments and empty lines
+            if (!trimmed || trimmed.startsWith("#")) {
+                continue;
+            }
+            const equalIndex = trimmed.indexOf("=");
+            if (equalIndex === -1) {
+                continue;
+            }
+            const key = trimmed.slice(0, equalIndex).trim();
+            let value = trimmed.slice(equalIndex + 1).trim();
+            // Remove quotes
+            if ((value.startsWith('"') && value.endsWith('"')) ||
+                (value.startsWith("'") && value.endsWith("'"))) {
+                value = value.slice(1, -1);
+            }
+            // Only set if not already in environment
+            if (!process.env[key]) {
+                process.env[key] = value;
+            }
+        }
+        log.debug(`Loaded .env from: ${dotenvPath}`);
     }
-    catch {
-        return true;
+    catch (error) {
+        // .env file is optional
+        log.debug(`No .env file found at: ${dotenvPath}`);
     }
 }
+export default {
+    load: loadConfig,
+    validate: validateConfig,
+    loadDotEnv,
+    createDefault: createDefaultConfig,
+    resolveStateDir,
+    resolveConfigPath,
+};

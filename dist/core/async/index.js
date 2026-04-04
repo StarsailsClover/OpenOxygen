@@ -12,7 +12,11 @@
 import { createSubsystemLogger } from "../../logging/index.js";
 import { generateId, nowMs } from "../../utils/index.js";
 const log = createSubsystemLogger("async/compute");
+<<<<<<< HEAD
 // ══════════════════════════════════════════════════════════════════════════�?
+=======
+// ═══════════════════════════════════════════════════════════════════════════
+>>>>>>> dev
 // Thread Pool Manager
 // ══════════════════════════════════════════════════════════════════════════�?
 export class ThreadPool {
@@ -51,7 +55,11 @@ export class ThreadPool {
         });
     }
     /**
+<<<<<<< HEAD
      * 优先级调�?
+=======
+     * 优先级调度
+>>>>>>> dev
      */
     schedule() {
         if (this.currentConcurrency >= this.maxConcurrency)
@@ -99,7 +107,11 @@ export class ThreadPool {
         return false;
     }
     /**
+<<<<<<< HEAD
      * 获取当前状�?
+=======
+     * 获取当前状态
+>>>>>>> dev
      */
     getStatus() {
         return {
@@ -116,24 +128,40 @@ export class GPUDispatcher {
         this.detectDevices();
     }
     detectDevices() {
+<<<<<<< HEAD
         // 实际实现需要调�?native 模块检�?GPU
+=======
+        // 实际实现需要调用 native 模块检测 GPU
+>>>>>>> dev
         // 这里提供框架接口
         log.info("GPU device detection (requires native module)");
     }
     /**
+<<<<<<< HEAD
      * 选择最�?GPU 设备
+=======
+     * 选择最优 GPU 设备
+>>>>>>> dev
      */
     selectDevice(hints) {
         const available = this.devices.filter((d) => d.isAvailable);
         if (available.length === 0)
             return null;
         if (hints.gpuMemoryMB) {
+<<<<<<< HEAD
             // 选择满足显存要求的最小设�?
+=======
+            // 选择满足显存要求的最小设备
+>>>>>>> dev
             return (available
                 .filter((d) => d.memoryMB >= hints.gpuMemoryMB)
                 .sort((a, b) => a.memoryMB - b.memoryMB)[0] || null);
         }
+<<<<<<< HEAD
         // 默认选择第一个可用设�?
+=======
+        // 默认选择第一个可用设备
+>>>>>>> dev
         return available[0] || null;
     }
     /**
@@ -144,7 +172,11 @@ export class GPUDispatcher {
         if (!device) {
             throw new Error("No suitable GPU device available");
         }
+<<<<<<< HEAD
         // 添加到设备队�?
+=======
+        // 添加到设备队列
+>>>>>>> dev
         const queue = this.deviceQueues.get(device.id) || [];
         queue.push(task);
         this.deviceQueues.set(device.id, queue);
@@ -205,7 +237,11 @@ export class AsyncComputeStack {
     async batch(tasks, options = {}) {
         const limit = options.concurrency || this.threadPool.getStatus().maxConcurrency;
         const results = [];
+<<<<<<< HEAD
         // 使用 p-limit 风格的并发控�?
+=======
+        // 使用 p-limit 风格的并发控制
+>>>>>>> dev
         const executing = [];
         for (let i = 0; i < tasks.length; i++) {
             const task = tasks[i];

@@ -1,5 +1,9 @@
 /**
+<<<<<<< HEAD
  * OpenOxygen �?Multi-Agent Runtime (26w15aD Phase 5)
+=======
+ * OpenOxygen - Multi-Agent Runtime
+>>>>>>> dev
  *
  * �?Agent 运行时系�?
  * Agent 协调、任务委派、断点续�?
@@ -48,8 +52,8 @@ export function getAgent(agentId) {
 }
 /**
  * List all agents
- * @param filter - Optional filter
  */
+<<<<<<< HEAD
 export function listAgents(filter) {
     let result = Array.from(agents.values());
     if (filter?.type) {
@@ -62,11 +66,16 @@ export function listAgents(filter) {
         result = result.filter((a) => a.capabilities.includes(filter.capability));
     }
     return result;
+=======
+export function listAgents() {
+    return Array.from(agents.values());
+>>>>>>> dev
 }
 /**
- * Find best agent for task
- * @param requiredCapabilities - Required capabilities
+ * Find best agent for task based on capabilities
+ * @param capabilities - Required capabilities
  */
+<<<<<<< HEAD
 export function findBestAgent(requiredCapabilities) {
     const candidates = listAgents({ status: "idle" }).filter((agent) => requiredCapabilities.every((cap) => agent.capabilities.includes(cap)));
     if (candidates.length === 0) {
@@ -79,12 +88,25 @@ export function findBestAgent(requiredCapabilities) {
         return scoreB - scoreA;
     });
     return candidates[0];
+=======
+export function findBestAgent(capabilities) {
+    const candidates = Array.from(agents.values()).filter((agent) => agent.status === "idle" &&
+        capabilities.every((cap) => agent.capabilities.includes(cap)));
+    if (candidates.length === 0) {
+        return null;
+    }
+    // Sort by number of matching capabilities (prefer specialists)
+    candidates.sort((a, b) => b.capabilities.filter((cap) => capabilities.includes(cap)).length -
+        a.capabilities.filter((cap) => capabilities.includes(cap)).length);
+    return candidates[0] || null;
+>>>>>>> dev
 }
 /**
  * Delegate task to agent
  * @param instruction - Task instruction
- * @param options - Delegation options
+ * @param capabilities - Required capabilities
  */
+<<<<<<< HEAD
 export async function delegateTask(instruction, options = {}) {
     log.info(`Delegating task: ${instruction.substring(0, 50)}...`);
     // Find agent
@@ -98,13 +120,13 @@ export async function delegateTask(instruction, options = {}) {
     if (!agent && options.requiredCapabilities) {
         agent = findBestAgent(options.requiredCapabilities);
     }
+=======
+export function delegateTask(instruction, capabilities) {
+    const agent = findBestAgent(capabilities);
+>>>>>>> dev
     if (!agent) {
-        agent = findBestAgent(["terminal"]);
+        throw new Error(`No available agent with capabilities: ${capabilities.join(", ")}`);
     }
-    if (!agent) {
-        throw new Error("No available agent for task");
-    }
-    // Create assignment
     const assignment = {
         id: generateId("task"),
         agentId: agent.id,
@@ -116,12 +138,11 @@ export async function delegateTask(instruction, options = {}) {
     // Update agent status
     agent.status = "busy";
     agent.currentTask = assignment.id;
-    log.info(`Task ${assignment.id} assigned to agent ${agent.name}`);
-    // Execute task (async)
-    executeTaskAsync(assignment, options.timeoutMs, options.allowRetry);
+    log.info(`Task ${assignment.id} delegated to ${agent.name}`);
     return assignment;
 }
 /**
+<<<<<<< HEAD
  * Execute task asynchronously
  */
 async function executeTaskAsync(assignment, timeoutMs = 30000, allowRetry = true) {
@@ -173,117 +194,121 @@ async function executeTaskAsync(assignment, timeoutMs = 30000, allowRetry = true
     }
 }
 /**
+=======
+>>>>>>> dev
  * Get task assignment
- * @param assignmentId - Assignment ID
+ * @param taskId - Task ID
  */
+<<<<<<< HEAD
 export function getAssignment(assignmentId) {
     return assignments.get(assignmentId);
+=======
+export function getAssignment(taskId) {
+    return assignments.get(taskId);
+>>>>>>> dev
 }
 /**
  * Wait for task completion
- * @param assignmentId - Assignment ID
- * @param timeoutMs - Timeout
+ * @param taskId - Task ID
+ * @param timeout - Timeout in ms
  */
-export async function waitForTask(assignmentId, timeoutMs = 60000) {
+export async function waitForTask(taskId, timeout = 60000) {
     const startTime = nowMs();
-    while (nowMs() - startTime < timeoutMs) {
-        const assignment = getAssignment(assignmentId);
+    while (nowMs() - startTime < timeout) {
+        const assignment = assignments.get(taskId);
         if (!assignment) {
-            throw new Error(`Assignment not found: ${assignmentId}`);
+            throw new Error(`Task not found: ${taskId}`);
         }
         if (assignment.status === "completed" || assignment.status === "failed") {
             return assignment;
         }
-        await sleep(100);
+        await new Promise((resolve) => setTimeout(resolve, 100));
     }
-    throw new Error(`Timeout waiting for task: ${assignmentId}`);
+    throw new Error(`Timeout waiting for task: ${taskId}`);
 }
 /**
- * Save checkpoint
+ * Save checkpoint for task
  * @param taskId - Task ID
  * @param data - Checkpoint data
  */
 export function saveCheckpoint(taskId, data) {
     checkpoints.set(taskId, {
+<<<<<<< HEAD
         ...data,
+=======
+        data,
+>>>>>>> dev
         timestamp: nowMs(),
     });
-    // Also save to persistent memory
-    try {
-        const memory = new GlobalMemory(".state", ".state/checkpoints.db");
-        memory.setPreference(`checkpoint_${taskId}`, JSON.stringify(data));
-        memory.close();
-    }
-    catch (error) {
-        log.error(`Failed to save checkpoint: ${error.message}`);
-    }
-    log.debug(`Checkpoint saved: ${taskId}`);
+    // Also persist to global memory
+    const memory = new GlobalMemory();
+    memory.setPreference(`checkpoint:${taskId}`, {
+        data,
+        timestamp: nowMs(),
+    });
+    log.debug(`Checkpoint saved for task ${taskId}`);
 }
 /**
- * Load checkpoint
+ * Load checkpoint for task
  * @param taskId - Task ID
  */
 export function loadCheckpoint(taskId) {
     // Try memory first
+    const memory = new GlobalMemory();
+    const fromMemory = memory.getPreference(`checkpoint:${taskId}`);
+    if (fromMemory) {
+        return fromMemory.data;
+    }
+    // Fallback to local storage
     const checkpoint = checkpoints.get(taskId);
-    if (checkpoint) {
-        return checkpoint;
-    }
-    // Try persistent storage
-    try {
-        const memory = new GlobalMemory(".state", ".state/checkpoints.db");
-        const data = memory.getPreference(`checkpoint_${taskId}`);
-        memory.close();
-        if (data) {
-            return JSON.parse(data);
-        }
-    }
-    catch (error) {
-        log.error(`Failed to load checkpoint: ${error.message}`);
-    }
-    return null;
+    return checkpoint?.data || null;
 }
 /**
  * Resume task from checkpoint
  * @param taskId - Task ID
- * @param instruction - Original instruction
  */
-export async function resumeTask(taskId, instruction) {
-    log.info(`Resuming task: ${taskId}`);
+export async function resumeTask(taskId) {
     const checkpoint = loadCheckpoint(taskId);
     if (!checkpoint) {
-        // No checkpoint, start fresh
-        return delegateTask(instruction);
+        throw new Error(`No checkpoint found for task: ${taskId}`);
     }
+<<<<<<< HEAD
     // Delegate with checkpoint context
     return delegateTask(instruction, {
         timeoutMs: 60000,
         allowRetry: true,
     });
+=======
+    const assignment = assignments.get(taskId);
+    if (!assignment) {
+        throw new Error(`Task not found: ${taskId}`);
+    }
+    assignment.status = "running";
+    assignment.checkpoint = checkpoint;
+    log.info(`Task ${taskId} resumed from checkpoint`);
+    return assignment;
+>>>>>>> dev
 }
 /**
  * Cancel task
- * @param assignmentId - Assignment ID
+ * @param taskId - Task ID
  */
-export function cancelTask(assignmentId) {
-    const assignment = assignments.get(assignmentId);
+export function cancelTask(taskId) {
+    const assignment = assignments.get(taskId);
     if (!assignment) {
         return false;
     }
-    if (assignment.status === "running") {
-        assignment.status = "failed";
-        assignment.error = "Cancelled by user";
-        assignment.endTime = nowMs();
-        // Update agent
-        const agent = getAgent(assignment.agentId);
-        if (agent) {
-            agent.status = "idle";
-            agent.currentTask = undefined;
-        }
-        log.info(`Task cancelled: ${assignmentId}`);
-        return true;
+    assignment.status = "failed";
+    assignment.error = "Cancelled by user";
+    assignment.endTime = nowMs();
+    // Free agent
+    const agent = agents.get(assignment.agentId);
+    if (agent) {
+        agent.status = "idle";
+        agent.currentTask = undefined;
     }
-    return false;
+    log.info(`Task ${taskId} cancelled`);
+    return true;
 }
 /**
  * Get task statistics
@@ -292,6 +317,7 @@ export function getTaskStatistics() {
     const all = Array.from(assignments.values());
     return {
         total: all.length,
+<<<<<<< HEAD
         completed: all.filter((a) => a.status === "completed").length,
         failed: all.filter((a) => a.status === "failed").length,
         pending: all.filter((a) => a.status === "pending").length,
@@ -301,20 +327,38 @@ export function getTaskStatistics() {
 // Helper
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
+=======
+        pending: all.filter((a) => a.status === "pending").length,
+        running: all.filter((a) => a.status === "running").length,
+        completed: all.filter((a) => a.status === "completed").length,
+        failed: all.filter((a) => a.status === "failed").length,
+    };
 }
-// Export all functions
-export default {
-    registerAgent,
-    unregisterAgent,
-    getAgent,
-    listAgents,
-    findBestAgent,
-    delegateTask,
-    getAssignment,
-    waitForTask,
-    saveCheckpoint,
-    loadCheckpoint,
-    resumeTask,
-    cancelTask,
-    getTaskStatistics,
-};
+/**
+ * Update agent heartbeat
+ * @param agentId - Agent ID
+ */
+export function updateHeartbeat(agentId) {
+    const agent = agents.get(agentId);
+    if (agent) {
+        agent.lastHeartbeat = nowMs();
+    }
+>>>>>>> dev
+}
+/**
+ * Check for stale agents
+ * @param maxAgeMs - Maximum age in ms
+ */
+export function checkStaleAgents(maxAgeMs = 60000) {
+    const now = nowMs();
+    const stale = [];
+    for (const agent of agents.values()) {
+        if (now - agent.lastHeartbeat > maxAgeMs) {
+            agent.status = "offline";
+            stale.push(agent);
+        }
+    }
+    return stale;
+}
+// Exports
+export { agents, assignments, checkpoints };

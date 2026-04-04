@@ -24,9 +24,15 @@ const TEMPFS_CONFIG = {
     dirMode: 0o700,
     // 自动清理间隔: 5 分钟
     cleanupIntervalMs: 5 * 60 * 1000,
+<<<<<<< HEAD
     // 文件最大存活时�? 1 小时
     maxAgeMs: 60 * 60 * 1000,
     // 敏感文件最大存活时�? 5 分钟
+=======
+    // 文件最大存活时间: 1 小时
+    maxAgeMs: 60 * 60 * 1000,
+    // 敏感文件最大存活时间: 5 分钟
+>>>>>>> dev
     sensitiveMaxAgeMs: 5 * 60 * 1000,
     // 内存加密密钥派生参数
     keyDerivation: {
@@ -51,19 +57,31 @@ export class SecureTempDirectory {
     }
     initialize() {
         try {
+<<<<<<< HEAD
             // 创建隔离目录，权�?0700
+=======
+            // 创建隔离目录，权限 0700
+>>>>>>> dev
             if (!existsSync(this.basePath)) {
                 mkdirSync(this.basePath, {
                     recursive: true,
                     mode: TEMPFS_CONFIG.dirMode,
                 });
             }
+<<<<<<< HEAD
             // 确保权限正确（Windows 忽略，Linux/macOS 生效�?
+=======
+            // 确保权限正确（Windows 忽略，Linux/macOS 生效）
+>>>>>>> dev
             try {
                 chmodSync(this.basePath, TEMPFS_CONFIG.dirMode);
             }
             catch {
+<<<<<<< HEAD
                 // Windows 不支�?chmod，忽略错�?
+=======
+                // Windows 不支持 chmod，忽略错误
+>>>>>>> dev
             }
             // 启动自动清理
             this.startCleanupTimer();
@@ -106,8 +124,13 @@ export class SecureTempDirectory {
         for (const file of files) {
             try {
                 const stat = readFileSync(file);
+<<<<<<< HEAD
                 // 简化的过期检查：实际应使�?stat.mtime
                 // 这里依赖 SecureTempFile 的自动清�?
+=======
+                // 简化的过期检查：实际应使用 stat.mtime
+                // 这里依赖 SecureTempFile 的自动清理
+>>>>>>> dev
             }
             catch {
                 // 忽略错误
@@ -115,11 +138,19 @@ export class SecureTempDirectory {
         }
     }
     /**
+<<<<<<< HEAD
      * 销毁整个临时目�?
      */
     destroy() {
         this.stopCleanupTimer();
         // 清理所有活跃文�?
+=======
+     * 销毁整个临时目录
+     */
+    destroy() {
+        this.stopCleanupTimer();
+        // 清理所有活跃文件
+>>>>>>> dev
         for (const filepath of this.activeFiles) {
             try {
                 unlinkSync(filepath);
@@ -160,7 +191,11 @@ export class SecureTempDirectory {
         }
     }
 }
+<<<<<<< HEAD
 // ══════════════════════════════════════════════════════════════════════════�?
+=======
+// ═══════════════════════════════════════════════════════════════════════════
+>>>>>>> dev
 // Secure Temp File
 // ══════════════════════════════════════════════════════════════════════════�?
 export class SecureTempFile {
@@ -296,9 +331,15 @@ export class SecureTempFile {
         return Buffer.concat([decipher.update(encrypted), decipher.final()]);
     }
 }
+<<<<<<< HEAD
 // ══════════════════════════════════════════════════════════════════════════�?
 // Global Instance
 // ══════════════════════════════════════════════════════════════════════════�?
+=======
+// ═══════════════════════════════════════════════════════════════════════════
+// Global Instance
+// ═══════════════════════════════════════════════════════════════════════════
+>>>>>>> dev
 let globalTempDir = null;
 export function getSecureTempDir() {
     if (!globalTempDir) {

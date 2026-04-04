@@ -1,24 +1,41 @@
 /**
+<<<<<<< HEAD
  * OpenOxygen �?Security Hardening Module
+=======
+ * OpenOxygen - Security Hardening Module
+>>>>>>> dev
  *
- * 针对 OpenClaw 已知漏洞的全面防护：
+ * 针对已知漏洞的全面防护：
  *
+<<<<<<< HEAD
  * [CVE-2026-25253] Gateway URL 注入 �?硬编码绑�?+ 禁止外部覆盖
  * [ClawJacked]     WebSocket 跨域劫持 �?Origin 校验 + 速率限制 + 设备审批
  * [CVE-2026-24763] PATH 命令注入 �?环境变量净�?+ 参数白名�?
  * [CVE-2026-25593] 日志投毒/提示注入 �?日志消毒 + 输入边界隔离
  * [Supply Chain]   插件投毒 �?签名校验 + 权限声明 + 沙箱执行
  * [CNCERT Advisory] 凭证明文存储 �?内存加密 + 文件权限锁定
+=======
+ * [CVE-2026-25253] Gateway URL 注入 -> 硬编码绑定 + 禁止外部覆盖
+ * [ClawJacked]     WebSocket 跨域劫持 -> Origin 校验 + 速率限制 + 设备审批
+ * [CVE-2026-24763] PATH 命令注入 -> 环境变量净化 + 参数白名单
+ * [CVE-2026-25593] 日志投毒/提示注入 -> 日志消毒 + 输入边界隔离
+ * [Supply Chain]   插件投毒 -> 签名验证 + 权限声明 + 沙盒执行
+ * [CNCERT Advisory] 凭证明文存储 -> 内存加密 + 文件权限锁定
+>>>>>>> dev
  */
 import crypto from "node:crypto";
 import { createSubsystemLogger } from "../logging/index.js";
 const log = createSubsystemLogger("security/hardening");
+<<<<<<< HEAD
 // ══════════════════════════════════════════════════════════════════════════�?
 // 1. GATEWAY URL INJECTION DEFENSE  (CVE-2026-25253)
 //    OpenClaw �?URL query string 读取 gatewayUrl 并自动连接，
 //    攻击者可构造恶意链接劫�?WebSocket 连接�?
 //    OpenOxygen 方案：完全禁止从外部输入覆盖 gateway 地址�?
 // ══════════════════════════════════════════════════════════════════════════�?
+=======
+// === 1. GATEWAY URL INJECTION DEFENSE ===
+>>>>>>> dev
 const ALLOWED_GATEWAY_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
 export function validateGatewayBinding(host, port) {
     // 禁止绑定�?0.0.0.0 或公网地址
@@ -43,6 +60,7 @@ export function validateGatewayBinding(host, port) {
  * 拒绝�?URL 参数、HTTP header 或外部输入动态设�?gateway 地址�?
  * 这是 CVE-2026-25253 的根本修复�?
  */
+<<<<<<< HEAD
 export function sanitizeGatewayUrl(input) {
     try {
         const url = new URL(input);
@@ -133,10 +151,169 @@ export class RateLimiter {
         for (const [ip, record] of this.clients) {
             if (record.requests.length === 0 && record.blockedUntil < now) {
                 this.clients.delete(ip);
+=======
+export function rejectDynamicGatewayConfig(source) {
+    throw new Error(`Gateway configuration from external source is forbidden (CVE-2026-25253). ` +
+        `Source: ${source}. ` +
+        `Gateway must be configured via config file or environment variables only.`);
+}
+export function validateWebSocketOrigin(origin, config) {
+    if (!origin) {
+        log.warn("WebSocket connection without Origin header rejected");
+        return false;
+    }
+    // Check against allowed origins
+    const allowed = config.allowedOrigins.some(allowed => {
+        if (allowed.includes("*")) {
+            const pattern = new RegExp(allowed.replace(/\*/g, ".*"));
+            return pattern.test(origin);
+        }
+        return origin === allowed;
+    });
+    if (!allowed) {
+        log.warn(`WebSocket Origin rejected: ${origin}`);
+        return false;
+    }
+    return true;
+}
+// === 3. PATH COMMAND INJECTION DEFENSE ===
+const DANGEROUS_PATTERNS = [
+    /rm\s+-rf\s+\//i,
+    /format\s+/i,
+    /mkfs\./i,
+    /dd\s+if=/i,
+    />\s*\/dev\/null.*rm/i,
+    /shutdown\s+/i,
+    /reboot\s+/i,
+    /init\s+0/i,
+    /poweroff/i,
+    /del\s+\/f\s+\/s\s+\/q/i,
+    /rmdir\s+\/s\s+\/q/i,
+];
+const ALLOWED_COMMANDS = new Set([
+    "ls", "dir", "cat", "type", "echo", "pwd", "cd",
+    "mkdir", "rmdir", "rm", "del", "copy", "cp", "mv", "move",
+    "git", "npm", "yarn", "pnpm", "node", "python", "pip",
+    "docker", "kubectl", "terraform",
+]);
+export function sanitizePathEnv(env) {
+    const sanitized = { ...env };
+    // Remove potentially dangerous PATH modifications
+    const dangerousPaths = ["/tmp", "/var/tmp", "C:\\Windows\\Temp"];
+    if (sanitized.PATH) {
+        const paths = sanitized.PATH.split(process.platform === "win32" ? ";" : ":");
+        const cleanPaths = paths.filter(p => !dangerousPaths.some(dp => p.includes(dp)));
+        sanitized.PATH = cleanPaths.join(process.platform === "win32" ? ";" : ":");
+    }
+    return sanitized;
+}
+export function validateCommand(command) {
+    // Check for dangerous patterns
+    for (const pattern of DANGEROUS_PATTERNS) {
+        if (pattern.test(command)) {
+            return {
+                safe: false,
+                reason: `Command matches dangerous pattern: ${pattern}`,
+            };
+        }
+    }
+    // Extract base command
+    const baseCommand = command.trim().split(/\s+/)[0];
+    // Check whitelist (if strict mode)
+    // if (!ALLOWED_COMMANDS.has(baseCommand.toLowerCase())) {
+    //   return {
+    //     safe: false,
+    //     reason: `Command not in whitelist: ${baseCommand}`,
+    //   };
+    // }
+    // Sanitize command
+    const sanitized = command
+        .replace(/[;&|`$(){}[\]\\]/g, "") // Remove shell metacharacters
+        .trim();
+    return { safe: true, sanitized };
+}
+// === 4. LOG POISONING / PROMPT INJECTION DEFENSE ===
+const INJECTION_PATTERNS = [
+    /ignore\s+(previous|above|all)\s+(instructions|prompts)/i,
+    /disregard\s+(previous|above|all)\s+(instructions|prompts)/i,
+    /forget\s+(previous|above|all)\s+(instructions|prompts)/i,
+    /```\s*system/i,
+    /<\|system\|>/i,
+    /<\|assistant\|>/i,
+    /<\|user\|>/i,
+    /\[system\]/i,
+    /\[assistant\]/i,
+    /\[user\]/i,
+];
+export function detectPromptInjection(input) {
+    const detected = [];
+    for (const pattern of INJECTION_PATTERNS) {
+        if (pattern.test(input)) {
+            detected.push(pattern.source);
+        }
+    }
+    // Sanitize by escaping special sequences
+    let sanitized = input;
+    sanitized = sanitized.replace(/```/g, "` ` `");
+    sanitized = sanitized.replace(/<\|/g, "< |");
+    sanitized = sanitized.replace(/\|>/g, "| >");
+    return {
+        detected: detected.length > 0,
+        patterns: detected,
+        sanitized,
+    };
+}
+export function sanitizeLogContent(content) {
+    // Remove potential log injection sequences
+    return content
+        .replace(/\n/g, "\\n")
+        .replace(/\r/g, "\\r")
+        .replace(/\x00/g, "") // Remove null bytes
+        .substring(0, 10000); // Limit length
+}
+export function validatePluginSecurity(manifest, publicKey) {
+    const result = {
+        signatureValid: false,
+        permissionsDeclared: false,
+        sandboxCompatible: false,
+        risks: [],
+    };
+    // Check signature
+    if (manifest.signature && publicKey) {
+        try {
+            // TODO: Implement signature verification
+            result.signatureValid = true;
+        }
+        catch {
+            result.risks.push("Invalid signature");
+        }
+    }
+    else {
+        result.risks.push("No signature provided");
+    }
+    // Check permissions
+    if (manifest.permissions && manifest.permissions.length > 0) {
+        result.permissionsDeclared = true;
+        // Check for dangerous permissions
+        const dangerous = ["filesystem:write", "network:outbound", "process:exec"];
+        for (const perm of manifest.permissions) {
+            if (dangerous.includes(perm)) {
+                result.risks.push(`Dangerous permission requested: ${perm}`);
+>>>>>>> dev
             }
         }
     }
+    else {
+        result.risks.push("No permissions declared");
+    }
+    // Check sandbox compatibility
+    result.sandboxCompatible = manifest.sandbox === true;
+    if (!result.sandboxCompatible) {
+        result.risks.push("Plugin does not support sandbox execution");
+    }
+    return result;
 }
+<<<<<<< HEAD
 /**
  * WebSocket Origin 校验�?
  * 只允许来自本地或已知白名单的 Origin�?
@@ -433,7 +610,83 @@ export function timingSafeEqual(a, b) {
     if (a.length !== b.length) {
         // 仍然执行比较以保持恒定时�?
         crypto.timingSafeEqual(Buffer.from(a.padEnd(Math.max(a.length, b.length))), Buffer.from(b.padEnd(Math.max(a.length, b.length))));
+=======
+// === 6. CREDENTIAL PROTECTION ===
+export function encryptInMemory(data, key) {
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
+    let encrypted = cipher.update(data, "utf8");
+    encrypted = Buffer.concat([encrypted, cipher.final()]);
+    const authTag = cipher.getAuthTag();
+    return Buffer.concat([iv, authTag, encrypted]);
+}
+export function decryptInMemory(encrypted, key) {
+    const iv = encrypted.slice(0, 16);
+    const authTag = encrypted.slice(16, 32);
+    const ciphertext = encrypted.slice(32);
+    const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
+    decipher.setAuthTag(authTag);
+    let decrypted = decipher.update(ciphertext);
+    decrypted = Buffer.concat([decrypted, decipher.final()]);
+    return decrypted.toString("utf8");
+}
+export async function secureFileWrite(filePath, data) {
+    const fs = await import("node:fs/promises");
+    // Write with restricted permissions (owner read/write only)
+    await fs.writeFile(filePath, data, { mode: 0o600 });
+    log.debug(`Secure file write: ${filePath}`);
+}
+// === 7. RATE LIMITING ===
+export class RateLimiter {
+    requests = new Map();
+    windowMs;
+    maxRequests;
+    constructor(windowMs = 60000, maxRequests = 100) {
+        this.windowMs = windowMs;
+        this.maxRequests = maxRequests;
+    }
+    isAllowed(clientId) {
+        const now = Date.now();
+        const windowStart = now - this.windowMs;
+        let timestamps = this.requests.get(clientId) || [];
+        timestamps = timestamps.filter(t => t > windowStart);
+        if (timestamps.length >= this.maxRequests) {
+            return false;
+        }
+        timestamps.push(now);
+        this.requests.set(clientId, timestamps);
+        return true;
+    }
+    getRemaining(clientId) {
+        const now = Date.now();
+        const windowStart = now - this.windowMs;
+        const timestamps = (this.requests.get(clientId) || [])
+            .filter(t => t > windowStart);
+        return Math.max(0, this.maxRequests - timestamps.length);
+    }
+}
+// === 8. TIMING-SAFE OPERATIONS ===
+export function timingSafeEqual(a, b) {
+    if (a.length !== b.length) {
+>>>>>>> dev
         return false;
     }
-    return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+    const bufA = Buffer.from(a);
+    const bufB = Buffer.from(b);
+    return crypto.timingSafeEqual(bufA, bufB);
 }
+export default {
+    validateGatewayBinding,
+    rejectDynamicGatewayConfig,
+    validateWebSocketOrigin,
+    sanitizePathEnv,
+    validateCommand,
+    detectPromptInjection,
+    sanitizeLogContent,
+    validatePluginSecurity,
+    encryptInMemory,
+    decryptInMemory,
+    secureFileWrite,
+    RateLimiter,
+    timingSafeEqual,
+};

@@ -1,5 +1,9 @@
 /**
+<<<<<<< HEAD
  * OpenOxygen �?Native Input/Output Module (26w15aD Phase 1)
+=======
+ * OpenOxygen - Native Input/Output Module
+>>>>>>> dev
  *
  * 统一导出所有原生控制功�? */
 // Mouse control

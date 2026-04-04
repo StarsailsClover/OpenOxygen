@@ -70,7 +70,11 @@ class LRUCache {
         this.map.clear();
     }
 }
+<<<<<<< HEAD
 // ══════════════════════════════════════════════════════════════════════════�?
+=======
+// ═══════════════════════════════════════════════════════════════════════════
+>>>>>>> dev
 // Persistent Vector Store
 // ══════════════════════════════════════════════════════════════════════════�?
 export class PersistentVectorStore {
@@ -92,7 +96,11 @@ export class PersistentVectorStore {
     addChunk(chunk) {
         // 存入内存向量存储
         this.memoryStore.addChunk(chunk);
+<<<<<<< HEAD
         // 存入 SQLite 元数�?
+=======
+        // 存入 SQLite 元数据
+>>>>>>> dev
         this.sqliteStore.saveChunk({
             id: chunk.id,
             source: chunk.source,
@@ -120,7 +128,11 @@ export class PersistentVectorStore {
         let added = 0;
         let skipped = 0;
         for (const chunk of chunks) {
+<<<<<<< HEAD
             // 检查内存限�?
+=======
+            // 检查内存限制
+>>>>>>> dev
             if (this.memoryStore.getChunkCount() >= this.maxMemoryChunks) {
                 // LRU 淘汰：移除最旧的
                 this.memoryStore.removeExpired();
@@ -136,13 +148,21 @@ export class PersistentVectorStore {
         return { added, skipped };
     }
     /**
+<<<<<<< HEAD
      * 搜索（混合：内存向量 + BM25�?
+=======
+     * 搜索（混合：内存向量 + BM25）
+>>>>>>> dev
      */
     search(query, queryEmbedding, opts) {
         return this.memoryStore.search(query, queryEmbedding, opts);
     }
     /**
+<<<<<<< HEAD
      * 清理过期�?
+=======
+     * 清理过期块
+>>>>>>> dev
      */
     cleanup() {
         const memoryRemoved = this.memoryStore.removeExpired();
@@ -165,7 +185,11 @@ export class PersistentVectorStore {
         };
     }
     /**
+<<<<<<< HEAD
      * 清空所有数�?
+=======
+     * 清空所有数据
+>>>>>>> dev
      */
     clear() {
         this.memoryStore.clear();

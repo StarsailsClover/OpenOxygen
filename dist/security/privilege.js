@@ -42,7 +42,11 @@ export function detectPrivilegeLevel() {
         catch {
             isElevated = false;
         }
+<<<<<<< HEAD
         // 检�?SYSTEM 账户
+=======
+        // 检测 SYSTEM 账户
+>>>>>>> dev
         if (username.toLowerCase().includes("system") ||
             username.toLowerCase().includes("nt authority")) {
             level = "system";
@@ -92,7 +96,11 @@ export class LowPrivilegeSandbox {
             }
             // 创建用户
             execSync(`net user ${this.config.username} ${this.config.password} /add /active:yes /comment:"OpenOxygen Sandbox User"`, { stdio: "inherit" });
+<<<<<<< HEAD
             // �?Users 组移除（限制权限�?
+=======
+            // 从 Users 组移除（限制权限）
+>>>>>>> dev
             try {
                 execSync(`net localgroup Users ${this.config.username} /delete`, {
                     stdio: "ignore",
@@ -188,7 +196,11 @@ export class LowPrivilegeSandbox {
         });
     }
 }
+<<<<<<< HEAD
 // ══════════════════════════════════════════════════════════════════════════�?
+=======
+// ═══════════════════════════════════════════════════════════════════════════
+>>>>>>> dev
 // Privilege Drop
 // ══════════════════════════════════════════════════════════════════════════�?
 /**
@@ -271,7 +283,11 @@ export function spawnIsolated(config) {
             });
         }
         else {
+<<<<<<< HEAD
             // Unix: 使用 chroot �?systemd-run
+=======
+            // Unix: 使用 chroot 或 systemd-run
+>>>>>>> dev
             const child = spawn(config.command, config.args, {
                 ...spawnOptions,
                 env: { ...process.env, PATH: "/usr/bin:/bin" },
@@ -286,7 +302,11 @@ export function spawnIsolated(config) {
             });
             // 内存限制（通过 cgroup，简化处理）
             const memoryWatcher = setInterval(() => {
+<<<<<<< HEAD
                 // 实际实现需要读�?/proc/[pid]/status
+=======
+                // 实际实现需要读取 /proc/[pid]/status
+>>>>>>> dev
             }, 1000);
             // 超时
             const timeout = setTimeout(() => {
@@ -307,7 +327,11 @@ export function spawnIsolated(config) {
         }
     });
 }
+<<<<<<< HEAD
 // ══════════════════════════════════════════════════════════════════════════�?
+=======
+// ═══════════════════════════════════════════════════════════════════════════
+>>>>>>> dev
 // Security Policy Enforcement
 // ══════════════════════════════════════════════════════════════════════════�?
 export class PrivilegePolicy {

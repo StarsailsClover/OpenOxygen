@@ -20,7 +20,11 @@ class LoadBalancer {
         this.nodes = nodes;
     }
     /**
+<<<<<<< HEAD
      * 选择下一个健康节�?
+=======
+     * 选择下一个健康节点
+>>>>>>> dev
      */
     select(strategy, sessionKey) {
         const healthy = this.nodes.filter((n) => n.status === "healthy");
@@ -55,7 +59,11 @@ class LoadBalancer {
         this.sessionMap.delete(sessionKey);
     }
 }
+<<<<<<< HEAD
 // ══════════════════════════════════════════════════════════════════════════�?
+=======
+// ═══════════════════════════════════════════════════════════════════════════
+>>>>>>> dev
 // Health Checker
 // ══════════════════════════════════════════════════════════════════════════�?
 class HealthChecker {
@@ -212,8 +220,13 @@ export class ClusterManager {
             requestCount: 0,
             avgLatencyMs: 0,
         };
+<<<<<<< HEAD
         // 在实际部署中，这里会 fork 子进程运�?Gateway
         // 当前实现为模拟节点（单进程多端口�?
+=======
+        // 在实际部署中，这里会 fork 子进程运行 Gateway
+        // 当前实现为模拟节点（单进程多端口）
+>>>>>>> dev
         log.info(`Worker node ${node.id} assigned to port ${port}`);
         node.status = "healthy";
         return node;

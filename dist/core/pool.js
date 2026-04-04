@@ -5,8 +5,13 @@
  */
 import { createSubsystemLogger } from "../logging/index.js";
 const log = createSubsystemLogger("pool/http");
+<<<<<<< HEAD
 // Node.js 22 内置 fetch 默认使用 undici，已有连接复用�?
 // 这里提供显式�?Agent 配置以优化高并发场景�?
+=======
+// Node.js 22 内置 fetch 默认使用 undici，已有连接复用。
+// 这里提供显式的 Agent 配置以优化高并发场景。
+>>>>>>> dev
 import { Agent } from "node:http";
 const keepAliveAgent = new Agent({
     keepAlive: true,
@@ -57,7 +62,11 @@ export function startMemoryMonitor(intervalMs = 60000) {
         const mem = getMemoryUsage();
         if (mem.heapPercent > 85) {
             log.warn(`High memory usage: ${mem.heapUsedMB}MB / ${mem.heapTotalMB}MB (${mem.heapPercent}%)`);
+<<<<<<< HEAD
             // 尝试触发 GC（需�?--expose-gc 标志�?
+=======
+            // 尝试触发 GC（需要 --expose-gc 标志）
+>>>>>>> dev
             if (global.gc) {
                 global.gc();
                 log.info("Manual GC triggered");

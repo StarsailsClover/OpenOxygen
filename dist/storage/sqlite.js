@@ -9,7 +9,11 @@ import { resolveStateDir } from "../core/config/index.js";
 import path from "node:path";
 import fs from "node:fs";
 const log = createSubsystemLogger("storage/sqlite");
+<<<<<<< HEAD
 // better-sqlite3 �?CJS，需�?createRequire
+=======
+// better-sqlite3 是 CJS，需要 createRequire
+>>>>>>> dev
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 // ══════════════════════════════════════════════════════════════════════════�?
@@ -291,9 +295,15 @@ export class SQLiteStore {
         log.info("SQLite store closed");
     }
 }
+<<<<<<< HEAD
 // ══════════════════════════════════════════════════════════════════════════�?
 // Global Instance
 // ══════════════════════════════════════════════════════════════════════════�?
+=======
+// ═══════════════════════════════════════════════════════════════════════════
+// Global Instance
+// ═══════════════════════════════════════════════════════════════════════════
+>>>>>>> dev
 let globalStore = null;
 export function getStore(dbPath) {
     if (!globalStore) {

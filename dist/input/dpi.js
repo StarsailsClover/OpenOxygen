@@ -49,7 +49,11 @@ export class DPIManager {
             log.info(`Detected ${this.monitors.length} monitor(s): ${metrics.physicalWidth}x${metrics.physicalHeight} @ ${metrics.dpiX}DPI`);
         }
         else {
+<<<<<<< HEAD
             // 默认�?
+=======
+            // 默认值
+>>>>>>> dev
             this.monitors = [
                 {
                     id: 0,

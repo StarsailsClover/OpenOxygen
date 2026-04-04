@@ -130,7 +130,11 @@ export class HumanLikenessScorer {
         };
     }
     scorePattern(actions) {
+<<<<<<< HEAD
         // 重复性检�?
+=======
+        // 重复性检测
+>>>>>>> dev
         const typeSequence = actions.map((a) => a.type).join(",");
         const chunks = [];
         for (let len = 2; len <= 5; len++) {
@@ -150,7 +154,11 @@ export class HumanLikenessScorer {
             const gap = a.timestamp - actions[i - 1].timestamp;
             return gap > 500 && gap < 3000;
         });
+<<<<<<< HEAD
         // 点击精确度（像素级精确不自然�?
+=======
+        // 点击精确度（像素级精确不自然）
+>>>>>>> dev
         const clickActions = actions.filter((a) => a.type === "click" && a.x !== undefined);
         const clickPrecision = clickActions.length > 1
             ? (() => {

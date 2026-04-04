@@ -1,10 +1,17 @@
 /**
  * OpenOxygen �?Structured LLM Output Module (26w15a)
  *
+<<<<<<< HEAD
  * 解决 qwen3:4b thinking 模式�?response 为空的问题�?
  * 兼容�?
  *   1. 标准模型（response 字段直接输出 JSON�?
  *   2. Thinking 模型（JSON �?thinking 字段中）
+=======
+ * 解决 qwen3:4b thinking 模式下 response 为空的问题。
+ * 兼容：
+ *   1. 标准模型（response 字段直接输出 JSON）
+ *   2. Thinking 模型（JSON 在 thinking 字段中）
+>>>>>>> dev
  *   3. Ollama format:"json" 模式
  *   4. 任意模型�?fallback 提取
  *
